@@ -7,9 +7,8 @@ This project includes the 2.1 version of Open-WBO as well as the algorithm CBLIN
 
 Loandra accepts all of the same arguments as Open wbo + the following:
 
-
-### core guided, core boosted or linear search
-```-pmreslin = <int32> [0 (core-guided), 1 (core-boosted), 2 (only linear search)]´´ (fdefault 1)
+``` ### core guided, core boosted or linear search
+```-pmreslin = <int32> [0 (core-guided), 1 (core-boosted), 2 (only linear search)]´´´ (fdefault 1)
 
 ### delete SAT solver between core-guided and linear phases
 ```-pmreslin-del, -no-pmreslin-del (default on)´´´
