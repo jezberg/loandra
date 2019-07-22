@@ -1,36 +1,3 @@
-# Loandra Incomplete MaxSAT solver
-## Version 1.0 July 2019
-
-Loandra is an extension of the OpenWBO MaxSAT solver to core-boosted linear search. Loandra was one of the best performing solvers in the incomlete category of the 2019 MaxSAT Evaluation. 
-
-This project includes the 2.1 version of Open-WBO as well as the algorithm CBLIN that implements core-boosted linear search as describedi in [1].
-
-Loandra accepts all of the same arguments as Open wbo + the following:
-
-``` ### core guided, core boosted or linear search
-```-pmreslin = <int32> [0 (core-guided), 1 (core-boosted), 2 (only linear search)]´´´ (fdefault 1)
-
-### delete SAT solver between core-guided and linear phases
-```-pmreslin-del, -no-pmreslin-del (default on)´´´
-
-## Do varying resolution during linear search: 
-```-pmreslin-varres, -no-pmreslin-varres (default on)
-
-## Encode maxres before lowering strat bound: 
-``-pmreslin-relax2strat, -no-pmreslin-relax2strat (default off)``
-
-##  Keep satsolver between resolutions: 
-``-pmreslin-incvarres, -no-pmreslin-incvarres (default off)``
-
-## set time limit (seconds) sfor core guided phase during core-boosted search 
-```-pmreslin-cglim" = <int32> [-1 (unlimited, run intil stratification bound gets to 1), ...]´´ (fdefault 30)
-        
-
-We thank the developers of Open-WBO!
-
-[1] Berg, Jeremias & Demirović, Emir & Stuckey, Peter. (2019). Core-Boosted Linear Search for Incomplete MaxSAT. 10.1007/978-3-030-19212-9_3. 
-
-###################################################################
 
 # Open-WBO MaxSAT Solver
 ## Version 2.1 - September 2018
