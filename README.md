@@ -24,10 +24,10 @@ Loandra accepts all of the same arguments as Open wbo + the following:
 ```-pmreslin-varres, -no-pmreslin-varres (default on) ```
 
 ### Encode maxres before lowering strat bound: 
-``-pmreslin-relax2strat, -no-pmreslin-relax2strat (default off) ```
+```-pmreslin-relax2strat, -no-pmreslin-relax2strat (default off) ```
 
 ###  Keep satsolver between resolutions: 
-``-pmreslin-incvarres, -no-pmreslin-incvarres (default off) ```
+```-pmreslin-incvarres, -no-pmreslin-incvarres (default off) ```
 
 We thank the developers of Open-WBO!
 
