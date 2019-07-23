@@ -699,7 +699,7 @@ Lit Solver::pickBranchLit() {
             next = order_heap.removeMin();
         }
     
-    if (solutionBasedPhaseSaving && (_user_phase_saving.size() > next) && (_user_phase_saving[next] != l_Undef)) {
+    if (next != var_Undef && solutionBasedPhaseSaving && (_user_phase_saving.size() > next) && (_user_phase_saving[next] != l_Undef)) {
 		assert(_user_phase_saving[next] == l_True || _user_phase_saving[next] == l_False);
         return mkLit(next, _user_phase_saving[next] != l_True);
     }
