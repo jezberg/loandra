@@ -26,6 +26,7 @@
  */
 
 #include "Enc_MTotalizer.h"
+#include <iostream>
 
 using namespace openwbo;
 
@@ -67,11 +68,12 @@ void MTotalizer::encode(Solver *S, vec<Lit> &lits, int64_t rhs) {
   }
 
   assert(rhs >= 1 && rhs <= lits.size());
-
+  //std::cout << "Rhs " << rhs << " lits " << lits.size() << std::endl;
+ /*
   if (rhs == lits.size()) {
     return;
   }
-
+*/
   hasEncoding = true;
 
   // Modulo that was used in the original paper.

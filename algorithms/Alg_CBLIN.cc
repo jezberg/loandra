@@ -1183,7 +1183,7 @@ uint64_t CBLIN::computeCostReducedWeights(vec<lbool> &inputModel) {
   vec<lbool> fullModel;
   bool haveModel = var(maxsat_formula->getSoftClause(maxsat_formula->nSoft() - 1).clause[0]) < inputModel.size();
   if (!haveModel) {
-    logPrint("UUPS, no model");
+    logPrint("No model for full formula");
     getModel(inputModel, fullModel);
   }
   else {
@@ -1483,7 +1483,7 @@ bool CBLIN::shouldUpdate() {
         checkGap();
     }
     if ( (modelCost == ubCost) && solver->model.size() > bestModel.size()) {
-      logPrint("SAME COST BUT LONGER");
+      logPrint("Found same cost model covering more variables");
       saveModel(solver->model);
       bestModel.clear();
       solver->model.copyTo(bestModel);
