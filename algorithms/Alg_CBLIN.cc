@@ -237,7 +237,10 @@ uint64_t CBLIN::findNextWeightDiversity(uint64_t weight) {
           }
 			  }
 			if (maxsat_formula->getSoftClause(i).weight > bound  || (maxsat_formula->getSoftClause(i).weight == bound && satisfied) ) {  // 
-				vec<Lit> clause;
+
+       // if (maxsat_formula->getSoftClause(i).weight == bound && satisfied) logPrint("Dubious");
+ 
+      	vec<Lit> clause;
 				clause.clear();
 				 
 				Lit l = maxsat_formula->getSoftClause(i).assumption_var;
@@ -245,14 +248,15 @@ uint64_t CBLIN::findNextWeightDiversity(uint64_t weight) {
 				clause.push(~l);
 				solver->addClause(clause);
 
-        if (!hardenLazily()) 
+        if (!hardenLazily()) {
           maxsat_formula->addHardClause(clause); 
-
+        }
 
 				maxsat_formula->getSoftClause(i).weight = 0;
         maxsat_formula->getSoftClause(i).assumption_var = lit_Undef;
 				num_hardened++;
 				num_hardened_round++;
+        did_harden = true;
 			}
 			else if (maxsat_formula->getSoftClause(i).weight > maxw_nothardened) {
 				maxw_nothardened = maxsat_formula->getSoftClause(i).weight;
@@ -921,7 +925,7 @@ StatusCode CBLIN::linearSearch() {
   //NOTE DO NOT COME HERE IMMEDIATELY
   logPrint( "Starting lin search with: LB: " + std::to_string(lbCost) + " UB: " + std::to_string(ubCost) + 
             " UB - LB: " + std::to_string(ubCost-lbCost) + " Time " + print_timeSinceStart() );
-  logPrint("REFORM SCLA: " + std::to_string(nRealSoft()));
+  // logPrint("REFORM SCLA: " + std::to_string(nRealSoft()));
 
   inLinSearch = true;
   solver->budgetOff();
@@ -1168,6 +1172,17 @@ void CBLIN::getModel(vec<lbool> &currentModel, vec<lbool> &fullModel) {
     }
     solver->setSolutionBasedPhaseSaving(false);
     lbool res = searchSATSolver(solver, modelAssumps);
+
+    if (res == l_False) {
+      assert(did_harden);
+      logPrint("Hardened clauses only due to LB, need to extend the model in a weaker way");
+      modelAssumps.clear();
+      res = searchSATSolver(solver, modelAssumps);
+      uint64_t modelCost = computeCostModelPMRES(solver->model);
+      logPrint("Cur best: " + std::to_string(ubCost) + " new " +  std::to_string(modelCost) );
+
+    }
+
     solver->setSolutionBasedPhaseSaving(true);
     assert(res == l_True);
     checkModel();

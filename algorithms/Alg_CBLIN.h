@@ -68,7 +68,7 @@ public:
     varyingres = varR;
     enc = NULL;
     varresFactor = 10; 
-
+    did_harden = false;
     varyingresCG = varRCG; 
     known_gap = UINT64_MAX;
     timeLimitCores = gcLim;
@@ -202,6 +202,7 @@ protected:
 
   int nRealSoft();
   bool shouldUpdate();
+  bool did_harden;
 
   // SAT solver
   Solver *solver;  // SAT solver used as a black box.
