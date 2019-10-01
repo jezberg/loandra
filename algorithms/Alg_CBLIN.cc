@@ -1093,7 +1093,6 @@ void CBLIN::initRelaxation() {
   objFunction.clear();
   coeffs.clear();
   uint64_t comW = 0;
-  bool unweighted = true; 
   nbCurrentSoft = 0; 
 
   uint64_t maxreducedweight = 0; 
@@ -1107,14 +1106,6 @@ void CBLIN::initRelaxation() {
         objFunction.push(l);
         coeffs.push(reducedWeight);
         nbCurrentSoft++;
-        if (comW == 0) {
-          comW = reducedWeight;
-        }
-        else {
-          if (comW != reducedWeight) {
-            unweighted = false;
-          }
-        }
 
         if (reducedWeight > maxreducedweight) {
           maxreducedweight = reducedWeight;
@@ -1123,20 +1114,8 @@ void CBLIN::initRelaxation() {
     }
   }
 
-  if(incrementalVarres) {
-    unweighted = false;
-  }
 
   logPrint("Considering " + std::to_string(nbCurrentSoft) + " of " + std::to_string(nRealSoft()) + " soft clauses");
-  
-  if (unweighted) {
-    logPrint("Unweighted in this iteration");
-    maxsat_formula->setProblemType(_UNWEIGHTED_);
-  }
-  else {
-    logPrint("Weighted in this iteration");
-    maxsat_formula->setProblemType(_WEIGHTED_);
-  }
   
 }
 
