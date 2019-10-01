@@ -220,7 +220,7 @@ uint64_t CBLIN::findNextWeightDiversity(uint64_t weight) {
 	   uint64_t bound = ubCost - lbCost;
      logPrint("Hardening with gap: " + std::to_string(bound));
      int num_hardened_round = 0;
-	   vec<lbool> &currentModel = solver->model;
+	   vec<lbool> &currentModel = bestModel; 
 	   maxw_nothardened = 0;
 	   for (int i = 0; i < softs_added; i++)
 		  {
@@ -236,9 +236,7 @@ uint64_t CBLIN::findNextWeightDiversity(uint64_t weight) {
             satisfied = true;
           }
 			  }
-			if (maxsat_formula->getSoftClause(i).weight > bound  || (maxsat_formula->getSoftClause(i).weight == bound && satisfied) ) {  // 
-
-       // if (maxsat_formula->getSoftClause(i).weight == bound && satisfied) logPrint("Dubious");
+			if (maxsat_formula->getSoftClause(i).weight > bound || (maxsat_formula->getSoftClause(i).weight == bound && satisfied) ) {  // 
  
       	vec<Lit> clause;
 				clause.clear();
@@ -1172,12 +1170,13 @@ void CBLIN::getModel(vec<lbool> &currentModel, vec<lbool> &fullModel) {
     }
     solver->setSolutionBasedPhaseSaving(false);
     lbool res = searchSATSolver(solver, modelAssumps);
-
+    
     if (res == l_False) {
       assert(did_harden);
       logPrint("Hardened clauses only due to LB, need to extend the model in a weaker way");
       modelAssumps.clear();
       res = searchSATSolver(solver, modelAssumps);
+      assert(res == l_True);
       uint64_t modelCost = computeCostModelPMRES(solver->model);
       logPrint("Cur best: " + std::to_string(ubCost) + " new " +  std::to_string(modelCost) );
 
