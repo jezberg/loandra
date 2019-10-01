@@ -1476,7 +1476,7 @@ bool CBLIN::shouldUpdate() {
  }
 
  void CBLIN::softsSatisfied() {
-     for (int i = 0; i < costComputingFormula->nSoft(); i++) {
+     for (int i = 0; i < maxsat_formula->nSoft(); i++) {
         assert(maxsat_formula->getSoftClause(i).clause.size() == 1 );
         Lit l =  maxsat_formula->getSoftClause(i).clause[0];
         solver->setPolarity(var(l), sign(l) ? true : false);
