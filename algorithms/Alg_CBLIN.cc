@@ -825,6 +825,7 @@ StatusCode CBLIN::coreGuidedLinearSearch() {
     if (lbCost == ubCost) {
       if (verbosity > 0)
         printf("c LB = UB\n");
+        printBound(lbCost);
         printAnswer(_OPTIMUM_);
         return _OPTIMUM_;
     }
@@ -1477,6 +1478,13 @@ bool CBLIN::shouldUpdate() {
     }
     if ( (modelCost == ubCost) && solver->model.size() > bestModel.size()) {
       logPrint("Found same cost model covering more variables");
+      if (bestModel.size() == 0) { //Corner case for when the only optimal solution falisifies all solft clauses. 
+        ubCost = modelCost;
+        time_best_solution = time(NULL);
+        printProgress();
+        printBound(ubCost);
+        checkGap();
+      }
       saveModel(solver->model);
       bestModel.clear();
       solver->model.copyTo(bestModel);
