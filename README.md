@@ -24,16 +24,22 @@ Loandra accepts all of the same arguments as Open wbo + the following:
 ```-pmreslin-varres, -no-pmreslin-varres (default on) ```
 
 ### Encode maxres before lowering strat bound: 
-```-pmreslin-relax2strat, -no-pmreslin-relax2strat (default off) ```
+```-pmreslin-r-b-s, -no-pmreslin-r-b-s (default off) ```
 
 ###  Keep satsolver between resolutions: 
-```-pmreslin-incvarres, -no-pmreslin-incvarres (default off) ```
+```-pmreslin-v-inc, -no-pmreslin-v-inc (default off) ```
 
 We thank the developers of Open-WBO!
 
+## Citing Loandra
+If you use Loandra in your research, we kindly ask you to cite the follwoing publication 
+
 [1] Berg, Jeremias & Demirović, Emir & Stuckey, Peter. (2019). Core-Boosted Linear Search for Incomplete MaxSAT. 10.1007/978-3-030-19212-9_3. 
 
+### Additional references
+[2] Berg, J. and Järvisalo, M., 2017, August. Weight-aware core extraction in SAT-based MaxSAT solving. 10.1007/978-3-319-66158-2\_42
 
+[2] Demirović, Emir & Stuckey, Peter. (2019). Techniques Inspired by Local Search for Incomplete MaxSAT and the Linear Algorithm: Varying Resolution and Solution-Guided Search. 10.1007/978-3-030-30048-7_11
 
 # Open-WBO MaxSAT Solver
 ## Version 2.1 - September 2018

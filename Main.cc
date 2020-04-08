@@ -175,17 +175,17 @@ int main(int argc, char **argv) {
 
     BoolOption pmreslin_delsol("PMRES", "pmreslin-del", "Delete Solver between core guided and linear search.\n", true);
   
-   BoolOption pmreslin_varres("PMRES", "pmreslin-varres", "Do varying resolution.\n", true);
-   
-   BoolOption pmreslin_relax2strat("PMRES", "pmreslin-relax2strat", "RelaxCores before strat.\n", false);
+    BoolOption pmreslin_varres("PMRES", "pmreslin-varres", "Do varying resolution.\n", true);
 
-   BoolOption pmreslin_varresCG("PMRES", "pmreslin-varresCG", "Do varying resolution for CG.\n", false);
+    BoolOption pmreslin_varresCG("PMRES", "pmreslin-cgvar", "Do varying resolution for CG.\n", false);
+    BoolOption pmreslin_incvarres("PMRES", "pmreslin-v-inc", "Do varying resolution incrementally.\n", false);
+    BoolOption pmreslin_relax2strat("PMRES", "pmreslin-r-b-s", "Relax Cores before strat.\n", false);
 
-   BoolOption pmreslin_incvarres("PMRES", "pmreslin-incvarres", "Do varying resolution incrementally.\n", false);
-   
-   IntOption pmreslin_cgLim("PMRES", "pmreslin-cglim", "Time limit for core guided phase (s): "
+
+    IntOption pmreslin_cgLim("PMRES", "pmreslin-cglim", "Time limit for core guided phase (s): "
                                             "(-1=not att all) .\n", 30,
                   IntRange(-1, INT_MAX));
+    
 
     parseOptions(argc, argv, true);
 
@@ -198,8 +198,10 @@ int main(int argc, char **argv) {
       break;
     
     case _ALGORITHM_PMRES_:
-      S = new CBLIN(verbosity, weight, pmreslin, pmreslin_delsol, pmreslin_varres, pmreslin_varresCG, 
-                    pmreslin_cgLim, pmreslin_relax2strat, pmreslin_incvarres);
+     // S = new CBLIN(verbosity, weight, pmreslin, pmreslin_delsol, pmreslin_varres, pmreslin_varresCG, 
+     //               pmreslin_cgLim, pmreslin_relax2strat, pmreslin_incvarres);
+      S = new CBLIN(verbosity, weight, pmreslin, pmreslin_delsol, pmreslin_varres, false, 
+                    pmreslin_cgLim, false, false);
       break;
 
     case _ALGORITHM_LINEAR_SU_:
