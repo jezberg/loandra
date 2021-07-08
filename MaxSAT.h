@@ -127,7 +127,7 @@ public:
   void print_Incremental_configuration(int incremental);
 
   virtual StatusCode search();      // MaxSAT search.
-  void printAnswer(int type); // Print the answer.
+  virtual void printAnswer(int type); // Print the answer.
 
   // Tests if a MaxSAT formula has a lexicographical optimization criterion.
   bool isBMO(bool cache = true);

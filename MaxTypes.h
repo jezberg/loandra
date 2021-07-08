@@ -57,6 +57,7 @@ enum {
   _ALGORITHM_MSU3_,
   _ALGORITHM_PART_MSU3_,
   _ALGORITHM_OLL_,
+  _ALGORITHM_OLLITER_,
   _ALGORITHM_BEST_
 };
 enum StatusCode {

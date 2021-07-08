@@ -395,6 +395,12 @@ Var Solver::newVar(bool sign, bool dvar) {
     return v;
 }
 
+void Solver::resetActivity(int i) {
+    if (i < 0) return;
+    assert(i < activity.size());
+    activity[i] = 0.0;
+}
+
 
 bool Solver::addClause_(vec <Lit> &ps) {
 

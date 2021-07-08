@@ -12,6 +12,7 @@ include $(PWD)/solvers/$(SOLVER).mk
 
 # THE REMAINING OF THE MAKEFILE SHOULD BE LEFT UNCHANGED
 EXEC       = loandra
+PREPRO_DIR = maxpre
 DEPDIR     += mtl utils core
 DEPDIR     +=  ../../encodings ../../algorithms ../../graph ../../classifier
 MROOT      ?= $(PWD)/solvers/$(SOLVERDIR)
@@ -26,6 +27,9 @@ CFLAGS     += -DGLUCORED
 DEPDIR     += reducer glucored
 endif
 endif
+
+
+
 
 
 

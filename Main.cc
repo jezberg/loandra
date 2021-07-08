@@ -58,6 +58,7 @@
 #include "algorithms/Alg_LinearSU.h"
 #include "algorithms/Alg_MSU3.h"
 #include "algorithms/Alg_OLL.h"
+#include "algorithms/Alg_OLL_ITER.h"
 #include "algorithms/Alg_PartMSU3.h"
 #include "algorithms/Alg_WBO.h"
 #include "algorithms/Alg_CBLIN.h"
@@ -113,17 +114,17 @@ int main(int argc, char **argv) {
         "c WARNING: for repeatability, setting FPU to use double precision\n");
 #endif
 
-    BoolOption printmodel("Open-WBO", "print-model", "Print model.\n", false);
+    BoolOption printmodel("Open-WBO", "print-model", "Print model.\n", true);
 
     StringOption printsoft("Open-WBO", "print-unsat-soft", "Print unsatisfied soft claues in the optimal assignment.\n", NULL);
 
     IntOption verbosity("Open-WBO", "verbosity",
-                        "Verbosity level (0=minimal, 1=more).\n", 1,
+                        "Verbosity level (0=minimal, 1=more).\n", 0,
                         IntRange(0, 1));
 
     IntOption algorithm("Open-WBO", "algorithm",
                         "Search algorithm "
-                        "(0=wbo,1=CBLIN,2=linear-su,3=msu3,4=part-msu3,5=oll,6=best)."
+                        "(0=wbo,1=CBLIN,2=linear-su,3=msu3,4=part-msu3,5=oll,6=oll_iter, 7=best)."
                         "\n",
                         1, IntRange(0, 6));
 
@@ -173,20 +174,25 @@ int main(int argc, char **argv) {
                                             "(0=not att all, 1=first cores then lin 2=only lins) .\n", 1,
                   IntRange(0, 3));
 
-    BoolOption pmreslin_delsol("PMRES", "pmreslin-del", "Delete Solver between core guided and linear search.\n", true);
-  
-    BoolOption pmreslin_varres("PMRES", "pmreslin-varres", "Do varying resolution.\n", true);
-
-    BoolOption pmreslin_varresCG("PMRES", "pmreslin-cgvar", "Do varying resolution for CG.\n", false);
-    BoolOption pmreslin_incvarres("PMRES", "pmreslin-v-inc", "Do varying resolution incrementally.\n", false);
-    BoolOption pmreslin_relax2strat("PMRES", "pmreslin-r-b-s", "Relax Cores before strat.\n", false);
-
-
-    IntOption pmreslin_cgLim("PMRES", "pmreslin-cglim", "Time limit for core guided phase (s): "
-                                            "(-1=not att all) .\n", 30,
+   BoolOption pmreslin_delsol("PMRES", "pmreslin-del", "Delete Solver between core guided and linear search.\n", true);
+   BoolOption pmreslin_varres("PMRES", "pmreslin-varres", "Do varying resolution.\n", true);
+   BoolOption pmreslin_relax2strat("PMRES", "pmreslin-r-b-s", "RelaxCores before strat.\n", false);
+   BoolOption pmreslin_varresCG("PMRES", "pmreslin-varresCG", "Do varying resolution for CG.\n", false);
+   BoolOption pmreslin_incvarres("PMRES", "pmreslin-v-inc", "Do varying resolution incrementally.\n", false);
+   IntOption pmreslin_cgLim("PMRES", "pmreslin-cglim", "Time limit for core guided phase (s): "
+                                            "(-1=not at all) .\n", 30,
                   IntRange(-1, INT_MAX));
     
+  BoolOption prepro_rec("PMRES", "preprocess-rec", "Reconstruct solutions during preprocessing.\n", false);
+  BoolOption prepro_min("PMRES", "preprocess-min", "Minimize solutions locally.\n", true);
+  IntOption prepro_min_strat("PMRES", "preprocess-min-strat", "1=agressive (all solutions), 2=only the two first in each resolution: "
+                                            "(0=only the best after each resolution) .\n", 0,
+                  IntRange(0, 2));
 
+
+   BoolOption preprocess("PMRES", "preprocess", "Preprocess the instance.\n", true);
+
+   
     parseOptions(argc, argv, true);
 
     double initial_time = cpuTime();
@@ -198,10 +204,8 @@ int main(int argc, char **argv) {
       break;
     
     case _ALGORITHM_PMRES_:
-     // S = new CBLIN(verbosity, weight, pmreslin, pmreslin_delsol, pmreslin_varres, pmreslin_varresCG, 
-     //               pmreslin_cgLim, pmreslin_relax2strat, pmreslin_incvarres);
-      S = new CBLIN(verbosity, weight, pmreslin, pmreslin_delsol, pmreslin_varres, false, 
-                    pmreslin_cgLim, false, false);
+      S = new CBLIN(verbosity, weight, pmreslin, pmreslin_delsol, pmreslin_varres, pmreslin_varresCG, 
+                    pmreslin_cgLim, pmreslin_relax2strat, pmreslin_incvarres, preprocess, prepro_rec, prepro_min,prepro_min_strat );
       break;
 
     case _ALGORITHM_LINEAR_SU_:
@@ -218,6 +222,10 @@ int main(int argc, char **argv) {
 
     case _ALGORITHM_OLL_:
       S = new OLL(verbosity, cardinality);
+      break;
+    
+    case _ALGORITHM_OLLITER_:
+      S = new OLL_ITER(verbosity, cardinality, preprocess, prepro_rec);
       break;
 
     case _ALGORITHM_BEST_:

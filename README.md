@@ -1,9 +1,10 @@
 # Loandra Incomplete MaxSAT solver
 ## Version 1.0 July 2019
 
-Loandra is an extension of the OpenWBO MaxSAT solver to core-boosted linear search. Loandra was one of the best performing solvers in the incomlete category of the 2019 MaxSAT Evaluation. 
+Loandra is an extension of the OpenWBO MaxSAT solver to core-boosted linear search. Loandra was one of the best performing solvers in the incomlete category of the 2019 MaxSAT Evaluation and the 2021 MaxSAT Evaluation-
 
 This project includes the 2.1 version of Open-WBO as well as the algorithm CBLIN that implements core-boosted linear search as describedi in [1].
+THis branch also includes the MaxPRE [2] preprocessor.
 
 ## Command line arguments 
 Loandra accepts all of the same arguments as Open wbo + the following:
@@ -29,6 +30,15 @@ Loandra accepts all of the same arguments as Open wbo + the following:
 ###  Keep satsolver between resolutions: 
 ```-pmreslin-v-inc, -no-pmreslin-v-inc (default off) ```
 
+## preprocess the instance with MaxPre
+```-preprocess, -no-preprocess (default on) ```
+
+## reconstruct all solutions found during search 
+```-preprocess-rec, -no-preprocess-rec (default on) ```
+
+## locally minimize solutions
+```-preprocess-min, -no-preprocess-min (default on) ```
+
 We thank the developers of Open-WBO!
 
 ## Citing Loandra
@@ -36,10 +46,14 @@ If you use Loandra in your research, we kindly ask you to cite the follwoing pub
 
 [1] Berg, Jeremias & Demirović, Emir & Stuckey, Peter. (2019). Core-Boosted Linear Search for Incomplete MaxSAT. 10.1007/978-3-030-19212-9_3. 
 
-### Additional references
-[2] Berg, J. and Järvisalo, M., 2017, August. Weight-aware core extraction in SAT-based MaxSAT solving. 10.1007/978-3-319-66158-2\_42
+[2] Korhonen, T., Berg, J., Saikko, P. and Järvisalo, M., (2017), MaxPre: an extended MaxSAT preprocessor. 10.1007/978-3-319-66263-3\_28. 
 
-[2] Demirović, Emir & Stuckey, Peter. (2019). Techniques Inspired by Local Search for Incomplete MaxSAT and the Linear Algorithm: Varying Resolution and Solution-Guided Search. 10.1007/978-3-030-30048-7_11
+### Additional references
+[3] Berg, J. and Järvisalo, M., (2017), August. Weight-aware core extraction in SAT-based MaxSAT solving. 10.1007/978-3-319-66158-2\_42
+
+[4] Demirović, Emir & Stuckey, Peter. (2019). Techniques Inspired by Local Search for Incomplete MaxSAT and the Linear Algorithm: Varying Resolution and Solution-Guided Search. 10.1007/978-3-030-30048-7_11
+
+[5] Leivo, M., Berg, J. and Järvisalo, M., (2020). Preprocessing in incomplete maxsat solving, 10.3233/FAIA200112
 
 # Open-WBO MaxSAT Solver
 ## Version 2.1 - September 2018

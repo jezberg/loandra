@@ -13,6 +13,9 @@ DSRCS      = $(foreach dir, $(DEPDIR), $(filter-out $(MROOT)/$(dir)/Main.cc, $(w
 CHDRS      = $(wildcard $(PWD)/*.h)
 COBJS      = $(CSRCS:.cc=.o) $(DSRCS:.cc=.o)
 
+PRESRC 	   = $(foreach dir, ../../maxpre, $(filter-out $(MROOT)/$(dir)/main.o, $(wildcard $(MROOT)/$(dir)/*.o)))
+PREOBJ	   = $(PRESRC:.cc=.o)
+
 PCOBJS     = $(addsuffix p,  $(COBJS))
 DCOBJS     = $(addsuffix d,  $(COBJS))
 RCOBJS     = $(addsuffix r,  $(COBJS))
@@ -26,7 +29,7 @@ COPTIMIZE ?= -O3
 CFLAGS    += -I$(MROOT) -D __STDC_LIMIT_MACROS -D __STDC_FORMAT_MACROS
 LFLAGS    += -lz
 
-.PHONY : s p d r rs clean 
+.PHONY : s p d r rs clean preprocess preprocess-clean
 
 s:	$(EXEC)
 p:	$(EXEC)_profile
@@ -65,6 +68,7 @@ lib$(LIB)_debug.a:	$(filter-out */Main.od, $(DCOBJS))
 lib$(LIB)_release.a:	$(filter-out */Main.or, $(RCOBJS))
 
 
+
 ## Build rule
 %.o %.op %.od %.or:	%.cc
 	@echo Compiling: $(subst $(MROOT)/,,$@)
@@ -73,7 +77,7 @@ lib$(LIB)_release.a:	$(filter-out */Main.or, $(RCOBJS))
 ## Linking rules (standard/profile/debug/release)
 $(EXEC) $(EXEC)_profile $(EXEC)_debug $(EXEC)_release $(EXEC)_static:
 	@echo Linking: "$@ ( $(foreach f,$^,$(subst $(MROOT)/,,$f)) )"
-	@$(CXX) $^ $(LFLAGS) -o $@
+	@$(CXX) $^ $(PREOBJ) $(LFLAGS) -o $@
 
 ## Library rules (standard/profile/debug/release)
 lib$(LIB)_standard.a lib$(LIB)_profile.a lib$(LIB)_release.a lib$(LIB)_debug.a:
@@ -92,9 +96,12 @@ allclean: clean
 clean:
 	rm -f $(EXEC) $(EXEC)_profile $(EXEC)_debug $(EXEC)_release $(EXEC)_static \
 	  $(COBJS) $(PCOBJS) $(DCOBJS) $(RCOBJS) *.core depend.mk 
+	$(MAKE) -C $(PREPRO_DIR) clean
 
 ## Make dependencies
 depend.mk: $(CSRCS) $(CHDRS)
+	@echo Making preprocessor
+	$(MAKE) -C $(PREPRO_DIR) lib
 	@echo Making dependencies
 	@$(CXX) $(CFLAGS) -I$(MROOT) \
 	   $(CSRCS) -MM | sed 's|\(.*\):|$(PWD)/\1 $(PWD)/\1r $(PWD)/\1d $(PWD)/\1p:|' > depend.mk
