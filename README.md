@@ -1,5 +1,5 @@
 # Loandra Incomplete MaxSAT solver
-## Version 1.0 July 2019
+## Version 1.2 July 2021
 
 Loandra is an extension of the OpenWBO MaxSAT solver to core-boosted linear search. Loandra was one of the best performing solvers in the incomlete category of the 2019 MaxSAT Evaluation and the 2021 MaxSAT Evaluation-
 
@@ -42,7 +42,7 @@ Loandra accepts all of the same arguments as Open wbo + the following:
 We thank the developers of Open-WBO!
 
 ## Citing Loandra
-If you use Loandra in your research, we kindly ask you to cite the follwoing publication 
+If you use Loandra in your research, we kindly ask you to cite the following publication 
 
 [1] Berg, Jeremias & Demirović, Emir & Stuckey, Peter. (2019). Core-Boosted Linear Search for Incomplete MaxSAT. 10.1007/978-3-030-19212-9_3. 
 
@@ -55,7 +55,7 @@ If you use Loandra in your research, we kindly ask you to cite the follwoing pub
 
 [5] Leivo, M., Berg, J. and Järvisalo, M., (2020). Preprocessing in incomplete maxsat solving, 10.3233/FAIA200112
 
-# Open-WBO MaxSAT Solver
+# Open-WBO MaxSAT Solver - That Loandra is based on
 ## Version 2.1 - September 2018
 
 Open-WBO is an extensible and modular open-source MaxSAT Solver.
