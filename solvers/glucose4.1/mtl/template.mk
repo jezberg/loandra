@@ -12,10 +12,8 @@ CSRCS      = $(wildcard $(PWD)/*.cc)
 DSRCS      = $(foreach dir, $(DEPDIR), $(filter-out $(MROOT)/$(dir)/Main.cc, $(wildcard $(MROOT)/$(dir)/*.cc)))
 CHDRS      = $(wildcard $(PWD)/*.h)
 COBJS      = $(CSRCS:.cc=.o) $(DSRCS:.cc=.o)
+PREOBJ	   = $(wildcard $(PREPRO_DIR)/src/lib/*.a) 
 
-PRESRC 	   = $(foreach dir, ../../maxpre2/src, $(filter-out $(MROOT)/$(dir)/main.o, $(wildcard $(MROOT)/$(dir)/*.o)))
-SATSRC 	   = maxpre2/src/satsolver/solvers/glucose3/core/Solver.cc  maxpre2/src/satsolver/solvers/glucose3/utils/System.cc
-PREOBJ	   = $(PRESRC:.cc=.o) $(SATSRC:.cc=.o)
 
 PCOBJS     = $(addsuffix p,  $(COBJS))
 DCOBJS     = $(addsuffix d,  $(COBJS))

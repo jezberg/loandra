@@ -114,7 +114,7 @@ int main(int argc, char **argv) {
         "c WARNING: for repeatability, setting FPU to use double precision\n");
 #endif
 
-  BoolOption printmodel("Open-WBO", "print-model", "Print model.\n", true);
+  BoolOption printmodel("Open-WBO", "print-model", "Print model.\n", false);
     
   BoolOption oldformat("Open-WBO", "old-format", "Parse WCNF files in the pre 2022 format.\n", false);
 
