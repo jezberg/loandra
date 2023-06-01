@@ -13,6 +13,10 @@ DSRCS      = $(foreach dir, $(DEPDIR), $(filter-out $(MROOT)/$(dir)/Main.cc, $(w
 CHDRS      = $(wildcard $(PWD)/*.h)
 COBJS      = $(CSRCS:.cc=.o) $(DSRCS:.cc=.o)
 
+PRESRC 	   = $(foreach dir, ../../maxpre2/src, $(filter-out $(MROOT)/$(dir)/main.o, $(wildcard $(MROOT)/$(dir)/*.o)))
+SATSRC 	   = maxpre2/src/satsolver/solvers/glucose3/core/Solver.cc  maxpre2/src/satsolver/solvers/glucose3/utils/System.cc
+PREOBJ	   = $(PRESRC:.cc=.o) $(SATSRC:.cc=.o)
+
 PCOBJS     = $(addsuffix p,  $(COBJS))
 DCOBJS     = $(addsuffix d,  $(COBJS))
 RCOBJS     = $(addsuffix r,  $(COBJS))
@@ -73,7 +77,7 @@ lib$(LIB)_release.a:	$(filter-out */Main.or, $(RCOBJS))
 ## Linking rules (standard/profile/debug/release)
 $(EXEC) $(EXEC)_profile $(EXEC)_debug $(EXEC)_release $(EXEC)_static:
 	@echo Linking: "$@ ( $(foreach f,$^,$(subst $(MROOT)/,,$f)) )"
-	@$(CXX) $^ $(LFLAGS) -o $@
+	@$(CXX) $^ $(PREOBJ) $(LFLAGS) -o $@
 
 ## Library rules (standard/profile/debug/release)
 lib$(LIB)_standard.a lib$(LIB)_profile.a lib$(LIB)_release.a lib$(LIB)_debug.a:
@@ -92,9 +96,12 @@ allclean: clean
 clean:
 	rm -f $(EXEC) $(EXEC)_profile $(EXEC)_debug $(EXEC)_release $(EXEC)_static \
 	  $(COBJS) $(PCOBJS) $(DCOBJS) $(RCOBJS) *.core depend.mk 
+	$(MAKE) -C $(PREPRO_DIR) clean
 
 ## Make dependencies
 depend.mk: $(CSRCS) $(CHDRS)
+	@echo Making preprocessor
+	$(MAKE) -C $(PREPRO_DIR) lib
 	@echo Making dependencies
 	@$(CXX) $(CFLAGS) -I$(MROOT) \
 	   $(CSRCS) -MM | sed 's|\(.*\):|$(PWD)/\1 $(PWD)/\1r $(PWD)/\1d $(PWD)/\1p:|' > depend.mk

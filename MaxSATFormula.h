@@ -91,7 +91,7 @@ class MaxSATFormula {
    * hard clauses. */
 public:
   MaxSATFormula()
-      : hard_weight(UINT64_MAX), problem_type(_UNWEIGHTED_), n_vars(0),
+      : hard_weight(UINT64_MAX), problem_type(_WEIGHTED_), n_vars(0),
         n_soft(0), n_hard(0), n_initial_vars(0), sum_soft_weight(0),
         max_soft_weight(0) {
     objective_function = NULL;

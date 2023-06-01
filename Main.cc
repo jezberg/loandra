@@ -1,5 +1,5 @@
 /*!
- * \author Jeremias Berg - ruben@sat.inesc-id.pt
+ * \author Jeremias Berg - jeremias.berg@helsinki.fi
  *
  * @section LICENSE
  *  
@@ -58,6 +58,7 @@
 #include "algorithms/Alg_LinearSU.h"
 #include "algorithms/Alg_MSU3.h"
 #include "algorithms/Alg_OLL.h"
+#include "algorithms/Alg_OLL_ITER.h"
 #include "algorithms/Alg_PartMSU3.h"
 #include "algorithms/Alg_WBO.h"
 #include "algorithms/Alg_CBLIN.h"
@@ -90,7 +91,7 @@ static void SIGINT_exit(int signum) {
 
 int main(int argc, char **argv) {
   printf("c\nc LOANDRA:\t an extension of Open-WBO to core-boosted linear search.\n");
-  printf("c Version:\t July 2019 2018 -- Release: 1.0\n");
+  printf("c Version:\t July 2019 2018 -- Release: 1.2\n");
   printf("c Authors:\t Jeremias Berg, Emir Demirovic, Peter Stuckey\n");
   printf("c We thank the developers of Open-WBO for their work\n");
   printf(
@@ -113,55 +114,57 @@ int main(int argc, char **argv) {
         "c WARNING: for repeatability, setting FPU to use double precision\n");
 #endif
 
-    BoolOption printmodel("Open-WBO", "print-model", "Print model.\n", false);
+  BoolOption printmodel("Open-WBO", "print-model", "Print model.\n", true);
+    
+  BoolOption oldformat("Open-WBO", "old-format", "Parse WCNF files in the pre 2022 format.\n", false);
 
-    StringOption printsoft("Open-WBO", "print-unsat-soft", "Print unsatisfied soft claues in the optimal assignment.\n", NULL);
+  StringOption printsoft("Open-WBO", "print-unsat-soft", "Print unsatisfied soft claues in the optimal assignment.\n", NULL);
 
-    IntOption verbosity("Open-WBO", "verbosity",
-                        "Verbosity level (0=minimal, 1=more).\n", 1,
+  IntOption verbosity("Open-WBO", "verbosity",
+                        "Verbosity level (0=minimal, 1=more).\n", 0,
                         IntRange(0, 1));
 
-    IntOption algorithm("Open-WBO", "algorithm",
+  IntOption algorithm("Open-WBO", "algorithm",
                         "Search algorithm "
-                        "(0=wbo,1=CBLIN,2=linear-su,3=msu3,4=part-msu3,5=oll,6=best)."
+                        "(0=wbo,1=CBLIN,2=linear-su,3=msu3,4=part-msu3,5=oll,6=oll_iter, 7=best)."
                         "\n",
                         1, IntRange(0, 6));
 
-    IntOption partition_strategy("PartMSU3", "partition-strategy",
+  IntOption partition_strategy("PartMSU3", "partition-strategy",
                                  "Partition strategy (0=sequential, "
                                  "1=sequential-sorted, 2=binary)"
                                  "(only for unsat-based partition algorithms).",
                                  2, IntRange(0, 2));
 
-    IntOption graph_type("PartMSU3", "graph-type",
+  IntOption graph_type("PartMSU3", "graph-type",
                          "Graph type (0=vig, 1=cvig, 2=res) (only for unsat-"
                          "based partition algorithms).",
                          2, IntRange(0, 2));
 
-    BoolOption bmo("Open-WBO", "bmo", "BMO search.\n", true);
+  BoolOption bmo("Open-WBO", "bmo", "BMO search.\n", true);
 
-    IntOption cardinality("Encodings", "cardinality",
+  IntOption cardinality("Encodings", "cardinality",
                           "Cardinality encoding (0=cardinality networks, "
                           "1=totalizer, 2=modulo totalizer).\n",
                           1, IntRange(0, 2));
 
-    IntOption amo("Encodings", "amo", "AMO encoding (0=Ladder).\n", 0,
+  IntOption amo("Encodings", "amo", "AMO encoding (0=Ladder).\n", 0,
                   IntRange(0, 0));
 
-    IntOption pb("Encodings", "pb", "PB encoding (0=SWC,1=GTE,2=Adder).\n", 1,
+  IntOption pb("Encodings", "pb", "PB encoding (0=SWC,1=GTE,2=Adder).\n", 1,
                  IntRange(0, 2));
 
-    IntOption formula("Open-WBO", "formula",
+  IntOption formula("Open-WBO", "formula",
                       "Type of formula (0=WCNF, 1=OPB).\n", 0, IntRange(0, 1));
 
-    IntOption weight(
+  IntOption weight(
         "WBO", "weight-strategy",
         "Weight strategy (0=none, 1=weight-based, 2=diversity-based).\n", 2,
         IntRange(0, 2));
 
-    BoolOption symmetry("WBO", "symmetry", "Symmetry breaking.\n", true);
+  BoolOption symmetry("WBO", "symmetry", "Symmetry breaking.\n", true);
     
-        IntOption symmetry_lim(
+  IntOption symmetry_lim(
         "WBO", "symmetry-limit",
         "Limit on the number of symmetry breaking clauses.\n", 500000,
         IntRange(0, INT32_MAX));
@@ -169,25 +172,32 @@ int main(int argc, char **argv) {
 
 
 
-    IntOption pmreslin("PMRES", "pmreslin", "Run linear search in conjunction with PMRES: "
+  IntOption pmreslin("CBLIN", "cb", "Run linear search in conjunction with PMRES: "
                                             "(0=not att all, 1=first cores then lin 2=only lins) .\n", 1,
                   IntRange(0, 3));
 
-    BoolOption pmreslin_delsol("PMRES", "pmreslin-del", "Delete Solver between core guided and linear search.\n", true);
-  
-    BoolOption pmreslin_varres("PMRES", "pmreslin-varres", "Do varying resolution.\n", true);
-
-    BoolOption pmreslin_varresCG("PMRES", "pmreslin-cgvar", "Do varying resolution for CG.\n", false);
-    BoolOption pmreslin_incvarres("PMRES", "pmreslin-v-inc", "Do varying resolution incrementally.\n", false);
-    BoolOption pmreslin_relax2strat("PMRES", "pmreslin-r-b-s", "Relax Cores before strat.\n", false);
-
-
-    IntOption pmreslin_cgLim("PMRES", "pmreslin-cglim", "Time limit for core guided phase (s): "
-                                            "(-1=not att all) .\n", 30,
+   BoolOption pmreslin_delsol("CBLIN", "cb-del", "Delete Solver between core guided and linear search.\n", true);
+   BoolOption pmreslin_varres("CBLIN", "cb-varres", "Do varying resolution.\n", true);
+   BoolOption pmreslin_relax2strat("CBLIN", "cb-r-2-s", "RelaxCores before strat.\n", false);
+   BoolOption pmreslin_varresCG("CBLIN", "cb-varCG", "Do varying resolution for CG.\n", false);
+   BoolOption pmreslin_incvarres("CBLIN", "cb-i-varres", "Do varying resolution incrementally.\n", false);
+   IntOption pmreslin_cgLim("CBLIN", "cb-cglim", "Time limit for core guided phase (s): "
+                                            "(-1=not at all) .\n", 30,
                   IntRange(-1, INT_MAX));
     
+  BoolOption prepro_rec("PREPROCESS", "pr-rec", "Reconstruct solutions during preprocessing.\n", false);
+  BoolOption prepro_min("PREPROCESS", "pr-min", "Minimize solutions locally.\n", true);
+  IntOption prepro_min_strat("PREPROCESS", "pr-min-strat", "1=agressive (all solutions), 2=only the two first in each resolution: "
+                                            "(0=only the best after each resolution) .\n", 0,
+                  IntRange(0, 2));
+  StringOption prT("PREPROCESS", "pr-tech", "Preprcess techniques.\n", "[u]#[uvsrgVGc]");
 
+  BoolOption preprocess("PREPROCESS", "preprocess", "Preprocess the instance.\n", true);
+
+  
+  
     parseOptions(argc, argv, true);
+    std::string preTechs(prT);
 
     double initial_time = cpuTime();
     MaxSAT *S = NULL;
@@ -197,11 +207,10 @@ int main(int argc, char **argv) {
       S = new WBO(verbosity, weight, symmetry, symmetry_lim);
       break;
     
-    case _ALGORITHM_PMRES_:
-     // S = new CBLIN(verbosity, weight, pmreslin, pmreslin_delsol, pmreslin_varres, pmreslin_varresCG, 
-     //               pmreslin_cgLim, pmreslin_relax2strat, pmreslin_incvarres);
-      S = new CBLIN(verbosity, weight, pmreslin, pmreslin_delsol, pmreslin_varres, false, 
-                    pmreslin_cgLim, false, false);
+    case _ALGORITHM_CBLIN_:
+      S = new CBLIN(verbosity, weight, pmreslin, pmreslin_delsol, pmreslin_varres, pmreslin_varresCG, 
+                    pmreslin_cgLim, pmreslin_relax2strat, pmreslin_incvarres, preprocess, prepro_rec, 
+                    prepro_min,prepro_min_strat,preTechs);
       break;
 
     case _ALGORITHM_LINEAR_SU_:
@@ -218,6 +227,10 @@ int main(int argc, char **argv) {
 
     case _ALGORITHM_OLL_:
       S = new OLL(verbosity, cardinality);
+      break;
+    
+    case _ALGORITHM_OLLITER_:
+      S = new OLL_ITER(verbosity, cardinality, preprocess, prepro_rec);
       break;
 
     case _ALGORITHM_BEST_:
@@ -238,6 +251,7 @@ int main(int argc, char **argv) {
       exit(_ERROR_);
     }
 
+
     gzFile in = (argc == 1) ? gzdopen(0, "rb") : gzopen(argv[1], "rb");
     if (in == NULL)
       printf("c ERROR! Could not open file: %s\n",
@@ -247,7 +261,7 @@ int main(int argc, char **argv) {
     MaxSATFormula *maxsat_formula = new MaxSATFormula();
 
     if ((int)formula == _FORMAT_MAXSAT_) {
-      parseMaxSATFormula(in, maxsat_formula);
+      parseMaxSATFormula(in, oldformat, maxsat_formula);
       maxsat_formula->setFormat(_FORMAT_MAXSAT_);
     } else {
       ParserPB *parser_pb = new ParserPB();

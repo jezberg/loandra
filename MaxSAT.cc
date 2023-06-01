@@ -371,10 +371,14 @@ void MaxSAT::printModel() {
   printf("v ");
   for(int i = 0; i < maxsat_formula->nInitialVars(); i++){
     //for (int i = 0; i < model.size(); i++) {
-    if (model[i] == l_True)
-      printf("%d ", i + 1);
-    else
-      printf("%d ", -(i + 1));
+    if (model[i] == l_True) {
+     // printf("%d ", i + 1);
+      printf("1");
+    }
+    else {
+     //  printf("%d ", -(i + 1));
+     printf("0");
+    }
   }
   printf("\n");
   

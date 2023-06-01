@@ -50,6 +50,10 @@ namespace openwbo {
 
 template <class B> static uint64_t parseWeight(B &in) {
   uint64_t val = 0;
+  if (*in == 'h') {
+    ++in;
+    return 1; //Hack, the value does not matter. 
+  }
   while ((*in >= 9 && *in <= 13) || *in == 32)
     ++in;
   if (*in < '0' || *in > '9')
@@ -124,13 +128,54 @@ static void parseMaxSAT(B &in, MaxSATFormula *maxsat_formula) {
   }
 }
 
+template <class B, class MaxSATFormula>
+static void parseMaxSAT_new(B &in, MaxSATFormula *maxsat_formula) {
+  vec<Lit> lits;
+  uint64_t hard_weight = UINT64_MAX;
+  //TODO we probably do not need the problem type...
+  maxsat_formula->setProblemType(_WEIGHTED_);
+  maxsat_formula->setHardWeight(hard_weight - 1);
+  for (;;) {
+    skipWhitespace(in);
+    if (*in == EOF)
+      break;
+    else if (*in == 'c' || *in == 'p')
+      skipLine(in);
+    else {
+      if (*in == 'h') {
+        //Hard clause
+        readClause(in, maxsat_formula, lits); // fills lits
+        maxsat_formula->addHardClause(lits);
+      }
+      else {
+        //Soft clause 
+        uint64_t weight = readClause(in, maxsat_formula, lits);
+        assert(weight > 0);
+        // Updates the maximum weight of soft clauses.
+        if (weight > maxsat_formula->getMaximumWeight()) {
+          maxsat_formula->setMaximumWeight(weight);
+        }
+        // Updates the sum of the weights of soft clauses.
+        maxsat_formula->updateSumWeights(weight);
+        maxsat_formula->addSoftClause(weight, lits);
+      }
+    }
+  }
+}
+
+
 // Inserts problem into solver.
 //
 template <class MaxSATFormula>
-static void parseMaxSATFormula(gzFile input_stream,
+static void parseMaxSATFormula(gzFile input_stream, bool oldformat,
                                MaxSATFormula *maxsat_formula) {
   StreamBuffer in(input_stream);
-  parseMaxSAT(in, maxsat_formula);
+  if (oldformat) {
+    parseMaxSAT(in, maxsat_formula);
+  }
+  else {
+    parseMaxSAT_new(in, maxsat_formula);
+  }
   if (maxsat_formula->getMaximumWeight() == 1) {
     maxsat_formula->setProblemType(_UNWEIGHTED_);
   }
