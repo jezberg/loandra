@@ -15,8 +15,8 @@ to run git submodule init and git submodule update in the maxpre2 subfolder.
 
 Afterwards, run make in the base folder.
 
-### Most significant command line arguments:
-Please also see the command line arguments for open-wbo and maxpre 2
+### Most significant command-line arguments:
+Please also see the command-line arguments for open-wbo and maxpre 2
 
 - **cb-i-varres, no-cb-i-varres**           (default: off)
   - Do varying resolution incrementally, i.e. do not delete the SAT solver between resolutions. 
