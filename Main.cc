@@ -114,19 +114,19 @@ int main(int argc, char **argv) {
         "c WARNING: for repeatability, setting FPU to use double precision\n");
 #endif
 
-  BoolOption printmodel("Open-WBO", "print-model", "Print model.\n", false);
+  BoolOption printmodel("Open-WBO", "print-model", "Print the solution found.\n", false);
     
   BoolOption oldformat("Open-WBO", "old-format", "Parse WCNF files in the pre 2022 format.\n", false);
 
-  StringOption printsoft("Open-WBO", "print-unsat-soft", "Print unsatisfied soft claues in the optimal assignment.\n", NULL);
+  StringOption printsoft("Open-WBO", "print-unsat-soft", "Print unsatisfied soft claueses in the solution found.\n", NULL);
 
   IntOption verbosity("Open-WBO", "verbosity",
                         "Verbosity level (0=minimal, 1=more).\n", 0,
                         IntRange(0, 1));
 
   IntOption algorithm("Open-WBO", "algorithm",
-                        "Search algorithm "
-                        "(0=wbo,1=CBLIN,2=linear-su,3=msu3,4=part-msu3,5=oll,6=oll_iter, 7=best)."
+                        "MaxSAT algorithm "
+                        "(0=wbo,1=core-boosted linear search,2=linear-su,3=msu3,4=part-msu3,5=oll,6=oll_iter, 7=best)."
                         "\n",
                         1, IntRange(0, 6));
 
@@ -169,30 +169,27 @@ int main(int argc, char **argv) {
         "Limit on the number of symmetry breaking clauses.\n", 500000,
         IntRange(0, INT32_MAX));
 
-
-
-
-  IntOption pmreslin("CBLIN", "cb", "Run linear search in conjunction with PMRES: "
-                                            "(0=not att all, 1=first cores then lin 2=only lins) .\n", 1,
+  IntOption pmreslin("CBLIN", "cb", "Run sat-unsat search in conjunction with core-guided search (i.e. core-boosted search): "
+                                            "(0=not at all, 1=first cores then sat-unsat search 2=only sat-unsat) .\n", 1,
                   IntRange(0, 3));
 
-   BoolOption pmreslin_delsol("CBLIN", "cb-del", "Delete Solver between core guided and linear search.\n", true);
+   BoolOption pmreslin_delsol("CBLIN", "cb-del", "Reinitialise the SAT solver between core guided and linear phase.\n", true);
    BoolOption pmreslin_varres("CBLIN", "cb-varres", "Do varying resolution.\n", true);
-   BoolOption pmreslin_relax2strat("CBLIN", "cb-r-2-s", "RelaxCores before strat.\n", false);
-   BoolOption pmreslin_varresCG("CBLIN", "cb-varCG", "Do varying resolution for CG.\n", false);
-   BoolOption pmreslin_incvarres("CBLIN", "cb-i-varres", "Do varying resolution incrementally.\n", false);
+   BoolOption pmreslin_relax2strat("CBLIN", "cb-r-2-s", "Relax cores before lowering the stratification bound.\n", false);
+   BoolOption pmreslin_varresCG("CBLIN", "cb-varCG", "Do varying resolution during core-guided search.\n", false);
+   BoolOption pmreslin_incvarres("CBLIN", "cb-i-varres", "Do varying resolution incrementally, without reinitialising the SAT solver.\n", false);
    IntOption pmreslin_cgLim("CBLIN", "cb-cglim", "Time limit for core guided phase (s): "
-                                            "(-1=not at all) .\n", 30,
+                                            "(-1=unlimited) .\n", 30,
                   IntRange(-1, INT_MAX));
     
-  BoolOption prepro_rec("PREPROCESS", "pr-rec", "Reconstruct solutions during preprocessing.\n", false);
-  BoolOption prepro_min("PREPROCESS", "pr-min", "Minimize solutions locally.\n", true);
-  IntOption prepro_min_strat("PREPROCESS", "pr-min-strat", "1=agressive (all solutions), 2=only the two first in each resolution: "
+  BoolOption prepro_rec("PREPROCESS", "pr-rec", "Reconstruct solutions before computing their costs (only applicable when preprocessing).\n", false);
+  BoolOption prepro_min("PREPROCESS", "pr-min", "Minimize solutions locally after preprocessing.\n", true);
+  IntOption prepro_min_strat("PREPROCESS", "pr-min-strat", "Strategy for oslution minimization: 1=agressive (all solutions), 2=only the two first in each resolution: "
                                             "(0=only the best after each resolution) .\n", 0,
                   IntRange(0, 2));
-  StringOption prT("PREPROCESS", "pr-tech", "Preprcess techniques.\n", "[u]#[uvsrgVGc]");
+  StringOption prT("PREPROCESS", "pr-tech", "Preprcess techniques used (see MaxPRE documentation).\n", "[u]#[uvsrgVGc]");
 
-  BoolOption preprocess("PREPROCESS", "preprocess", "Preprocess the instance.\n", true);
+  BoolOption preprocess("PREPROCESS", "preprocess", "Preprocess the instance prior to search.\n", true);
 
   
   
