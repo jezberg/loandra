@@ -57,7 +57,7 @@ public:
   CBLIN(int verb = _VERBOSITY_MINIMAL_, int weight = _WEIGHT_NORMAL_, 
         int linear = 0, bool delsol = false, bool varR = false, bool varRCG = false,
         int gcLim = -1, bool r2strat = false, bool incrementalV = false, bool pre = false, bool u = false, bool m = false, int m_strat = 0,
-        std::string prT = "[u]#[uvsrgc]", bool dec = false) {
+        std::string prT = "[u]#[uvsrgVGc]", bool dec = false) {
     solver = NULL;
     verbosity = verb;
 
@@ -86,6 +86,7 @@ public:
     wrong_eval_cg = 0;
     wrong_eval_lin = 0;
     pb_enc =  _PB_GTE_;
+    //pb_enc = _PB_ADDER_;
     do_preprocess = pre;
     delete_before_lin = delsol;
     encoder.setCardEncoding(_CARD_MTOTALIZER_); //TODO JUST UNTIL IT WORKS

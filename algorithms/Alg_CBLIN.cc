@@ -715,13 +715,12 @@ StatusCode CBLIN::unsatSearch() {
 
 
       if (do_preprocess) {
-        logPrint("PRE hard clauses before: " + std::to_string(maxsat_formula->nSoft() + maxsat_formula->nHard()));
-        logPrint("PRE soft literals before: " + std::to_string(maxsat_formula->nSoft()));
+        logPrint("Preprocess: hard clauses before: " + std::to_string(maxsat_formula->nSoft() + maxsat_formula->nHard()));
+        logPrint("Preprocess soft literals before: " + std::to_string(maxsat_formula->nSoft()));
         maxsat_formula = preprocess_formula();
-        logPrint("PRE time: " + print_timeSinceStart() + " removed weight: "  + std::to_string(weightRemoved)) ;
-        logPrint("PRE hard clauses after: " + std::to_string(maxsat_formula->nHard()));
-        logPrint("PRE soft literals after: " + std::to_string(maxsat_formula->nSoft()));
-        if (maxsat_formula->nHard() == 0) {
+        logPrint("Preprocess time: " + print_timeSinceStart() + " removed weight: "  + std::to_string(weightRemoved)) ;
+        logPrint("Preprocess hard clauses after: " + std::to_string(maxsat_formula->nHard()) + "soft literals after: " + std::to_string(maxsat_formula->nSoft()));
+        if (maxsat_formula->nSoft() == 0) {
           return _OPTIMUM_;
         }   
       }
@@ -1208,7 +1207,7 @@ void CBLIN::initializePBConstraint(uint64_t rhs) {
 
   assert(!enc->hasPBEncoding());
   logPrint("Encoding PB with UB: " + std::to_string(rhs) + " obj size " + std::to_string(objFunction.size()));
-  enc->encodePB(solver, objFunction, coeffs, rhs  );
+  enc->encodePB(solver, objFunction, coeffs, rhs);
   logPrint("Encoding Done");        
 
   setCardVars(prepro_set);
