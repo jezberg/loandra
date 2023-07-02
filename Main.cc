@@ -298,8 +298,14 @@ int main(int argc, char **argv) {
     delete[] _emergencyMemory;
     //TODO print the solution here.
     std::cout << "c Error: Out of memory." << std::endl;
-    std::cout << "s UNKNOWN" << std::endl;
-    exit(_ERROR_);
+    if (mxsolver->hasSolution()) {
+      mxsolver->printAnswer(_UNKNOWN_);
+      exit(_UNKNOWN_);
+    }
+    else {
+      std::cout << "s UNKNOWN" << std::endl;
+      exit(_ERROR_);
+    }
   } catch(MaxSATException &e) {
     sleep(1);
     delete[] _emergencyMemory;

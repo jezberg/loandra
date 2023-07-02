@@ -942,7 +942,6 @@ StatusCode CBLIN::onlyLinearSearch() {
 
 
 StatusCode CBLIN::linearSearch() {
-  //NOTE DO NOT COME HERE IMMEDIATELY
   logPrint( "Starting lin search with: LB: " + std::to_string(lbCost) + " UB: " + std::to_string(ubCost) + 
             " UB - LB: " + std::to_string(ubCost-lbCost) + " Time " + print_timeSinceStart() );
   // logPrint("REFORM SCLA: " + std::to_string(nRealSoft()));
@@ -1099,24 +1098,11 @@ void CBLIN::updateBoundLinSearch (uint64_t newBound) {
 // Sets according to current maxweight
 // Delete solver as needed 
 void CBLIN::setPBencodings() {
- // assert(!varyingres || maxsat_formula->getMaximumWeight() > 1);
-  /*
-  //HACK
-  uint64_t check_cost = computeCostFromLabels(bestModel);
-  logPrint("Label cost of best before ext: " + std::to_string(check_cost));
-  //  
-  */
   
   if (bestModel.size() < maxsat_formula->nVars()) {
       logPrint("Extending best model to full formula");
       extendBestModel();
   }
-/*
-  //HACK
-  check_cost = computeCostFromLabels(bestModel);
-  logPrint("Label cost of best after ext: " + std::to_string(check_cost));
-  // 
-  */
   
   uint64_t reduced_cost = computeCostReducedWeights(bestModel); 
   if (reduced_cost == 0 && maxsat_formula->getMaximumWeight() > 1) {
@@ -1127,9 +1113,6 @@ void CBLIN::setPBencodings() {
   logPrint("Building new PB");
   initializePBConstraint(reduced_cost); 
 }
-
-
-
 
 void CBLIN::initializePBConstraint(uint64_t rhs) {
   initRelaxation();
@@ -1173,14 +1156,12 @@ void CBLIN::initializePBConstraint(uint64_t rhs) {
   if (enc != NULL)
     delete enc;
   enc = new Encoder(_INCREMENTAL_NONE_, _CARD_MTOTALIZER_,
-                               _AMO_LADDER_, pb_enc);
-
+                               _AMO_LADDER_, _PB_GTE_);
 
   assert(!enc->hasPBEncoding());
   logPrint("Encoding PB with UB: " + std::to_string(rhs) + " obj size " + std::to_string(objFunction.size()));
   enc->encodePB(solver, objFunction, coeffs, rhs);
   logPrint("Encoding Done");        
-
   setCardVars(bound_set_by_prepro);
     
 }
@@ -1301,12 +1282,13 @@ void CBLIN::minimizelinearsolution(vec<lbool> & sol) {
     Lit l = objFunction[i]; 
     assert(var(l) >= isSoft.size() || isSoft[var(l)] );
     if (literalTrueInModel(l, sol)) {
-      // indulges cost
+      // induces cost
       minimizable.push(l);
       skip.push(false);
     }
     else {
       fixed_assumptions.push(~l);
+
     }
   }
 
@@ -1418,25 +1400,26 @@ StatusCode CBLIN::search() {
     weightStrategy = _WEIGHT_NORMAL_;
   }
 
-  logPrint("PMRES ALGORITHM WITH LINEAR SEARCH ");
-  logPrint("PMRES LINEAR STRAT=" + std::to_string(lins));
-  logPrint("PMRES LINEAR DIVISION=" + std::to_string(varyingres));
-  logPrint("PMRES CORE DIVISION=" + std::to_string(varyingresCG));
-  logPrint("PMRES CORE LIMIT (-1 = no limit)=" + std::to_string(timeLimitCores));
-  logPrint("PMRES RELAX BEFORE STRAT =" + std::to_string(relaxBeforeStrat));
-  logPrint("PMRES INCREMENTAL LIN DIVISION =" + std::to_string(incrementalVarres));
-  logPrint("PMRES MINIM =" + std::to_string(minimize_sol));
-  logPrint("PMRES MINIM STRAT =" + std::to_string(minimize_strat));
+
+  logPrint("core-boosted linear search parameters");
+  logPrint("linear_strat=" + std::to_string(lins));
+  logPrint("varying_res=" + std::to_string(varyingres));
+  logPrint("varying_resCG=" + std::to_string(varyingresCG));
+  logPrint("time limit on cg-phase (s)=" + std::to_string(timeLimitCores));
+  logPrint("relax prior to strat =" + std::to_string(relaxBeforeStrat));
+  logPrint("do varying resolution incrementally =" + std::to_string(incrementalVarres));
+  logPrint("minimize the solution =" + std::to_string(minimize_sol));
+  logPrint("minimizing strat =" + std::to_string(minimize_strat));
   
 
   time_start = time(NULL);
 	time_best_solution = time_start;
+  
   StatusCode r = setup(); 
   timeLimitCores += (time(NULL) - time_start);
-  logPrint("PMRES CORE LIMIT (-1 = no limit)=" + std::to_string(timeLimitCores));
 
   if (r == _UNSATISFIABLE_) {
-         logPrint("Error: No solutions for instance");
+         logPrint("Error: hard clauses UNSAT instance");
          return _UNSATISFIABLE_;
   }
   if (r == _OPTIMUM_) {
@@ -1447,7 +1430,6 @@ StatusCode CBLIN::search() {
     printAnswer(_OPTIMUM_);
     return _OPTIMUM_;
   }
-
 
   switch (lins) {
     case 0:
@@ -1461,11 +1443,10 @@ StatusCode CBLIN::search() {
     case 2: 
       return onlyLinearSearch();
       break;
-    
 
     default:
-      printf("c Error: Invalid variation value.\n");
-      printf("s UNKNOWN\n");
+      cout << "c Error: Invalid variation value." << std::endl;
+      cout << "s UNKNOWN" << std::endl;
       exit(_ERROR_);
     }
 }
@@ -1630,12 +1611,6 @@ bool CBLIN::shouldUpdate() {
       bestModel.clear();
       solver->model.copyTo(bestModel);
     }
-/*
-    //HACK
-  uint64_t check_cost = computeCostFromLabels(bestModel);
-  logPrint("Label cost of best in check: " + std::to_string(check_cost));
-  // 
-*/
     return isBetter;
  }
 

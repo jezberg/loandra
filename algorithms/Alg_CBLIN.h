@@ -82,10 +82,9 @@ public:
     inLinSearch = false;
     wrong_eval_cg = 0;
     wrong_eval_lin = 0;
-    pb_enc =  _PB_GTE_;
     delete_before_lin = delsol;
     encoder.setCardEncoding(_CARD_MTOTALIZER_); //TODO JUST UNTIL IT WORKS
-    encoder.setPBEncoding( pb_enc);
+    encoder.setPBEncoding( _PB_GTE_);
     minimize_sol = m;
     minimize_strat = m_strat;
   }
@@ -110,7 +109,6 @@ protected:
   bool delete_before_lin;
   int timeLimitCores; //-1 = noBudget;
   bool relaxBeforeStrat;
-  int pb_enc;
 
   void softsSatisfied();
   void updateCurrentWeight(int strategy); // Updates 'currentWeight'.
@@ -231,15 +229,7 @@ protected:
   vec<Lit> assumptions; // Stores the assumptions to be used in the extraction
                         // of the core.
 
-  vec<int> indexSoftCore; // Indexes of soft clauses that appear in the current core.
-  // Maps the soft clause with the cores where they appears.
-  vec<vec<int>> softMapping;
-  vec<vec<Lit>> relaxationMapping; // Maps the relaxation variables with the
-                                   // soft clause where they appear.
   StatusCode getModelAfterCG();
-
- void improveModel(vec<lbool> &currentModel, vec<lbool> &impr);
-
 
  int wrong_eval_cg;
  int wrong_eval_lin;

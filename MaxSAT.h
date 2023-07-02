@@ -161,6 +161,8 @@ public:
   virtual StatusCode search();      // MaxSAT search.
   virtual void printAnswer(int type); // Print the answer.
 
+  bool hasSolution() {return model.size() > 0;};
+
   // Tests if a MaxSAT formula has a lexicographical optimization criterion.
   bool isBMO(bool cache = true);
 
