@@ -39,10 +39,12 @@
 #include "MaxSATFormula.h"
 #include "MaxTypes.h"
 #include "utils/System.h"
+#include "maxpre2/src/preprocessorinterface.hpp"
 #include <algorithm>
 #include <map>
 #include <set>
 #include <utility>
+#include <iostream>
 #include <vector>
 
 using NSPACE::vec;
@@ -61,6 +63,8 @@ public:
 
   MaxSAT(MaxSATFormula *mx) {
     maxsat_formula = mx;
+    original_labels = NULL; 
+    full_original_scla = NULL;
 
     searchStatus = _UNKNOWN_;
 
@@ -81,10 +85,23 @@ public:
     print_soft = false;
     print = false;
     unsat_soft_file = NULL;
+
+    pif = NULL;
+    prepro_techs = "";
+    preprocess_time_limit = -1;
+    prepro_verb = 0;
+    do_preprocess = false;
+    ub_prepro = UINT64_MAX;
+    gate_extraction = false; 
+    label_matching = true;
+    skip_technique = 20; 
+
   }
 
   MaxSAT() {
     maxsat_formula = NULL;
+    original_labels = NULL; 
+    full_original_scla = NULL;
 
     searchStatus = _UNKNOWN_;
 
@@ -105,11 +122,26 @@ public:
     print_soft = false;
     print = false;
     unsat_soft_file = NULL;
+    
+    pif = NULL;
+    prepro_techs = "";
+    preprocess_time_limit = -1;
+    prepro_verb = 0;
+    do_preprocess = false;
+    ub_prepro = UINT64_MAX;
+    
+    gate_extraction = false; 
+    label_matching = true;
+    skip_technique = 20; 
   }
 
   virtual ~MaxSAT() {
     if (maxsat_formula != NULL)
       delete maxsat_formula;
+    if (original_labels != NULL)
+      delete original_labels;
+    if (full_original_scla != NULL)
+      delete full_original_scla;
   }
 
   void setInitialTime(double initial); // Set initial time.
@@ -145,10 +177,6 @@ public:
   }
 
   void blockModel(Solver *solver);
-
-  // Get bounds methods
-  uint64_t getUB();
-  std::pair<uint64_t, int> getLB();
 
   Soft &getSoftClause(int i) { return maxsat_formula->getSoftClause(i); }
   Hard &getHardClause(int i) { return maxsat_formula->getHardClause(i); }
@@ -200,7 +228,47 @@ public:
     return -(int)v - 1;
   }
 
-protected:
+  
+
+  /** Preprocessing methods
+   * 
+   * 
+   * 
+  */
+  void set_preprocessing_parameters
+        (double preprocess_time_limit = 30, std::string pre_techs = "[u]#[uvsrgVGc]",
+        bool gate_extraction = false, bool label_matching = true, int skip_technique = 20); 
+  void setup_formula();
+    //replaces the internal maxsat_formula with the preprocessed one 
+ 
+ protected:
+  //Preprocessing relatied 
+  MaxSATFormula* preprocessed_formula();
+  MaxSATFormula* standardized_formula();
+
+
+  void reconstruct_model_prepro(vec<lbool> &currentModel, vec<lbool> &reconstructed_out);
+  
+  maxPreprocessor::PreprocessorInterface * pif;
+  std::string prepro_techs;
+  double preprocess_time_limit;
+  int prepro_verb;
+  bool do_preprocess;
+  bool gate_extraction;
+  bool label_matching;
+  int skip_technique; 
+  uint64_t ub_prepro;
+  
+  
+  int lit2Int(Lit l);
+  Lit int2Lit(int l);
+  void ppClause2SolClause(vec<Lit>  & solClause_out, const std::vector<int> & ppClause);
+  void solClause2ppClause(const vec<Lit>  & solClause,  std::vector<int> & ppClause_out);
+
+  
+
+
+
   // Interface with the SAT solver
   //
   Solver *newSATSolver(); // Creates a SAT solver.
@@ -215,6 +283,7 @@ protected:
   // Properties of the MaxSAT formula
   //
   vec<lbool> model; // Stores the best satisfying model.
+  vec<lbool> model_of_original; // stores the best known solution of the non-åreårocessed isntance, obtained by calling reconstruct_model_prepro
   StatusCode searchStatus; // Stores the current state of the formula
 
   // Statistics
@@ -228,9 +297,12 @@ protected:
   //
   uint64_t ubCost; // Upper bound value.
   uint64_t lbCost; // Lower bound value.
+  uint64_t cost_removed_preprocessing; 
   int64_t off_set; // Offset of the objective function for PB solving.
 
   MaxSATFormula *maxsat_formula;
+  MaxSATFormula *original_labels;
+  MaxSATFormula *full_original_scla;
 
   // Others
   // int currentWeight;  // Initialized to the maximum weight of soft clauses.
@@ -246,10 +318,11 @@ protected:
 
   // Utils for model management
   //
+  bool literalTrueInModel(Lit l, vec<lbool> &model);
   void saveModel(vec<lbool> &currentModel); // Saves a Model.
   // Compute the cost of a model.
-  uint64_t computeCostModel(vec<lbool> &currentModel,
-                            uint64_t weight = UINT64_MAX);
+  uint64_t computeCostOriginalClauses(vec<lbool> &reconstructed_model); // checks the soft clauses of the input formula reconstructing solutions if needed
+  uint64_t computeCostObjective(vec<lbool> &premodel); // computes cost from the standardized formula or preprocessed formuals objective funciton.
 
   // Utils for printing
   //
@@ -258,6 +331,7 @@ protected:
   void printStats(); // Print search statistics.
   std::string printSoftClause(int id); // Prints a soft clause.
   void printUnsatisfiedSoftClauses(); // Prints unsatisfied soft clauses.
+  void logPrint(std::string s); // Prints string if verbosity > 0
 
   // Greater than comparator.
   bool static greaterThan(uint64_t i, uint64_t j) { return (i > j); }

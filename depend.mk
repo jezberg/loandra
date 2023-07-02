@@ -46,9 +46,38 @@
   /Users/jezberg/Documents/software/loandra/MaxSATFormula.h \
   /Users/jezberg/Documents/software/loandra/FormulaPB.h \
   /Users/jezberg/Documents/software/loandra/MaxTypes.h \
+  /Users/jezberg/Documents/software/loandra/maxpre2/src/preprocessorinterface.hpp \
+  /Users/jezberg/Documents/software/loandra/maxpre2/src/preprocessor.hpp \
+  /Users/jezberg/Documents/software/loandra/maxpre2/src/global.hpp \
+  /Users/jezberg/Documents/software/loandra/maxpre2/src/preprocessedinstance.hpp \
+  /Users/jezberg/Documents/software/loandra/maxpre2/src/probleminstance.hpp \
+  /Users/jezberg/Documents/software/loandra/maxpre2/src/clause.hpp \
+  /Users/jezberg/Documents/software/loandra/maxpre2/src/touchedlist.hpp \
+  /Users/jezberg/Documents/software/loandra/maxpre2/src/trace.hpp \
+  /Users/jezberg/Documents/software/loandra/maxpre2/src/timer.hpp \
+  /Users/jezberg/Documents/software/loandra/maxpre2/src/log.hpp \
+  /Users/jezberg/Documents/software/loandra/maxpre2/src/AMSLEX.hpp \
+  /Users/jezberg/Documents/software/loandra/maxpre2/src/satsolver/satsolverinterface.hpp \
+  /Users/jezberg/Documents/software/loandra/maxpre2/src/satsolver/glucose3.cpp \
+  /Users/jezberg/Documents/software/loandra/maxpre2/src/satsolver/solvers/glucose3/core/Solver.h \
+  /Users/jezberg/Documents/software/loandra/maxpre2/src/satsolver/solvers/glucose3/core/../core/SolverTypes.h \
+  /Users/jezberg/Documents/software/loandra/maxpre2/src/satsolver/solvers/glucose3/core/../mtl/IntTypes.h \
+  /Users/jezberg/Documents/software/loandra/maxpre2/src/satsolver/solvers/glucose3/core/../mtl/Alg.h \
+  /Users/jezberg/Documents/software/loandra/maxpre2/src/satsolver/solvers/glucose3/core/../mtl/../mtl/Vec.h \
+  /Users/jezberg/Documents/software/loandra/maxpre2/src/satsolver/solvers/glucose3/core/../mtl/../mtl/IntTypes.h \
+  /Users/jezberg/Documents/software/loandra/maxpre2/src/satsolver/solvers/glucose3/core/../mtl/../mtl/XAlloc.h \
+  /Users/jezberg/Documents/software/loandra/maxpre2/src/satsolver/solvers/glucose3/core/../mtl/Vec.h \
+  /Users/jezberg/Documents/software/loandra/maxpre2/src/satsolver/solvers/glucose3/core/../mtl/Map.h \
+  /Users/jezberg/Documents/software/loandra/maxpre2/src/satsolver/solvers/glucose3/core/../mtl/Alloc.h \
+  /Users/jezberg/Documents/software/loandra/maxpre2/src/satsolver/solvers/glucose3/core/../mtl/Heap.h \
+  /Users/jezberg/Documents/software/loandra/maxpre2/src/satsolver/solvers/glucose3/core/../utils/Options.h \
+  /Users/jezberg/Documents/software/loandra/maxpre2/src/satsolver/solvers/glucose3/core/../utils/../mtl/IntTypes.h \
+  /Users/jezberg/Documents/software/loandra/maxpre2/src/satsolver/solvers/glucose3/core/../utils/../mtl/Vec.h \
+  /Users/jezberg/Documents/software/loandra/maxpre2/src/satsolver/solvers/glucose3/core/../core/BoundedQueue.h \
+  /Users/jezberg/Documents/software/loandra/maxpre2/src/satsolver/solvers/glucose3/core/../core/Constants.h \
   /Users/jezberg/Documents/software/loandra/ParserMaxSAT.h \
   /Users/jezberg/Documents/software/loandra/ParserPB.h \
-  /Users/jezberg/Documents/software/loandra/algorithms/Alg_LinearSU.h \
+  /Users/jezberg/Documents/software/loandra/algorithms/Alg_OLL_ITER.h \
   /Users/jezberg/Documents/software/loandra/algorithms/../Encoder.h \
   /Users/jezberg/Documents/software/loandra/encodings/Enc_CNetworks.h \
   /Users/jezberg/Documents/software/loandra/encodings/Encodings.h \
@@ -60,46 +89,9 @@
   /Users/jezberg/Documents/software/loandra/encodings/Enc_Totalizer.h \
   /Users/jezberg/Documents/software/loandra/encodings/Enc_Adder.h \
   /Users/jezberg/Documents/software/loandra/algorithms/../MaxSAT.h \
-  /Users/jezberg/Documents/software/loandra/algorithms/Alg_MSU3.h \
-  /Users/jezberg/Documents/software/loandra/algorithms/Alg_OLL.h \
-  /Users/jezberg/Documents/software/loandra/algorithms/Alg_OLL_ITER.h \
   /Users/jezberg/Documents/software/loandra/algorithms/../maxpre2/src/preprocessorinterface.hpp \
-  /Users/jezberg/Documents/software/loandra/algorithms/../maxpre2/src/preprocessor.hpp \
-  /Users/jezberg/Documents/software/loandra/algorithms/../maxpre2/src/global.hpp \
-  /Users/jezberg/Documents/software/loandra/algorithms/../maxpre2/src/preprocessedinstance.hpp \
-  /Users/jezberg/Documents/software/loandra/algorithms/../maxpre2/src/probleminstance.hpp \
-  /Users/jezberg/Documents/software/loandra/algorithms/../maxpre2/src/clause.hpp \
-  /Users/jezberg/Documents/software/loandra/algorithms/../maxpre2/src/touchedlist.hpp \
-  /Users/jezberg/Documents/software/loandra/algorithms/../maxpre2/src/trace.hpp \
-  /Users/jezberg/Documents/software/loandra/algorithms/../maxpre2/src/timer.hpp \
-  /Users/jezberg/Documents/software/loandra/algorithms/../maxpre2/src/log.hpp \
-  /Users/jezberg/Documents/software/loandra/algorithms/../maxpre2/src/AMSLEX.hpp \
-  /Users/jezberg/Documents/software/loandra/algorithms/../maxpre2/src/satsolver/satsolverinterface.hpp \
-  /Users/jezberg/Documents/software/loandra/algorithms/../maxpre2/src/satsolver/glucose3.cpp \
-  /Users/jezberg/Documents/software/loandra/algorithms/../maxpre2/src/satsolver/solvers/glucose3/core/Solver.h \
-  /Users/jezberg/Documents/software/loandra/algorithms/../maxpre2/src/satsolver/solvers/glucose3/core/../core/SolverTypes.h \
-  /Users/jezberg/Documents/software/loandra/algorithms/../maxpre2/src/satsolver/solvers/glucose3/core/../mtl/IntTypes.h \
-  /Users/jezberg/Documents/software/loandra/algorithms/../maxpre2/src/satsolver/solvers/glucose3/core/../mtl/Alg.h \
-  /Users/jezberg/Documents/software/loandra/algorithms/../maxpre2/src/satsolver/solvers/glucose3/core/../mtl/../mtl/Vec.h \
-  /Users/jezberg/Documents/software/loandra/algorithms/../maxpre2/src/satsolver/solvers/glucose3/core/../mtl/../mtl/IntTypes.h \
-  /Users/jezberg/Documents/software/loandra/algorithms/../maxpre2/src/satsolver/solvers/glucose3/core/../mtl/../mtl/XAlloc.h \
-  /Users/jezberg/Documents/software/loandra/algorithms/../maxpre2/src/satsolver/solvers/glucose3/core/../mtl/Vec.h \
-  /Users/jezberg/Documents/software/loandra/algorithms/../maxpre2/src/satsolver/solvers/glucose3/core/../mtl/Map.h \
-  /Users/jezberg/Documents/software/loandra/algorithms/../maxpre2/src/satsolver/solvers/glucose3/core/../mtl/Alloc.h \
-  /Users/jezberg/Documents/software/loandra/algorithms/../maxpre2/src/satsolver/solvers/glucose3/core/../mtl/Heap.h \
-  /Users/jezberg/Documents/software/loandra/algorithms/../maxpre2/src/satsolver/solvers/glucose3/core/../utils/Options.h \
-  /Users/jezberg/Documents/software/loandra/algorithms/../maxpre2/src/satsolver/solvers/glucose3/core/../utils/../mtl/IntTypes.h \
-  /Users/jezberg/Documents/software/loandra/algorithms/../maxpre2/src/satsolver/solvers/glucose3/core/../utils/../mtl/Vec.h \
-  /Users/jezberg/Documents/software/loandra/algorithms/../maxpre2/src/satsolver/solvers/glucose3/core/../core/BoundedQueue.h \
-  /Users/jezberg/Documents/software/loandra/algorithms/../maxpre2/src/satsolver/solvers/glucose3/core/../core/Constants.h \
-  /Users/jezberg/Documents/software/loandra/algorithms/Alg_PartMSU3.h \
-  /Users/jezberg/Documents/software/loandra/algorithms/../MaxSAT_Partition.h \
-  /Users/jezberg/Documents/software/loandra/graph/Graph.h \
-  /Users/jezberg/Documents/software/loandra/graph/Graph_Communities.h \
-  /opt/homebrew/include/gmpxx.h /opt/homebrew/include/gmp.h \
-  /Users/jezberg/Documents/software/loandra/algorithms/Alg_WBO.h \
-  /Users/jezberg/Documents/software/loandra/algorithms/../MaxTypes.h \
-  /Users/jezberg/Documents/software/loandra/algorithms/Alg_CBLIN.h
+  /Users/jezberg/Documents/software/loandra/algorithms/Alg_CBLIN.h \
+  /Users/jezberg/Documents/software/loandra/algorithms/../MaxTypes.h
 /Users/jezberg/Documents/software/loandra/MaxSAT.o /Users/jezberg/Documents/software/loandra/MaxSAT.or /Users/jezberg/Documents/software/loandra/MaxSAT.od /Users/jezberg/Documents/software/loandra/MaxSAT.op: /Users/jezberg/Documents/software/loandra/MaxSAT.cc \
   /Users/jezberg/Documents/software/loandra/MaxSAT.h \
   /Users/jezberg/Documents/software/loandra/solvers/glucose4.1/core/Solver.h \
@@ -120,7 +112,36 @@
   /Users/jezberg/Documents/software/loandra/MaxSATFormula.h \
   /Users/jezberg/Documents/software/loandra/FormulaPB.h \
   /Users/jezberg/Documents/software/loandra/MaxTypes.h \
-  /Users/jezberg/Documents/software/loandra/solvers/glucose4.1/utils/System.h
+  /Users/jezberg/Documents/software/loandra/solvers/glucose4.1/utils/System.h \
+  /Users/jezberg/Documents/software/loandra/maxpre2/src/preprocessorinterface.hpp \
+  /Users/jezberg/Documents/software/loandra/maxpre2/src/preprocessor.hpp \
+  /Users/jezberg/Documents/software/loandra/maxpre2/src/global.hpp \
+  /Users/jezberg/Documents/software/loandra/maxpre2/src/preprocessedinstance.hpp \
+  /Users/jezberg/Documents/software/loandra/maxpre2/src/probleminstance.hpp \
+  /Users/jezberg/Documents/software/loandra/maxpre2/src/clause.hpp \
+  /Users/jezberg/Documents/software/loandra/maxpre2/src/touchedlist.hpp \
+  /Users/jezberg/Documents/software/loandra/maxpre2/src/trace.hpp \
+  /Users/jezberg/Documents/software/loandra/maxpre2/src/timer.hpp \
+  /Users/jezberg/Documents/software/loandra/maxpre2/src/log.hpp \
+  /Users/jezberg/Documents/software/loandra/maxpre2/src/AMSLEX.hpp \
+  /Users/jezberg/Documents/software/loandra/maxpre2/src/satsolver/satsolverinterface.hpp \
+  /Users/jezberg/Documents/software/loandra/maxpre2/src/satsolver/glucose3.cpp \
+  /Users/jezberg/Documents/software/loandra/maxpre2/src/satsolver/solvers/glucose3/core/Solver.h \
+  /Users/jezberg/Documents/software/loandra/maxpre2/src/satsolver/solvers/glucose3/core/../core/SolverTypes.h \
+  /Users/jezberg/Documents/software/loandra/maxpre2/src/satsolver/solvers/glucose3/core/../mtl/IntTypes.h \
+  /Users/jezberg/Documents/software/loandra/maxpre2/src/satsolver/solvers/glucose3/core/../mtl/Alg.h \
+  /Users/jezberg/Documents/software/loandra/maxpre2/src/satsolver/solvers/glucose3/core/../mtl/../mtl/Vec.h \
+  /Users/jezberg/Documents/software/loandra/maxpre2/src/satsolver/solvers/glucose3/core/../mtl/../mtl/IntTypes.h \
+  /Users/jezberg/Documents/software/loandra/maxpre2/src/satsolver/solvers/glucose3/core/../mtl/../mtl/XAlloc.h \
+  /Users/jezberg/Documents/software/loandra/maxpre2/src/satsolver/solvers/glucose3/core/../mtl/Vec.h \
+  /Users/jezberg/Documents/software/loandra/maxpre2/src/satsolver/solvers/glucose3/core/../mtl/Map.h \
+  /Users/jezberg/Documents/software/loandra/maxpre2/src/satsolver/solvers/glucose3/core/../mtl/Alloc.h \
+  /Users/jezberg/Documents/software/loandra/maxpre2/src/satsolver/solvers/glucose3/core/../mtl/Heap.h \
+  /Users/jezberg/Documents/software/loandra/maxpre2/src/satsolver/solvers/glucose3/core/../utils/Options.h \
+  /Users/jezberg/Documents/software/loandra/maxpre2/src/satsolver/solvers/glucose3/core/../utils/../mtl/IntTypes.h \
+  /Users/jezberg/Documents/software/loandra/maxpre2/src/satsolver/solvers/glucose3/core/../utils/../mtl/Vec.h \
+  /Users/jezberg/Documents/software/loandra/maxpre2/src/satsolver/solvers/glucose3/core/../core/BoundedQueue.h \
+  /Users/jezberg/Documents/software/loandra/maxpre2/src/satsolver/solvers/glucose3/core/../core/Constants.h
 /Users/jezberg/Documents/software/loandra/MaxSATFormula.o /Users/jezberg/Documents/software/loandra/MaxSATFormula.or /Users/jezberg/Documents/software/loandra/MaxSATFormula.od /Users/jezberg/Documents/software/loandra/MaxSATFormula.op: \
   /Users/jezberg/Documents/software/loandra/MaxSATFormula.cc \
   /Users/jezberg/Documents/software/loandra/MaxSATFormula.h \
@@ -141,32 +162,6 @@
   /Users/jezberg/Documents/software/loandra/solvers/glucose4.1/core/SolverStats.h \
   /Users/jezberg/Documents/software/loandra/FormulaPB.h \
   /Users/jezberg/Documents/software/loandra/MaxTypes.h
-/Users/jezberg/Documents/software/loandra/MaxSAT_Partition.o /Users/jezberg/Documents/software/loandra/MaxSAT_Partition.or /Users/jezberg/Documents/software/loandra/MaxSAT_Partition.od /Users/jezberg/Documents/software/loandra/MaxSAT_Partition.op: \
-  /Users/jezberg/Documents/software/loandra/MaxSAT_Partition.cc \
-  /Users/jezberg/Documents/software/loandra/solvers/glucose4.1/core/SolverTypes.h \
-  /Users/jezberg/Documents/software/loandra/solvers/glucose4.1/mtl/IntTypes.h \
-  /Users/jezberg/Documents/software/loandra/solvers/glucose4.1/mtl/Alg.h \
-  /Users/jezberg/Documents/software/loandra/solvers/glucose4.1/mtl/Vec.h \
-  /Users/jezberg/Documents/software/loandra/solvers/glucose4.1/mtl/XAlloc.h \
-  /Users/jezberg/Documents/software/loandra/solvers/glucose4.1/mtl/Map.h \
-  /Users/jezberg/Documents/software/loandra/solvers/glucose4.1/mtl/Alloc.h \
-  /Users/jezberg/Documents/software/loandra/MaxSAT_Partition.h \
-  /Users/jezberg/Documents/software/loandra/MaxSAT.h \
-  /Users/jezberg/Documents/software/loandra/solvers/glucose4.1/core/Solver.h \
-  /Users/jezberg/Documents/software/loandra/solvers/glucose4.1/mtl/Heap.h \
-  /Users/jezberg/Documents/software/loandra/solvers/glucose4.1/utils/Options.h \
-  /Users/jezberg/Documents/software/loandra/solvers/glucose4.1/utils/ParseUtils.h \
-  /Users/jezberg/Documents/software/loandra/solvers/glucose4.1/core/BoundedQueue.h \
-  /Users/jezberg/Documents/software/loandra/solvers/glucose4.1/core/Constants.h \
-  /Users/jezberg/Documents/software/loandra/solvers/glucose4.1/mtl/Clone.h \
-  /Users/jezberg/Documents/software/loandra/solvers/glucose4.1/core/SolverStats.h \
-  /Users/jezberg/Documents/software/loandra/MaxSATFormula.h \
-  /Users/jezberg/Documents/software/loandra/FormulaPB.h \
-  /Users/jezberg/Documents/software/loandra/MaxTypes.h \
-  /Users/jezberg/Documents/software/loandra/solvers/glucose4.1/utils/System.h \
-  /Users/jezberg/Documents/software/loandra/graph/Graph.h \
-  /Users/jezberg/Documents/software/loandra/graph/Graph_Communities.h \
-  /opt/homebrew/include/gmpxx.h /opt/homebrew/include/gmp.h
 /Users/jezberg/Documents/software/loandra/ParserPB.o /Users/jezberg/Documents/software/loandra/ParserPB.or /Users/jezberg/Documents/software/loandra/ParserPB.od /Users/jezberg/Documents/software/loandra/ParserPB.op: /Users/jezberg/Documents/software/loandra/ParserPB.cc \
   /Users/jezberg/Documents/software/loandra/ParserPB.h \
   /Users/jezberg/Documents/software/loandra/MaxSATFormula.h \

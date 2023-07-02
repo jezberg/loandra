@@ -146,55 +146,63 @@ void MaxSAT::saveModel(vec<lbool> &currentModel) {
 
 /*_________________________________________________________________________________________________
   |
-  |  computeCostModel : (currentModel : vec<lbool>&) (weight : int) ->
-  |                     [uint64_t]
+  |  computeCostOriginalClauses : (reconstructed_model : vec<lbool>&)
   |
   |  Description:
   |
-  |    Computes the cost of 'currentModel'. The cost of a model is the sum of
+  |    Computes the cost of 'reconstructed_model'. The cost of a model is the sum of
   |    the weights of the unsatisfied soft clauses.
-  |    If a weight is specified, then it only considers the sum of the weights
-  |    of the unsatisfied soft clauses with the specified weight.
+  |    
+  |    if preprocessing is employed, the model should be reconstructed before this mehtod is invoked. 
   |
   |  Pre-conditions:
   |    * Assumes that 'currentModel' is not empty.
   |
   |________________________________________________________________________________________________@*/
-uint64_t MaxSAT::computeCostModel(vec<lbool> &currentModel, uint64_t weight) {
-
-  assert(currentModel.size() != 0);
+uint64_t MaxSAT::computeCostOriginalClauses(vec<lbool> &reconstructed_model) {
+  
+  assert(reconstructed_model.size() != 0);
   uint64_t currentCost = 0;
 
-  for (int i = 0; i < maxsat_formula->nSoft(); i++) {
+  for (int i = 0; i < full_original_scla->nSoft(); i++) {
     bool unsatisfied = true;
-    for (int j = 0; j < maxsat_formula->getSoftClause(i).clause.size(); j++) {
+    for (int j = 0; j < full_original_scla->getSoftClause(i).clause.size(); j++) {
+      Lit l = full_original_scla->getSoftClause(i).clause[j]; 
 
-      if (weight != UINT64_MAX &&
-          maxsat_formula->getSoftClause(i).weight != weight) {
-        unsatisfied = false;
-        continue;
-      }
-
-      assert(var(maxsat_formula->getSoftClause(i).clause[j]) <
-             currentModel.size());
-      if ((sign(maxsat_formula->getSoftClause(i).clause[j]) &&
-           currentModel[var(maxsat_formula->getSoftClause(i).clause[j])] ==
-               l_False) ||
-          (!sign(maxsat_formula->getSoftClause(i).clause[j]) &&
-           currentModel[var(maxsat_formula->getSoftClause(i).clause[j])] ==
-               l_True)) {
+      assert(var(l) < reconstructed_model.size());
+      if (literalTrueInModel(l, reconstructed_model)) {
         unsatisfied = false;
         break;
       }
     }
 
     if (unsatisfied) {
-      currentCost += maxsat_formula->getSoftClause(i).weight;
+      currentCost += full_original_scla->getSoftClause(i).weight;
     }
   }
-
   return currentCost;
 }
+
+uint64_t MaxSAT::computeCostObjective(vec<lbool> &model) {
+  assert(model.size() != 0);
+  uint64_t currentCost = 0;
+
+  for (int i = 0; i < original_labels->nSoft(); i++) {
+    assert(original_labels->getSoftClause(i).clause.size() == 1); 
+    Lit l = original_labels->getSoftClause(i).clause[0];
+    
+    //// satisfied soft
+    if (literalTrueInModel(l, model)) {
+      continue;
+    }
+    currentCost += original_labels->getSoftClause(i).weight;  
+  } 
+  if (do_preprocess) {
+    currentCost += cost_removed_preprocessing;
+  }
+  return currentCost;
+}
+
 
 /*_________________________________________________________________________________________________
   |
@@ -345,6 +353,12 @@ void MaxSAT::blockModel(Solver *solver) {
   solver->addClause(blocking);
 }
 
+void MaxSAT::logPrint(std::string s) {
+  if (verbosity > 0) {
+    std::cout << "c " << s << std::endl;
+  }
+}
+
 void MaxSAT::printBound(int64_t bound)
 {
   if(!print) return;
@@ -356,34 +370,38 @@ void MaxSAT::printBound(int64_t bound)
 
 // Prints the best satisfying model if it found one.
 void MaxSAT::printModel() {
- 
-
+  
   if (model.size() == 0)
       return;
-  
-
-
-  std::stringstream s;
-  //s << "v ";
 
   assert(maxsat_formula->getFormat() != _FORMAT_PB_); //disabled for now
 
-  printf("v ");
-  for(int i = 0; i < maxsat_formula->nInitialVars(); i++){
-    //for (int i = 0; i < model.size(); i++) {
-    if (model[i] == l_True) {
-     // printf("%d ", i + 1);
-      printf("1");
-    }
-    else {
-     //  printf("%d ", -(i + 1));
-     printf("0");
+  std::stringstream s;
+  s << "v ";
+  if (do_preprocess) {
+    assert(model_of_original.size() > 0);
+    for(int i = 0; i < model_of_original.size(); i++){
+      //for (int i = 0; i < model.size(); i++) {
+      if (model_of_original[i] == l_True) {
+        s << "1";
+      }
+      else {
+        s << "0";
+      }
     }
   }
-  printf("\n");
-  
-
- // printf("%s\n", s.str().c_str()); 
+  else {
+    for(int i = 0; i < maxsat_formula->nInitialVars(); i++){
+      if (model[i] == l_True) {
+        s << "1";
+      }
+      else {
+        s << "0";
+      }
+    }
+  }
+  s << std::endl;
+  std::cout << s.str(); 
 }
 
 std::string MaxSAT::printSoftClause(int id){
@@ -462,6 +480,23 @@ void MaxSAT::printAnswer(int type) {
 
   if (type == _UNKNOWN_ && model.size() > 0)
     type = _SATISFIABLE_;
+  
+  if (do_preprocess && model.size() > 0) {
+    model_of_original.clear(); 
+
+    reconstruct_model_prepro(model, model_of_original);
+    uint64_t newCost = computeCostOriginalClauses(model_of_original);
+
+    if (newCost < ubCost) {
+      logPrint("cost improved after reconstruction");
+    }
+    if (newCost > ubCost) {
+      logPrint("warning: cost worsened after final reconstruct");
+    }
+    ubCost = newCost; 
+  }
+
+  printBound(ubCost);
 
   // store type in member variable
   searchStatus = (StatusCode)type;
@@ -493,125 +528,262 @@ void MaxSAT::printAnswer(int type) {
   }
 }
 
-uint64_t MaxSAT::getUB() {
-  // only works for partial MaxSAT currently
-  Solver *solver = newSATSolver();
+void MaxSAT::set_preprocessing_parameters
+    (double pre_timeLimit, std::string pre_techs, bool gate_extraction_, bool label_matching_,
+    int skip_technique_){
+    //These could be supported by first encoding them into CNF. 
+    assert(maxsat_formula->nCard() == 0);
+    assert(maxsat_formula->nPB() == 0);
 
-  vec<Lit> relaxation_vars;
-  for (int i = 0; i < maxsat_formula->nSoft(); i++) {
-    Lit p = mkLit(maxsat_formula->nVars() + i, false);
-    relaxation_vars.push(p);
-  }
+    do_preprocess = true;
+    assert(pif == NULL);
+    
+    preprocess_time_limit = pre_timeLimit; 
+	  prepro_verb = 0;
+    prepro_techs = pre_techs;
 
-  for (int i = 0; i < maxsat_formula->nVars() + maxsat_formula->nSoft(); i++)
-    newSATVariable(solver);
+    gate_extraction = gate_extraction_;
+    label_matching = label_matching_;
+    skip_technique = skip_technique_;
 
-  for (int i = 0; i < maxsat_formula->nHard(); i++)
-    solver->addClause(maxsat_formula->getHardClause(i).clause);
-
-  vec<Lit> clause;
-  for (int i = 0; i < maxsat_formula->nSoft(); i++) {
-    clause.clear();
-    maxsat_formula->getSoftClause(i).clause.copyTo(clause);
-
-    for (int j = 0; j < maxsat_formula->getSoftClause(i).relaxation_vars.size();
-         j++)
-      clause.push(maxsat_formula->getSoftClause(i).relaxation_vars[j]);
-
-    clause.push(relaxation_vars[i]);
-
-    solver->addClause(clause);
-  }
-
-  int limit = 1000;
-  solver->setConfBudget(limit);
-
-  vec<Lit> dummy;
-  lbool res = searchSATSolver(solver, dummy);
-  if (res == l_True) {
-    uint64_t ub = computeCostModel(solver->model);
-    return ub;
-  } else if (res == l_False) {
-    printAnswer(_UNSATISFIABLE_);
-    exit(_UNSATISFIABLE_);
-  }
-
-  return maxsat_formula->nSoft();
+    logPrint("Preprocessing parameters:"); 
+    logPrint("preprocess_time_limit: " + std::to_string(pre_timeLimit) );
+    logPrint("prepro_verb: " + std::to_string(prepro_verb) );
+    logPrint("prepro_techs: " + pre_techs );
+    logPrint("gate_extraction: " + std::to_string(gate_extraction) );
+    logPrint("label_matching: " + std::to_string(label_matching) );
+    logPrint("skip_technique: " + std::to_string(skip_technique) );
+  
 }
 
-std::pair<uint64_t, int> MaxSAT::getLB() {
-  // only works for partial MaxSAT currently
-  Solver *solver = newSATSolver();
+void MaxSAT::setup_formula() {
+  MaxSATFormula* temp_formula = NULL;
+  full_original_scla = maxsat_formula->copySoftsFromFormula();
 
-  vec<Lit> relaxation_vars;
-  for (int i = 0; i < maxsat_formula->nSoft(); i++) {
-    Lit p = mkLit(maxsat_formula->nVars() + i, false);
-    relaxation_vars.push(p);
+  if (do_preprocess) {
+    temp_formula = preprocessed_formula();  
   }
+  else {   
+    temp_formula = standardized_formula();
+  }
+  delete maxsat_formula;
+  maxsat_formula = temp_formula; 
 
-  for (int i = 0; i < maxsat_formula->nVars() + maxsat_formula->nSoft(); i++)
-    newSATVariable(solver);
+  original_labels = maxsat_formula->copySoftsFromFormula();
+
+}
+
+MaxSATFormula* MaxSAT::standardized_formula() {
+  MaxSATFormula *copymx = new MaxSATFormula();
+  copymx->setInitialVars(maxsat_formula->nVars());
+
+  for (int i = 0; i < maxsat_formula->nVars(); i++)
+    copymx->newVar();
 
   for (int i = 0; i < maxsat_formula->nHard(); i++)
-    solver->addClause(maxsat_formula->getHardClause(i).clause);
+    copymx->addHardClause(maxsat_formula->getHardClause(i).clause);
 
-  vec<Lit> clause;
+  vec<Lit> clause; 
   for (int i = 0; i < maxsat_formula->nSoft(); i++) {
     clause.clear();
     maxsat_formula->getSoftClause(i).clause.copyTo(clause);
-
-    clause.push(relaxation_vars[i]);
-
-    solver->addClause(clause);
+    if (clause.size() != 1){
+      Lit l = copymx->newLiteral();
+      clause.push(l);
+      copymx->addHardClause(clause);
+    
+      clause.clear();
+      clause.push(~l);
+    }  
+    copymx->addSoftClause(maxsat_formula->getSoftClause(i).weight, clause);
   }
 
-  std::map<Lit, int> core; // Mapping between the assumption literal and
-                           // the respective soft clause.
+  copymx->setProblemType(maxsat_formula->getProblemType());
+  copymx->updateSumWeights(maxsat_formula->getSumWeights());
+  copymx->setMaximumWeight(maxsat_formula->getMaximumWeight());
+  copymx->setHardWeight(maxsat_formula->getHardWeight());
+  return copymx;
+}
 
-  for (int i = 0; i < maxsat_formula->nSoft(); i++)
-    core[relaxation_vars[i]] = i;
 
-  int limit = 1000;
-  lbool res = l_False;
-  uint64_t lb = 0;
+MaxSATFormula* MaxSAT::preprocessed_formula() {
 
-  vec<bool> active;
-  active.growTo(relaxation_vars.size(), false);
-  vec<Lit> assumptions;
-  for (int i = 0; i < relaxation_vars.size(); i++) {
-    if (!active[i]) {
-      assumptions.push(~relaxation_vars[i]);
+    int cla_before = maxsat_formula->nSoft() + maxsat_formula->nHard();
+    int softs_before = maxsat_formula->nSoft(); 
+
+    std::vector<std::vector<int> > clauses_out;
+		std::vector<uint64_t> weights_out;
+    std::vector<int> ppClause; 
+
+    uint64_t top_orig = maxsat_formula->getSumWeights();
+
+    for (int i = 0; i < maxsat_formula->nHard(); i++) {
+        solClause2ppClause(maxsat_formula->getHardClause(i).clause, ppClause);
+        assert(maxsat_formula->getHardClause(i).clause.size() == ppClause.size());
+        clauses_out.push_back(ppClause);
+        weights_out.push_back(top_orig);
     }
-  }
 
-  while (res == l_False) {
-    solver->setConfBudget(limit);
-    res = searchSATSolver(solver, assumptions);
-    if (res == l_False) {
-
-      for (int i = 0; i < solver->conflict.size(); i++) {
-        Lit p = solver->conflict[i];
-        if (core.find(p) != core.end()) {
-          assert(!active[core[p]]);
-          active[core[p]] = true;
-        }
-      }
-
-      assumptions.clear();
-      for (int i = 0; i < relaxation_vars.size(); i++) {
-        if (!active[i]) {
-          assumptions.push(~relaxation_vars[i]);
-        }
-      }
-      lb++;
+    for (int i = 0; i < maxsat_formula->nSoft(); i++) {
+        bool isHardened = maxsat_formula->getSoftClause(i).weight == 0;
+        if (!isHardened) {
+          solClause2ppClause(maxsat_formula->getSoftClause(i).clause, ppClause);
+          assert(maxsat_formula->getSoftClause(i).clause.size() == ppClause.size());
+          clauses_out.push_back(ppClause);
+          weights_out.push_back(maxsat_formula->getSoftClause(i).weight);
+        } 
     }
+
+    pif = new maxPreprocessor::PreprocessorInterface (clauses_out, weights_out, top_orig, true);
+		
+    pif->setBVEGateExtraction(gate_extraction);	
+	  pif->setLabelMatching(label_matching);
+	  pif->setSkipTechnique(skip_technique);
+
+    pif->preprocess(prepro_techs, prepro_verb, preprocess_time_limit);
+    ub_prepro = pif->getUpperBound();
+    uint64_t lb = pif->getRemovedWeight();
+    
+
+    cost_removed_preprocessing += pif->getRemovedWeight();
+    lbCost += cost_removed_preprocessing;
+
+    //COLLECT NEW
+    std::vector<std::vector<int> > pre_Clauses; 
+		std::vector<uint64_t> pre_Weights; 
+		std::vector<int> pre_Labels; //will not be used	
+		pif->getInstance(pre_Clauses, pre_Weights, pre_Labels);
+		uint64_t top = pif->getTopWeight();
+
+    MaxSATFormula *copymx = new MaxSATFormula();
+    copymx->setProblemType(maxsat_formula->getProblemType());
+    copymx->setHardWeight(top);
+
+    int init_vars = 0;
+    uint64_t sum_of_weights = 0;
+    uint64_t max_weight = 0;
+ 
+    assert(pre_Weights.size() == pre_Clauses.size());
+    for (int i = 0; i < pre_Weights.size(); i++) {
+        uint64_t cur = pre_Weights[i];
+        if (cur < top) {
+          if (cur > max_weight) {
+            max_weight = cur;
+          }
+          sum_of_weights += cur;
+        }
+        for (int j = 0; j < pre_Clauses[i].size(); j++) {
+          int var = pre_Clauses[i][j];
+
+          if (abs(var) > init_vars) {
+            init_vars = abs(var);
+          }
+        }
+
+    }
+    copymx->setInitialVars(maxsat_formula->nInitialVars());
+    copymx->updateSumWeights(sum_of_weights);
+    copymx->setMaximumWeight(max_weight);
+    
+    for (int i = 0; i < init_vars; i++) {
+      copymx->newVar();
+    }
+
+    vec<Lit> sol_cla;		
+		for (int i = 0; i < pre_Clauses.size(); i++) {
+			sol_cla.clear();				
+			ppClause2SolClause(sol_cla, pre_Clauses[i]);
+			assert(sol_cla.size() == pre_Clauses[i].size());
+						
+			int64_t weight = pre_Weights[i];
+			if (weight < top) {
+				//SOFT 
+				assert(sol_cla.size() == 1);
+				assert(weight > 0);
+        copymx->addSoftClause(weight, sol_cla);
+			}
+			else {
+				copymx->addHardClause(sol_cla);
+			}			
+		}
+      //logPrint("Preprocess time: " + print_timeSinceStart() + " removed weight: "  + std::to_string(cost_removed_preprocessing)) ;
+    
+    logPrint("Preprocessing removed " + std::to_string(cla_before - copymx->nHard()) + " clauses and " + std::to_string(softs_before - copymx->nSoft()) + " softs");
+    logPrint("Preprocessing obtained ub: " + std::to_string(ub_prepro) + " lb " +std::to_string(lb));
+  return copymx;
+}
+
+void MaxSAT::solClause2ppClause(const vec<Lit>  & solClause,  std::vector<int> & ppClause_out) {
+	ppClause_out.clear();
+	for (int i = 0; i < solClause.size(); i++) {
+    Lit l = solClause[i];
+    assert( int2Lit ( lit2Int( l ) ) == l ); 
+		ppClause_out.push_back( lit2Int( l ));
+	}
+}
+
+void MaxSAT::ppClause2SolClause(vec<Lit>  & solClause_out, const std::vector<int> & ppClause) {
+	solClause_out.clear();
+	for (int i = 0; i < ppClause.size(); i++) {
+    int int_var = ppClause[i];
+    assert( int_var == lit2Int ( int2Lit(int_var) )  ) ;
+		solClause_out.push( int2Lit( int_var ));
+	}
+}
+
+int MaxSAT::lit2Int(Lit l) {
+	if (sign(l)) {
+		return  -(var(l) + 1);
+	}
+	else {
+		return var(l) + 1; 
+	}
+}
+
+Lit MaxSAT::int2Lit(int l) {
+	int var = abs(l) - 1;
+	bool sign = l > 0;
+	return sign ? mkLit(var) : ~mkLit(var);
+}
+
+void MaxSAT::reconstruct_model_prepro(vec<lbool> &currentModel, vec<lbool> &reconstructed_out) {
+    time_t rec = time(NULL);
+    std::vector<int> trueLiterals;
+    for (int i = 0 ; i < currentModel.size() ; i++) {
+      Lit l = mkLit(i, true); 
+      if (literalTrueInModel(l, currentModel)) {
+          trueLiterals.push_back(lit2Int(l));
+      }
+      else {
+        assert(literalTrueInModel(~l, currentModel));
+        trueLiterals.push_back(lit2Int(~l));
+      }
+    }
+    std::vector<int> true_model = pif->reconstruct(trueLiterals);
+
+    assert(true_model.size() == full_original_scla->nVars());
+    for (int i = 0; i < true_model.size() ; i ++) {
+      if (true_model[i] > 0) 
+        reconstructed_out.push(l_True);
+      else {
+        reconstructed_out.push(l_False);
+      }
+    }
+    time_t done = time(NULL);
+    logPrint("Reconstruction time: " + std::to_string( done - rec ));
+}
+
+bool MaxSAT::literalTrueInModel(Lit l, vec<lbool> &model) {
+
+  if (var(l) >= model.size()) {
+    logPrint("Error, asking for truthness of literal beyond model size");
+    assert(var(l) < model.size());
   }
 
-  int nb_relaxed = 0;
-  for (int i = 0; i < relaxation_vars.size(); i++) {
-    if (active[i])
-      nb_relaxed++;
+  if (model[var(l)] == l_Undef) {
+    logPrint("Warning, undef literal treated as false");
+    return false;
   }
 
-  return std::make_pair(lb, nb_relaxed);
+  return (sign(l) && model[var(l)] == l_False) || (!sign(l) && model[var(l)] == l_True);
 }

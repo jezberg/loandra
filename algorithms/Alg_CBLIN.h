@@ -44,10 +44,6 @@
 #include <utility>
 #include <iostream>
 
-//preprocessing
-#include "../maxpre2/src/preprocessorinterface.hpp"
-
-
 namespace openwbo {
 
 class CBLIN : public MaxSAT {
@@ -56,8 +52,9 @@ public:
   // NOTE: currently the encoding is not set as an input parameter.
   CBLIN(int verb = _VERBOSITY_MINIMAL_, int weight = _WEIGHT_NORMAL_, 
         int linear = 0, bool delsol = false, bool varR = false, bool varRCG = false,
-        int gcLim = -1, bool r2strat = false, bool incrementalV = false, bool pre = false, bool u = false, bool m = false, int m_strat = 0,
-        std::string prT = "[u]#[uvsrgVGc]", bool dec = false) {
+        int gcLim = -1, bool r2strat = false, bool incrementalV = false, 
+        bool u = false, bool m = false, int m_strat = 0) {
+    
     solver = NULL;
     verbosity = verb;
 
@@ -86,27 +83,20 @@ public:
     wrong_eval_cg = 0;
     wrong_eval_lin = 0;
     pb_enc =  _PB_GTE_;
-    //pb_enc = _PB_ADDER_;
-    do_preprocess = pre;
     delete_before_lin = delsol;
     encoder.setCardEncoding(_CARD_MTOTALIZER_); //TODO JUST UNTIL IT WORKS
     encoder.setPBEncoding( pb_enc);
     minimize_sol = m;
     minimize_strat = m_strat;
-    ub_prepro = UINT64_MAX;
-    prepro_techs = prT;
-    prepro_gap = UINT64_MAX;
-    set_non_descisions = dec; 
-
   }
 
   ~CBLIN() {
+    //Formula is deleted in MaxSAT.cc
     if (solver != NULL)
       delete solver;
   }
 
   StatusCode search(); // WBO search.
-  void printAnswer(int type);
 
 protected:
   // Rebuild MaxSAT solver
@@ -173,7 +163,6 @@ protected:
   void setCardVars(bool prepro);
   
   vec<bool> isSoft; 
-  
 
   std::string print_timeSinceStart();
   time_t timeSinceStart();
@@ -214,10 +203,10 @@ protected:
   // Other
   // Initializes assumptions and core extraction.
   void initAssumptions();
-  void logPrint(std::string s);
+
   void printProgress();
 
-  MaxSATFormula* standardizeMaxSATFormula();
+  
   void addSoftClauseAndAssumptionVar(uint64_t weight, vec<Lit> &clause);
   uint64_t computeCostOfModel(vec<lbool> &currentModel);
 
@@ -247,30 +236,9 @@ protected:
   vec<vec<int>> softMapping;
   vec<vec<Lit>> relaxationMapping; // Maps the relaxation variables with the
                                    // soft clause where they appear.
-  bool literalTrueInModel(Lit l, vec<lbool> &model);
   StatusCode getModelAfterCG();
 
-  ///Preprocessor 
-  maxPreprocessor::PreprocessorInterface * pif;
-  bool do_preprocess;
-  uint64_t ub_prepro;
-  uint64_t prepro_gap;
-  MaxSATFormula * preprocess_formula();
-  std::string prepro_techs;
-
-  int lit2Int(Lit l);
-  Lit int2Lit(int l);
-  void ppClause2SolClause(vec<Lit>  & solClause_out, const std::vector<int> & ppClause);
-  void solClause2ppClause(const vec<Lit>  & solClause,  std::vector<int> & ppClause_out);
-  uint64_t weightRemoved;
-
- void reconstruct(vec<lbool> &currentModel, vec<lbool> &r_out);
  void improveModel(vec<lbool> &currentModel, vec<lbool> &impr);
-
- MaxSATFormula * original_labels;
- MaxSATFormula * full_original_scla;
- uint64_t computeCostFromOriginalClauses(vec<lbool> &premodel);
- uint64_t computeCostFromLabels(vec<lbool> &premodel);
 
 
  int wrong_eval_cg;
@@ -282,7 +250,6 @@ protected:
  int  minimize_strat;
  void minimizelinearsolution( vec<lbool> & sol);
 
- bool set_non_descisions;
 
  
 

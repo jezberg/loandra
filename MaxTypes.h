@@ -32,6 +32,7 @@
 
 namespace openwbo {
 
+//this refers to max clauses allowed in a PB encoding
 #define _MAX_CLAUSES_ 3000000
 
 /** This class catches the exception that is used across the solver to indicate errors */
@@ -43,7 +44,7 @@ public:
   {
     s << file << ":" << line << ":" << msg;
   }
-  const char* getMsg() const {return s.str().c_str();}
+  const std::string getMsg() const {return s.str().c_str();}
 };
 
 enum { _FORMAT_MAXSAT_ = 0, _FORMAT_PB_ };
@@ -51,14 +52,8 @@ enum { _VERBOSITY_MINIMAL_ = 0, _VERBOSITY_SOME_ };
 enum { _UNWEIGHTED_ = 0, _WEIGHTED_ };
 enum { _WEIGHT_NONE_ = 0, _WEIGHT_NORMAL_, _WEIGHT_DIVERSIFY_ };
 enum {
-  _ALGORITHM_WBO_ = 0,
-  _ALGORITHM_CBLIN_,
-  _ALGORITHM_LINEAR_SU_,
-  _ALGORITHM_MSU3_,
-  _ALGORITHM_PART_MSU3_,
-  _ALGORITHM_OLL_,
-  _ALGORITHM_OLLITER_,
-  _ALGORITHM_BEST_
+  _ALGORITHM_CBLIN_ = 0,
+  _ALGORITHM_OLLITER_
 };
 enum StatusCode {
   _SATISFIABLE_ = 10,
@@ -76,7 +71,5 @@ enum {
 enum { _CARD_CNETWORKS_ = 0, _CARD_TOTALIZER_, _CARD_MTOTALIZER_ };
 enum { _AMO_LADDER_ = 0 };
 enum { _PB_SWC_ = 0, _PB_GTE_, _PB_ADDER_ };
-enum { _PART_SEQUENTIAL_ = 0, _PART_SEQUENTIAL_SORTED_, _PART_BINARY_ };
-
 }
 #endif

@@ -55,12 +55,7 @@
 #include "ParserPB.h"
 
 // Algorithms
-#include "algorithms/Alg_LinearSU.h"
-#include "algorithms/Alg_MSU3.h"
-#include "algorithms/Alg_OLL.h"
 #include "algorithms/Alg_OLL_ITER.h"
-#include "algorithms/Alg_PartMSU3.h"
-#include "algorithms/Alg_WBO.h"
 #include "algorithms/Alg_CBLIN.h"
 
 #define VER1_(x) #x
@@ -102,6 +97,8 @@ int main(int argc, char **argv) {
   printf("c Contributors:\t Miguel Neves, Saurabh Joshi, Norbert Manthey, Mikolas Janota\n");
   printf("c Contact:\t open-wbo@sat.inesc-id.pt -- "
          "http://sat.inesc-id.pt/open-wbo/\nc\n");
+  
+  char* _emergencyMemory = new char[16384];
   try {
     NSPACE::setUsageHelp("c USAGE: %s [options] <input-file>\n\n");
 
@@ -126,22 +123,9 @@ int main(int argc, char **argv) {
 
   IntOption algorithm("Open-WBO", "algorithm",
                         "MaxSAT algorithm "
-                        "(0=wbo,1=core-boosted linear search,2=linear-su,3=msu3,4=part-msu3,5=oll,6=oll_iter, 7=best)."
+                        "(0=core-boosted linear search (default),2=oll_iter)."
                         "\n",
-                        1, IntRange(0, 6));
-
-  IntOption partition_strategy("PartMSU3", "partition-strategy",
-                                 "Partition strategy (0=sequential, "
-                                 "1=sequential-sorted, 2=binary)"
-                                 "(only for unsat-based partition algorithms).",
-                                 2, IntRange(0, 2));
-
-  IntOption graph_type("PartMSU3", "graph-type",
-                         "Graph type (0=vig, 1=cvig, 2=res) (only for unsat-"
-                         "based partition algorithms).",
-                         2, IntRange(0, 2));
-
-  BoolOption bmo("Open-WBO", "bmo", "BMO search.\n", true);
+                        0, IntRange(0, 1));
 
   IntOption cardinality("Encodings", "cardinality",
                           "Cardinality encoding (0=cardinality networks, "
@@ -191,8 +175,6 @@ int main(int argc, char **argv) {
 
   BoolOption preprocess("PREPROCESS", "preprocess", "Preprocess the instance prior to search.\n", true);
 
-  
-  
     parseOptions(argc, argv, true);
     std::string preTechs(prT);
 
@@ -200,37 +182,15 @@ int main(int argc, char **argv) {
     MaxSAT *S = NULL;
 
     switch ((int)algorithm) {
-    case _ALGORITHM_WBO_:
-      S = new WBO(verbosity, weight, symmetry, symmetry_lim);
-      break;
     
     case _ALGORITHM_CBLIN_:
       S = new CBLIN(verbosity, weight, pmreslin, pmreslin_delsol, pmreslin_varres, pmreslin_varresCG, 
-                    pmreslin_cgLim, pmreslin_relax2strat, pmreslin_incvarres, preprocess, prepro_rec, 
-                    prepro_min,prepro_min_strat,preTechs);
-      break;
-
-    case _ALGORITHM_LINEAR_SU_:
-      S = new LinearSU(verbosity, bmo, cardinality, pb);
-      break;
-
-    case _ALGORITHM_PART_MSU3_:
-      S = new PartMSU3(verbosity, partition_strategy, graph_type, cardinality);
-      break;
-
-    case _ALGORITHM_MSU3_:
-      S = new MSU3(verbosity);
-      break;
-
-    case _ALGORITHM_OLL_:
-      S = new OLL(verbosity, cardinality);
+                    pmreslin_cgLim, pmreslin_relax2strat, pmreslin_incvarres, prepro_rec, 
+                    prepro_min,prepro_min_strat);
       break;
     
     case _ALGORITHM_OLLITER_:
       S = new OLL_ITER(verbosity, cardinality, preprocess, prepro_rec);
-      break;
-
-    case _ALGORITHM_BEST_:
       break;
 
     default:
@@ -317,46 +277,36 @@ int main(int argc, char **argv) {
     printf("c |                                                                "
            "                                       |\n");
 
-    if (algorithm == _ALGORITHM_BEST_) {
-      assert(S == NULL);
-
-      if (maxsat_formula->getProblemType() == _UNWEIGHTED_) {
-        // Unweighted
-        S = new PartMSU3(_VERBOSITY_MINIMAL_, _PART_BINARY_, RES_GRAPH,
-                         cardinality);
-        S->loadFormula(maxsat_formula);
-
-        if (((PartMSU3 *)S)->chooseAlgorithm() == _ALGORITHM_MSU3_) {
-          // FIXME: possible memory leak
-          S = new MSU3(_VERBOSITY_MINIMAL_);
-        }
-
-      } else {
-        // Weighted
-        S = new OLL(_VERBOSITY_MINIMAL_, cardinality);
-      }
-    }
-
     if (S->getMaxSATFormula() == NULL)
       S->loadFormula(maxsat_formula);
     S->setPrintModel(printmodel);
     S->setPrintSoft((const char *)printsoft);
     S->setInitialTime(initial_time);
+    
     mxsolver = S;
     mxsolver->setPrint(true);
-
+    if (preprocess) {
+      //TODO abstract all of these into parameters: timelimit, techs, gate extraction, label matching, skiptechnique.
+      mxsolver->set_preprocessing_parameters(30, preTechs, false, true, 20);
+    }
+    mxsolver->setup_formula();
     int ret = (int)mxsolver->search();
-    delete S;
+    delete mxsolver; // S
     return ret;
   } catch (OutOfMemoryException &) {
     sleep(1);
-    printf("c Error: Out of memory.\n");
-    printf("s UNKNOWN\n");
+    delete[] _emergencyMemory;
+    //TODO print the solution here.
+    std::cout << "c Error: Out of memory." << std::endl;
+    std::cout << "s UNKNOWN" << std::endl;
     exit(_ERROR_);
   } catch(MaxSATException &e) {
     sleep(1);
-    printf("c Error: MaxSAT Exception: %s\n", e.getMsg());
-    printf("s UNKNOWN\n");
+    delete[] _emergencyMemory;
+    //TODO print the solution
+    std::cout << "c Error: MaxSAT Exception: %s" << std::endl;
+    std::cout << e.getMsg() << std::endl;
+    std::cout <<  "s UNKNOWN" << std::endl;
     exit(_ERROR_);
   }
 }

@@ -75,17 +75,6 @@ Solver *CBLIN::updateSolver() {
   
   clauses_added = maxsat_formula->nHard();
 
-  if (set_non_descisions) {
-    for (int i = clauses_added; i < maxsat_formula->nSoft(); i++) {
-      assert(maxsat_formula->getSoftClause(i).clause.size() == 1);
-      
-      if (maxsat_formula->getSoftClause(i).weight == 0) continue; 
-
-      Lit l = maxsat_formula->getSoftClause(i).clause[0];
-      solver->setDecisionVar(var(l), false);
-    }
-  }
-
   softs_added = maxsat_formula->nSoft();
 
 
@@ -529,11 +518,6 @@ void CBLIN::relaxCore(vec<Lit> &conflict, uint64_t weightCore) {
     maxsat_formula->getSoftClause(indexSoft).weight -= weightCore;
 
     if(maxsat_formula->getSoftClause(indexSoft).weight == 0) {
-      if (set_non_descisions) {
-        Lit l = maxsat_formula->getSoftClause(indexSoft).assumption_var;
-        assert(var(l) < solver->nVars());
-        solver->setDecisionVar(var(l), true);
-      }
       maxsat_formula->getSoftClause(indexSoft).assumption_var = lit_Undef;
       num_hardened++;
     }
@@ -710,23 +694,11 @@ StatusCode CBLIN::unsatSearch() {
   |________________________________________________________________________________________________@*/
   StatusCode CBLIN::setup() {
 
-      full_original_scla = maxsat_formula->copySoftsFromFormula();
+      if (maxsat_formula->nSoft() == 0) {
+          return _OPTIMUM_; //Solved by preprocessing
+      }  
       
-
-
-      if (do_preprocess) {
-        logPrint("Preprocess: hard clauses before: " + std::to_string(maxsat_formula->nSoft() + maxsat_formula->nHard()));
-        logPrint("Preprocess soft literals before: " + std::to_string(maxsat_formula->nSoft()));
-        maxsat_formula = preprocess_formula();
-        logPrint("Preprocess time: " + print_timeSinceStart() + " removed weight: "  + std::to_string(weightRemoved)) ;
-        logPrint("Preprocess hard clauses after: " + std::to_string(maxsat_formula->nHard()) + "soft literals after: " + std::to_string(maxsat_formula->nSoft()));
-        if (maxsat_formula->nSoft() == 0) {
-          return _OPTIMUM_;
-        }   
-      }
-      else {   
-       maxsat_formula = standardizeMaxSATFormula();
-      }
+      // TODO does not work now
 
       while (isSoft.size() < maxsat_formula->nVars()) isSoft.push(false);
       for (int i = 0; i < maxsat_formula->nSoft(); i++)  {
@@ -735,7 +707,6 @@ StatusCode CBLIN::unsatSearch() {
           assert(var(l) < isSoft.size());
           isSoft[var(l)] = true; 
       }
-      original_labels = maxsat_formula->copySoftsFromFormula();
       
       initAssumptions();  
       solver = newSATSolver();
@@ -743,10 +714,6 @@ StatusCode CBLIN::unsatSearch() {
       StatusCode rs = unsatSearch();
       maxw_nothardened = maxsat_formula->getSumWeights();
       
-      
-      
-      
-
       if(varyingresCG) {
         initializeDivisionFactor(varyingresCG);
       }
@@ -1184,13 +1151,17 @@ void CBLIN::initializePBConstraint(uint64_t rhs) {
         rhs = red_gap;
       }
   }
-  bool prepro_set = false;
-  uint64_t red_p_gap = prepro_gap / maxsat_formula->getMaximumWeight();
-  logPrint("Prepro gap: " + std::to_string(red_p_gap));
-  if (rhs > red_p_gap) {
-      logPrint("Setting rhs to prepro gap " + std::to_string(red_p_gap));
-      rhs = red_p_gap;
-      prepro_set = true;
+  
+  // if the bound is obtained from preprocessing, we can not set variables in encoding according to a model. 
+  bool bound_set_by_prepro = false;
+  if (do_preprocess) {
+
+    uint64_t red_p_gap = (ub_prepro - lbCost) / maxsat_formula->getMaximumWeight();
+    if (rhs > red_p_gap) {
+        logPrint("reduced prepro gap: " + std::to_string(red_p_gap) + " better than computed rhs " + std::to_string(rhs));
+        rhs = red_p_gap;
+        bound_set_by_prepro = true;
+    }
   }
 
   if (rhs == 0 && maxsat_formula->getMaximumWeight() > 1) {
@@ -1210,7 +1181,7 @@ void CBLIN::initializePBConstraint(uint64_t rhs) {
   enc->encodePB(solver, objFunction, coeffs, rhs);
   logPrint("Encoding Done");        
 
-  setCardVars(prepro_set);
+  setCardVars(bound_set_by_prepro);
     
 }
 
@@ -1471,7 +1442,7 @@ StatusCode CBLIN::search() {
   if (r == _OPTIMUM_) {
     assert(pif != NULL);
     logPrint("Solved by preprocessing");
-    ubCost = weightRemoved;
+    ubCost = cost_removed_preprocessing;
     printBound(ubCost);
     printAnswer(_OPTIMUM_);
     return _OPTIMUM_;
@@ -1532,11 +1503,7 @@ void CBLIN::initAssumptions() {
   }
 }
 
-void CBLIN::logPrint(std::string s) {
-  if (verbosity > 0) {
-    std::cout << "c " << s << std::endl;
-  }
-}
+
 
 void CBLIN::printProgress() {
   std::string prefix = inLinSearch ? "LIN " : "CG ";
@@ -1555,37 +1522,6 @@ time_t CBLIN::timeSinceStart() {
 time_t CBLIN::timeSincePrepro() {
   time_t cur = time(NULL);
   return cur - time_prepro;
-}
-
-MaxSATFormula *CBLIN::standardizeMaxSATFormula() {
-  MaxSATFormula *copymx = new MaxSATFormula();
-  copymx->setInitialVars(maxsat_formula->nVars());
-
-  for (int i = 0; i < maxsat_formula->nVars(); i++)
-    copymx->newVar();
-
-  for (int i = 0; i < maxsat_formula->nHard(); i++)
-    copymx->addHardClause(maxsat_formula->getHardClause(i).clause);
-
-  vec<Lit> clause; 
-  for (int i = 0; i < maxsat_formula->nSoft(); i++) {
-    clause.clear();
-    maxsat_formula->getSoftClause(i).clause.copyTo(clause);
-    Lit l = copymx->newLiteral();
-    clause.push(l);
-    copymx->addHardClause(clause);
-    
-    clause.clear();
-    clause.push(~l);
-    copymx->addSoftClause(maxsat_formula->getSoftClause(i).weight, clause);
-  }
-
-  copymx->setProblemType(maxsat_formula->getProblemType());
-  copymx->updateSumWeights(maxsat_formula->getSumWeights());
-  copymx->setMaximumWeight(maxsat_formula->getMaximumWeight());
-  copymx->setHardWeight(maxsat_formula->getHardWeight());
-
-  return copymx;
 }
 
 void CBLIN::addSoftClauseAndAssumptionVar(uint64_t weight, vec<Lit> &clause) {
@@ -1611,9 +1547,12 @@ uint64_t CBLIN::computeCostOfModel(vec<lbool> &currentModel) {
   
   assert(currentModel.size() != 0);
   uint64_t formula_cost = 0;
-  uint64_t label_cost = computeCostFromLabels(currentModel);
-  if (reconstruct_sol && reconstruct_iter) 
-    formula_cost = computeCostFromOriginalClauses(currentModel);
+  uint64_t label_cost = computeCostObjective(currentModel);
+  if (reconstruct_sol && reconstruct_iter) {
+    vec<lbool> reconstructed;
+    reconstruct_model_prepro(currentModel, reconstructed);
+    formula_cost = computeCostOriginalClauses(reconstructed);
+  }
   /*
   if (minimize_sol && !inLinSearch) {
     logPrint("Still in CG, reconstructing");
@@ -1637,22 +1576,6 @@ uint64_t CBLIN::computeCostOfModel(vec<lbool> &currentModel) {
     return label_cost;
   }
 }
-
-bool CBLIN::literalTrueInModel(Lit l, vec<lbool> &model) {
-
-  if (var(l) >= model.size()) {
-    logPrint("Error, asking for truthness of literal beyond model size");
-    assert(var(l) < model.size());
-  }
-
-  if (model[var(l)] == l_Undef) {
-    assert(set_non_descisions);
-    return false;
-  }
-
-  return (sign(l) && model[var(l)] == l_False) || (!sign(l) && model[var(l)] == l_True);
-}
-
 
 
 Solver * CBLIN::resetSolver() {
@@ -1718,7 +1641,6 @@ bool CBLIN::shouldUpdate() {
 
  void CBLIN::checkGap() {
    uint64_t currentGap = ubCost - lbCost;
-   uint64_t currentPGap = ub_prepro - lbCost;
    if (currentGap < known_gap) {
      known_gap = currentGap;
      if (inLinSearch)
@@ -1726,314 +1648,10 @@ bool CBLIN::shouldUpdate() {
      else 
         logPrint("CG GAP: " + std::to_string(known_gap) + " T " + print_timeSinceStart());
    }
-
-   if (currentPGap  < prepro_gap) {
-     prepro_gap = currentPGap;
-   }
  }
 
-/************************************************************************************************
- //
- // Preprocessing related
- //
- ************************************************************************************************/
 
 
- ///ONLY CALL IN THE BEGINNING, ASSUMES NOT NORMALIZED
-MaxSATFormula *CBLIN::preprocess_formula() {
-    assert(maxsat_formula->nCard() == 0);
-    assert(maxsat_formula->nPB() == 0);
-
-    std::vector<std::vector<int> > clauses_out;
-		std::vector<uint64_t> weights_out;
-		
-    uint64_t top_orig = maxsat_formula->getSumWeights();
-
-    std::vector<int> ppClause; 
-
-    for (int i = 0; i < maxsat_formula->nHard(); i++) {
-        solClause2ppClause(maxsat_formula->getHardClause(i).clause, ppClause);
-        assert(maxsat_formula->getHardClause(i).clause.size() == ppClause.size());
-        clauses_out.push_back(ppClause);
-        weights_out.push_back(top_orig);
-    }
-
-    for (int i = 0; i < maxsat_formula->nSoft(); i++) {
-        bool isHardened = maxsat_formula->getSoftClause(i).weight == 0;
-        if (!isHardened) {
-          solClause2ppClause(maxsat_formula->getSoftClause(i).clause, ppClause);
-          assert(maxsat_formula->getSoftClause(i).clause.size() == ppClause.size());
-          clauses_out.push_back(ppClause);
-          weights_out.push_back(maxsat_formula->getSoftClause(i).weight);
-        } 
-    }
-    
-    if (pif != NULL) {
-      delete pif; //TODO models when we need both is tricky
-    }
-
-		pif = new maxPreprocessor::PreprocessorInterface (clauses_out, weights_out, top_orig, true);
-
-    double timeLimit = 30;
-	  int verb = 0;
-
-	  pif->setBVEGateExtraction(false);	
-	  pif->setLabelMatching(true);
-	  pif->setSkipTechnique(20);
-   
-
-    logPrint("Preprocess Techs: " + prepro_techs);
-
-		pif->preprocess(prepro_techs, verb, timeLimit);
-    
-    ub_prepro = pif->getUpperBound();
-    uint64_t lb = pif->getRemovedWeight();
-    logPrint("Preprocess ub: " + std::to_string(ub_prepro) + " lb " +std::to_string(lb));
-    //pif->printInstance(std::cout, 1);
-
-    weightRemoved += pif->getRemovedWeight();
-    lbCost += weightRemoved;
-
-    //COLLECT NEW
-    std::vector<std::vector<int> > pre_Clauses; 
-		std::vector<uint64_t> pre_Weights; 
-		std::vector<int> pre_Labels; //will not be used	
-		pif->getInstance(pre_Clauses, pre_Weights, pre_Labels);
-		uint64_t top = pif->getTopWeight();
-
-    MaxSATFormula *copymx = new MaxSATFormula();
-    copymx->setProblemType(maxsat_formula->getProblemType());
-    copymx->setHardWeight(top);
-
-    int init_vars = 0;
-    uint64_t sum_of_weights = 0;
-    uint64_t max_weight = 0;
- 
-    assert(pre_Weights.size() == pre_Clauses.size());
-    for (int i = 0; i < pre_Weights.size(); i++) {
-        uint64_t cur = pre_Weights[i];
-        if (cur < top) {
-          if (cur > max_weight) {
-            max_weight = cur;
-          }
-          sum_of_weights += cur;
-        }
-        for (int j = 0; j < pre_Clauses[i].size(); j++) {
-          int var = pre_Clauses[i][j];
-
-          if (abs(var) > init_vars) {
-            init_vars = abs(var);
-          }
-        }
-
-    }
-    copymx->setInitialVars(maxsat_formula->nInitialVars());
-    copymx->updateSumWeights(sum_of_weights);
-    copymx->setMaximumWeight(max_weight);
-    
-    for (int i = 0; i < init_vars; i++) {
-      copymx->newVar();
-    }
-
-    vec<Lit> sol_cla;		
-		for (int i = 0; i < pre_Clauses.size(); i++) {
-			sol_cla.clear();				
-			ppClause2SolClause(sol_cla, pre_Clauses[i]);
-			assert(sol_cla.size() == pre_Clauses[i].size());
-						
-			int64_t weight = pre_Weights[i];
-			if (weight < top) {
-				//SOFT 
-				assert(sol_cla.size() == 1);
-				assert(weight > 0);
-        copymx->addSoftClause(weight, sol_cla);
-			}
-			else {
-				copymx->addHardClause(sol_cla);
-			}			
-		}
-    
-  return copymx;
-}
-
-
-void CBLIN::solClause2ppClause(const vec<Lit>  & solClause,  std::vector<int> & ppClause_out) {
-	ppClause_out.clear();
-	for (int i = 0; i < solClause.size(); i++) {
-    Lit l = solClause[i];
-    assert( int2Lit ( lit2Int( l ) ) == l ); 
-		ppClause_out.push_back( lit2Int( l ));
-	}
-}
-
-void CBLIN::ppClause2SolClause(vec<Lit>  & solClause_out, const std::vector<int> & ppClause) {
-	solClause_out.clear();
-	for (int i = 0; i < ppClause.size(); i++) {
-    int int_var = ppClause[i];
-
-    assert( int_var == lit2Int ( int2Lit(int_var) )  ) ;
-
-		solClause_out.push( int2Lit( int_var ));
-	}
-}
-
-int CBLIN::lit2Int(Lit l) {
-	if (sign(l)) {
-		return  -(var(l) + 1);
-	}
-	else {
-		return   var(l) + 1; 
-	}
-}
-
-Lit CBLIN::int2Lit(int l) {
-	int var = abs(l) - 1;
-	bool sign = l > 0;
-	return sign ? mkLit(var) : ~mkLit(var);
-}
-
-void CBLIN::reconstruct(vec<lbool> &currentModel, vec<lbool> &reconstructed_out) {
-    time_t rec = time(NULL);
-
-    std::vector<int> trueLiterals;
-    for (int i = 0 ; i < currentModel.size() ; i++) {
-      Lit l = mkLit(i, true); 
-      if (literalTrueInModel(l, currentModel)) {
-          trueLiterals.push_back(lit2Int(l));
-      }
-      else {
-        assert(literalTrueInModel(~l, currentModel));
-        trueLiterals.push_back(lit2Int(~l));
-      }
-    }
-    std::vector<int> true_model = pif->reconstruct(trueLiterals);
-
-    assert(true_model.size() == full_original_scla->nVars());
-    for (int i = 0; i < true_model.size() ; i ++) {
-      if (true_model[i] > 0) 
-        reconstructed_out.push(l_True);
-      else {
-        reconstructed_out.push(l_False);
-      }
-    }
-    time_t done = time(NULL);
-    logPrint("Reconstruction time: " + std::to_string( done - rec ));
-}
-
- //TODO improve controll flow.
- uint64_t CBLIN::computeCostFromOriginalClauses(vec<lbool> &premodel) {
-  
-  assert(premodel.size() != 0);
-  uint64_t currentCost = 0;
-
-  vec<lbool> currentModel;
-  if (do_preprocess)
-    reconstruct(premodel, currentModel);
-  else 
-    premodel.copyTo(currentModel);
-
-  for (int i = 0; i < full_original_scla->nSoft(); i++) {
-    bool unsatisfied = true;
-    for (int j = 0; j < full_original_scla->getSoftClause(i).clause.size(); j++) {
-      Lit l = full_original_scla->getSoftClause(i).clause[j]; 
-
-      assert(var(l) < currentModel.size());
-      if (literalTrueInModel(l, currentModel)) {
-        unsatisfied = false;
-        break;
-      }
-    }
-
-    if (unsatisfied) {
-      currentCost += full_original_scla->getSoftClause(i).weight;
-    }
-  }
-  return currentCost;
-}
-
-uint64_t CBLIN::computeCostFromLabels(vec<lbool> &premodel) {
-  assert(premodel.size() != 0);
-  uint64_t currentCost = 0;
-  //uint64_t sanity = 0;
-
-  for (int i = 0; i < original_labels->nSoft(); i++) {
-    assert(original_labels->getSoftClause(i).clause.size() == 1); 
-    Lit l = original_labels->getSoftClause(i).clause[0];
-    
-    //// satisfied soft
-    if (literalTrueInModel(l, premodel)) {
-      continue;
-    }
-    currentCost += original_labels->getSoftClause(i).weight;
-
-   
-  } 
-  if (do_preprocess) {
-    currentCost += weightRemoved;
-  }
-  return currentCost;
-}
-
-void CBLIN::printAnswer(int type) {  
-	
-  if (type == _UNKNOWN_ && model.size() > 0)
-    type = _SATISFIABLE_;
-  
-  bool should_rec = (type == _SATISFIABLE_) ||  (type == _OPTIMUM_);  
-  
-if (should_rec && do_preprocess && !reconstruct_sol) {
-    logPrint("Reconstructing in print answer");
-
-/*
-    //HACK
-  uint64_t check_cost = computeCostFromLabels(bestModel);
-  logPrint("Label cost of best in rec: " + std::to_string(check_cost));
-  // 
-*/
-    vec<lbool> currentModel;
-    reconstruct(bestModel, currentModel);
-    bestModel.clear(); 
-    currentModel.copyTo(bestModel);
-    saveModel(bestModel);
-    do_preprocess = false; 
-    uint64_t newCost = computeCostFromOriginalClauses(bestModel);
-
-    logPrint("new cost: " + std::to_string(newCost));
-
-    if (newCost < ubCost) {
-      logPrint("Improvement in final");
-      printBound(newCost);
-    }
-    if (newCost > ubCost) {
-      printf("c error, solution got worse");
-      printBound(newCost);
-    }
-  }
-
-  // store type in member variable
-  if(!print) return;
-
-  switch (type) {
-  case _SATISFIABLE_:
-    printf("s SATISFIABLE\n");
-    if (print_model)
-      printModel();
-    break;
-  case _OPTIMUM_:
-    printf("s OPTIMUM FOUND\n");
-    if (print_model)
-      printModel();
-    break;
-  case _UNSATISFIABLE_:
-    printf("s UNSATISFIABLE\n");
-    break;
-  case _UNKNOWN_:
-    printf("s UNKNOWN\n");
-    break;
-  default:
-    printf("c Error: Invalid answer type.\n");
-  }
-}
 
 
 
