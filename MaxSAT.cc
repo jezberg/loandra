@@ -618,7 +618,7 @@ MaxSATFormula* MaxSAT::preprocessed_formula() {
 		std::vector<uint64_t> weights_out;
     std::vector<int> ppClause; 
 
-    uint64_t top_orig = maxsat_formula->getSumWeights();
+    uint64_t top_orig = maxsat_formula->getSumWeights() + 1;
 
     for (int i = 0; i < maxsat_formula->nHard(); i++) {
         solClause2ppClause(maxsat_formula->getHardClause(i).clause, ppClause);
@@ -637,7 +637,7 @@ MaxSATFormula* MaxSAT::preprocessed_formula() {
         } 
     }
 
-    pif = new maxPreprocessor::PreprocessorInterface (clauses_out, weights_out, top_orig, true);
+    pif = new maxPreprocessor::PreprocessorInterface (clauses_out, weights_out, top_orig, false);
 		
     pif->setBVEGateExtraction(gate_extraction);	
 	  pif->setLabelMatching(label_matching);
@@ -684,13 +684,14 @@ MaxSATFormula* MaxSAT::preprocessed_formula() {
         }
         for (int j = 0; j < pre_Clauses[i].size(); j++) {
           int var = pre_Clauses[i][j];
-
+          
           if (abs(var) > init_vars) {
             init_vars = abs(var);
           }
         }
 
     }
+
     copymx->setInitialVars(init_vars);
     copymx->updateSumWeights(sum_of_weights);
     copymx->setMaximumWeight(max_weight);
@@ -711,6 +712,7 @@ MaxSATFormula* MaxSAT::preprocessed_formula() {
 				//SOFT 
 				assert(sol_cla.size() == 1);
 				assert(weight > 0);
+
         if (weight == cost_removed_preprocessing && forced_hards.find(abs(pre_Clauses[i][0])) != forced_hards.end() && num_skipped == 0) {
            num_skipped++; 
         }
@@ -722,7 +724,7 @@ MaxSATFormula* MaxSAT::preprocessed_formula() {
 				copymx->addHardClause(sol_cla);
 			}			
 		}
-    logPrint("Found: " + std::to_string(num_skipped) + " to skip init vars " + std::to_string(init_vars) ) ;
+    //logPrint("Preprocess removed weight: "  + std::to_string(cost_removed_preprocessing) + " num_skipped " + std::to_string(num_skipped))  ;
     assert(cost_removed_preprocessing == 0 || num_skipped == 1);
 
       //logPrint("Preprocess time: " + print_timeSinceStart() + " removed weight: "  + std::to_string(cost_removed_preprocessing)) ;

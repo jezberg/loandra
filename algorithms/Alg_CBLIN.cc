@@ -592,6 +592,9 @@ StatusCode CBLIN::unsatSearch() {
 
 
   solver = updateSolver();
+  
+  logPrint("Unsat search: nvars " + std::to_string(solver->nVars()) + " clauses " + std::to_string(solver->nClauses()));
+  logPrint("Unsat search: vars " + std::to_string(maxsat_formula->nVars()) +  " hards " + std::to_string(maxsat_formula->nHard()) + " softs " + std::to_string(maxsat_formula->nSoft()));
 
   softsSatisfied();
   lbool res = searchSATSolver(solver, assumptions);
@@ -710,8 +713,11 @@ StatusCode CBLIN::unsatSearch() {
       initAssumptions();  
       solver = newSATSolver();
       solver->setSolutionBasedPhaseSaving(false);
+      logPrint("Before UNSAT");
       StatusCode rs = unsatSearch();
       if (rs == _UNSATISFIABLE_) return rs;
+      logPrint("After UNSAT");
+      
       //Here we know that the formula is SAT
       if (maxsat_formula->nSoft() == 0) {
           return _OPTIMUM_; //Solved by preprocessing
