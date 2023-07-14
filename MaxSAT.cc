@@ -161,7 +161,7 @@ void MaxSAT::saveModel(vec<lbool> &currentModel) {
   |________________________________________________________________________________________________@*/
 uint64_t MaxSAT::computeCostOriginalClauses(vec<lbool> &reconstructed_model) {
   
-  assert(reconstructed_model.size() != 0);
+  assert(reconstructed_model.size() != 0 || full_original_scla->nSoft() == 0);
   uint64_t currentCost = 0;
 
   for (int i = 0; i < full_original_scla->nSoft(); i++) {
@@ -486,7 +486,8 @@ void MaxSAT::printAnswer(int type) {
      return;
   }
 
-  if (do_preprocess && model.size() > 0) {
+  if (do_preprocess) {
+    assert(maxsat_formula->nHard() == 0 || model.size() > 0);
     model_of_original.clear(); 
 
     reconstruct_model_prepro(model, model_of_original);

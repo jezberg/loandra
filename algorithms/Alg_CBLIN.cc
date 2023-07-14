@@ -693,11 +693,11 @@ StatusCode CBLIN::unsatSearch() {
   |________________________________________________________________________________________________@*/
   StatusCode CBLIN::setup() {
 
-      if (maxsat_formula->nSoft() == 0) {
-          return _OPTIMUM_; //Solved by preprocessing
-      }  
-      
       // TODO does not work now
+      if (maxsat_formula->nHard() == 0) {
+        return _OPTIMUM_;
+      }
+
 
       while (isSoft.size() < maxsat_formula->nVars()) isSoft.push(false);
       for (int i = 0; i < maxsat_formula->nSoft(); i++)  {
@@ -712,6 +712,10 @@ StatusCode CBLIN::unsatSearch() {
       solver->setSolutionBasedPhaseSaving(false);
       StatusCode rs = unsatSearch();
       if (rs == _UNSATISFIABLE_) return rs;
+      //Here we know that the formula is SAT
+      if (maxsat_formula->nSoft() == 0) {
+          return _OPTIMUM_; //Solved by preprocessing
+      }  
 
       maxw_nothardened = maxsat_formula->getSumWeights();
       
@@ -1579,7 +1583,7 @@ int CBLIN::nRealSoft() {
 
 uint64_t CBLIN::computeCostOfModel(vec<lbool> &currentModel) {
   
-  assert(currentModel.size() != 0);
+  assert(currentModel.size() != 0 || maxsat_formula->nHard() == 0);
   uint64_t formula_cost = 0;
   uint64_t label_cost = computeCostObjective(currentModel);
   if (reconstruct_sol && reconstruct_iter) {
