@@ -191,6 +191,14 @@ protected:
   vec<uint64_t> coeffs; // Coefficients of the literals that are used in the
                         // constraint that excludes models.
  
+  //DEBUGGING
+  vec<Lit> objFunction_;
+  vec<uint64_t> coeffs_;
+  uint64_t rhs_;
+  uint64_t num_literals_;
+
+
+
   vec<Lit> minimisable_lits;
  
   void savePhase();
@@ -241,7 +249,7 @@ protected:
  void minimizelinearsolution( vec<lbool> & sol);
 
 
- 
+ void test_pb_enc();
 
 };
 } // namespace openwbo

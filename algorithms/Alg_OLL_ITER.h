@@ -53,7 +53,7 @@ namespace openwbo {
 class OLL_ITER : public MaxSAT {
 
 public:
-  OLL_ITER( int verb = _VERBOSITY_MINIMAL_, int enc = _CARD_TOTALIZER_, bool pre = false, bool fix = false) 
+  OLL_ITER( int verb = _VERBOSITY_MINIMAL_, int enc = _CARD_TOTALIZER_, bool fix = false) 
   {
     solver = NULL;
     verbosity = verb;
@@ -63,8 +63,6 @@ public:
     num_hardened = 0;
     nonreformulatedCores = 0;
     num_card_dropped = 0;    
-    do_preprocess = pre;
-    weightRemoved = 0;
     use_reconstruct = fix;
     num_hardened_me = 0;
     nOrigVars  = 0;
@@ -133,7 +131,6 @@ protected:
 
   //RETURNS UNSAT IF NO SOLUTIONS
   StatusCode setup();
-  MaxSATFormula * standardizeMaxSATFormula();
 
   time_t time_start;
 	time_t time_best_solution;
@@ -151,7 +148,6 @@ protected:
   void increaseBound(Lit cardAssump, const uint64_t min_core, vec<Encoder *> & soft_cardinality);
   void processCore(const vec<Lit> & orig_core, vec<Lit> &processed_core );
   vec<uint64_t> origWeights;
-  uint64_t computeCostFromLabels(vec<lbool> &currentModel);
   void printProgress();
 
   ///WCE
@@ -162,16 +158,6 @@ protected:
   bool reformulateDelayed(vec<Encoder *> & soft_cardinality);
   
   vec<lbool> bestModel;
-
-  //Preprocessor 
-  maxPreprocessor::PreprocessorInterface * pif;
-  bool do_preprocess;
-  MaxSATFormula * preprocess();
-  int lit2Int(Lit l);
-  Lit int2Lit(int l);
-  void ppClause2SolClause(vec<Lit>  & solClause_out, const std::vector<int> & ppClause);
-  void solClause2ppClause(const vec<Lit>  & solClause,  std::vector<int> & ppClause_out);
-  uint64_t weightRemoved;
 
   /// HARDENING
   uint64_t maxw_nothardened;
@@ -188,8 +174,6 @@ protected:
 
   MaxSATFormula* cost_formula;
   void extendModel();
-  uint64_t computeCostFromClauses(vec<lbool> &currentModel);
-  void reconstruct(vec<lbool> &currentModel, vec<lbool> &reconstructed_out);
   bool use_reconstruct;
 
   int nOrigVars; 

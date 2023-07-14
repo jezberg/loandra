@@ -81,8 +81,11 @@ static void SIGINT_exit(int signum) {
   exit(_UNKNOWN_);
 }
 
+
+
 //=================================================================================================
 // Main:
+
 
 int main(int argc, char **argv) {
   printf("c\nc LOANDRA:\t an extension of Open-WBO to core-boosted linear search.\n");
@@ -168,7 +171,7 @@ int main(int argc, char **argv) {
     
   BoolOption prepro_rec("PREPROCESS", "pr-rec", "Reconstruct solutions before computing their costs (only applicable when preprocessing).\n", false);
   BoolOption prepro_min("PREPROCESS", "pr-min", "Minimize solutions locally after preprocessing.\n", true);
-  IntOption prepro_min_strat("PREPROCESS", "pr-min-strat", "Strategy for oslution minimization: 1=agressive (all solutions), 2=only the two first in each resolution: "
+  IntOption prepro_min_strat("PREPROCESS", "pr-min-strat", "Strategy for solution minimization: 1=agressive (all solutions), 2=only the two first in each resolution: "
                                             "(0=only the best after each resolution) .\n", 0,
                   IntRange(0, 2));
   StringOption prT("PREPROCESS", "pr-tech", "Preprcess techniques used (see MaxPRE documentation).\n", "[u]#[uvsrgVGc]");
@@ -190,7 +193,7 @@ int main(int argc, char **argv) {
       break;
     
     case _ALGORITHM_OLLITER_:
-      S = new OLL_ITER(verbosity, cardinality, preprocess, prepro_rec);
+      S = new OLL_ITER(verbosity, cardinality, prepro_rec);
       break;
 
     default:
@@ -227,58 +230,23 @@ int main(int argc, char **argv) {
     }
     gzclose(in);
 
-    printf("c |                                                                "
-           "                                       |\n");
-    printf("c ========================================[ Problem Statistics "
-           "]===========================================\n");
-    printf("c |                                                                "
-           "                                       |\n");
 
-    if (maxsat_formula->getFormat() == _FORMAT_MAXSAT_)
-      printf(
-          "c |  Problem Format:  %17s                                         "
-          "                          |\n",
-          "MaxSAT");
-    else
-      printf(
-          "c |  Problem Format:  %17s                                         "
-          "                          |\n",
-          "PB");
-
-    if (maxsat_formula->getProblemType() == _UNWEIGHTED_)
-      printf("c |  Problem Type:  %19s                                         "
-             "                          |\n",
-             "Unweighted");
-    else
-      printf("c |  Problem Type:  %19s                                         "
-             "                          |\n",
-             "Weighted");
-
-    printf("c |  Number of variables:  %12d                                    "
-           "                               |\n",
-           maxsat_formula->nVars());
-    printf("c |  Number of hard clauses:    %7d                                "
-           "                                   |\n",
-           maxsat_formula->nHard());
-    printf("c |  Number of soft clauses:    %7d                                "
-           "                                   |\n",
-           maxsat_formula->nSoft());
-    printf("c |  Number of cardinality:     %7d                                "
-           "                                   |\n",
-           maxsat_formula->nCard());
-    printf("c |  Number of PB :             %7d                                "
-           "                                   |\n",
-           maxsat_formula->nPB());
-    double parsed_time = cpuTime();
-
-    printf("c |  Parse time:           %12.2f s                                "
-           "                                 |\n",
-           parsed_time - initial_time);
-    printf("c |                                                                "
-           "                                       |\n");
+  
+   
 
     if (S->getMaxSATFormula() == NULL)
       S->loadFormula(maxsat_formula);
+    
+    printf("c Before Setup: \n");
+    S->print_statistics();
+    double parsed_time = cpuTime();
+    printf("c |  Parse time:           %12.2f s                                "
+            "                                 |\n",
+            parsed_time - initial_time);
+    printf("c |                                                                "
+            "                                       |\n");
+    
+    
     S->setPrintModel(printmodel);
     S->setPrintSoft((const char *)printsoft);
     S->setInitialTime(initial_time);
@@ -290,6 +258,9 @@ int main(int argc, char **argv) {
       mxsolver->set_preprocessing_parameters(30, preTechs, false, true, 20);
     }
     mxsolver->setup_formula();
+    printf("c After Setup: \n");
+    mxsolver->print_statistics(); 
+
     int ret = (int)mxsolver->search();
     delete mxsolver; // S
     return ret;

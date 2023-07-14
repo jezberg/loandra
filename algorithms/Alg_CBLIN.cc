@@ -597,7 +597,6 @@ StatusCode CBLIN::unsatSearch() {
   lbool res = searchSATSolver(solver, assumptions);
   solver->resetFixes();
 
-  
   if (res == l_False) {
     nbCores++;
     printAnswer(_UNSATISFIABLE_);
@@ -712,6 +711,8 @@ StatusCode CBLIN::unsatSearch() {
       solver = newSATSolver();
       solver->setSolutionBasedPhaseSaving(false);
       StatusCode rs = unsatSearch();
+      if (rs == _UNSATISFIABLE_) return rs;
+
       maxw_nothardened = maxsat_formula->getSumWeights();
       
       if(varyingresCG) {
@@ -1160,7 +1161,23 @@ void CBLIN::initializePBConstraint(uint64_t rhs) {
 
   assert(!enc->hasPBEncoding());
   logPrint("Encoding PB with UB: " + std::to_string(rhs) + " obj size " + std::to_string(objFunction.size()));
+
+  /*
+   ///DEBUGGING
+  objFunction_.clear();
+  coeffs_.clear();
+  objFunction.copyTo(objFunction_);
+  coeffs.copyTo(coeffs_);
+  rhs_ = rhs;
+  num_literals_ = solver->nVars();
+  ///////////
+  */
+
+  
   enc->encodePB(solver, objFunction, coeffs, rhs);
+
+ 
+
   logPrint("Encoding Done");        
   setCardVars(bound_set_by_prepro);
     
@@ -1217,6 +1234,8 @@ void CBLIN::setCardVars(bool prepro_bound) {
     lbool res = searchSATSolver(solver, cardAssumps);
     if (res == l_False) {
       logPrint("Warning: UNSAT in card setting");
+      //DEBUG
+      //test_pb_enc();
       return;
     }
     assert(res == l_True);
@@ -1227,6 +1246,34 @@ void CBLIN::setCardVars(bool prepro_bound) {
     
     assumptions.clear();
 
+}
+
+void CBLIN::test_pb_enc(){
+  logPrint("Testing PB encoding with " + std::to_string(objFunction_.size()) + " literals and rhs " + std::to_string(rhs_) + " num lits " + std::to_string(num_literals_));
+  assert(objFunction_.size() > 0);
+  assert(objFunction_.size() == coeffs_.size());
+
+  Solver* testsolver = newSATSolver();
+  while(testsolver->nVars() < num_literals_) testsolver->newVar();
+
+  Encoder * enc_ = new Encoder(_INCREMENTAL_NONE_, _CARD_MTOTALIZER_,
+                               _AMO_LADDER_, _PB_GTE_);
+
+  assert(!enc_->hasPBEncoding());
+  enc_->encodePB(testsolver, objFunction_, coeffs_, rhs_);
+  assert(enc_->hasPBEncoding());
+
+  vec<Lit> assumps;
+  lbool res = searchSATSolver(testsolver, assumps);
+  logPrint("first bound " + std::to_string(rhs_));
+  assert(res == l_True);
+
+  for (uint64_t k = 0; k < maxsat_formula->nHard(); k++) {
+    testsolver->addClause(maxsat_formula->getHardClause(k).clause); 
+    res = searchSATSolver(testsolver, assumps);
+    logPrint("num_clauses added " +  std::to_string(k));
+    assert(res == l_True);
+  }
 }
 
 void CBLIN::extendBestModel() {
@@ -1361,7 +1408,7 @@ uint64_t CBLIN::computeCostReducedWeights(vec<lbool> &fullModel) {
     }
 
     if (unsatisfied) {
-      tot_reducedCost += maxsat_formula->getSoftClause(i).weight / maxsat_formula->getMaximumWeight();
+      tot_reducedCost += (maxsat_formula->getSoftClause(i).weight / maxsat_formula->getMaximumWeight());
     }
   }
   uint64_t red_gap = known_gap / maxsat_formula->getMaximumWeight();
@@ -1416,10 +1463,9 @@ StatusCode CBLIN::search() {
 	time_best_solution = time_start;
   
   StatusCode r = setup(); 
-  timeLimitCores += (time(NULL) - time_start);
 
   if (r == _UNSATISFIABLE_) {
-         logPrint("Error: hard clauses UNSAT instance");
+         logPrint("Clauses unsat...");
          return _UNSATISFIABLE_;
   }
   if (r == _OPTIMUM_) {
@@ -1430,9 +1476,11 @@ StatusCode CBLIN::search() {
     printAnswer(_OPTIMUM_);
     return _OPTIMUM_;
   }
+  timeLimitCores += (time(NULL) - time_start);
 
   switch (lins) {
     case 0:
+      timeLimitCores = -1;
       return weightSearch();
       break;
     

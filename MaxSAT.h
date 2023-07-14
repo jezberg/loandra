@@ -230,8 +230,6 @@ public:
     return -(int)v - 1;
   }
 
-  
-
   /** Preprocessing methods
    * 
    * 
@@ -242,7 +240,9 @@ public:
         bool gate_extraction = false, bool label_matching = true, int skip_technique = 20); 
   void setup_formula();
     //replaces the internal maxsat_formula with the preprocessed one 
- 
+ void print_statistics();
+
+
  protected:
   //Preprocessing relatied 
   MaxSATFormula* preprocessed_formula();

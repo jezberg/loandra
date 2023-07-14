@@ -238,7 +238,7 @@ StatusCode OLL_ITER::search() {
   if (set == _OPTIMUM_) {
     assert(pif != NULL);
     logPrint("Solved by preprocessing");
-    ubCost = weightRemoved;
+    ubCost =  cost_removed_preprocessing; ;
     printBound(ubCost);
     printAnswer(_OPTIMUM_);
     return _OPTIMUM_;
@@ -255,23 +255,6 @@ StatusCode OLL_ITER::search() {
 	  time_best_solution = time_start;
     time_best_lb = time_start;
     bestModel.clear();
-
-    cost_formula = maxsat_formula->copySoftsFromFormula();
-
-    if (do_preprocess) {
-      logPrint("PRE hard clauses before: " + std::to_string(maxsat_formula->nSoft() + maxsat_formula->nHard()));
-      logPrint("PRE soft literals before: " + std::to_string(maxsat_formula->nSoft()));
-      maxsat_formula = preprocess();
-      logPrint("PRE time: " + print_timeSinceStart() + " removed weight: "  + std::to_string(weightRemoved)) ;
-      logPrint("PRE hard clauses after: " + std::to_string(maxsat_formula->nHard()));
-      logPrint("PRE soft literals after: " + std::to_string(maxsat_formula->nSoft()));
-      if (maxsat_formula->nSoft() == 0) {
-        return _OPTIMUM_;
-      }
-    }
-    else {
-      maxsat_formula = standardizeMaxSATFormula();
-    }
   
     initAssumptions();
     solver = rebuildSolver();
@@ -293,7 +276,9 @@ StatusCode OLL_ITER::search() {
     checkModel();
 
     nbSatisfiable++;
-    return _UNKNOWN_;
+
+    if (maxsat_formula->nSoft() == 0) return _OPTIMUM_;
+    else return _UNKNOWN_;
   }
 
 
@@ -794,175 +779,6 @@ void OLL_ITER::printProgress() {
     return maxsat_formula->nSoft() - num_hardened;
   }  
 
-MaxSATFormula *OLL_ITER::standardizeMaxSATFormula() {
-  MaxSATFormula *copymx = new MaxSATFormula();
-  copymx->setInitialVars(maxsat_formula->nVars());
-
-  for (int i = 0; i < maxsat_formula->nVars(); i++)
-    copymx->newVar();
-
-  for (int i = 0; i < maxsat_formula->nHard(); i++)
-    copymx->addHardClause(maxsat_formula->getHardClause(i).clause);
-
-  vec<Lit> clause; 
-  for (int i = 0; i < maxsat_formula->nSoft(); i++) {
-    clause.clear();
-    maxsat_formula->getSoftClause(i).clause.copyTo(clause);
-    Lit l = copymx->newLiteral();
-    clause.push(l);
-    copymx->addHardClause(clause);
-    
-    clause.clear();
-    clause.push(~l);
-    copymx->addSoftClause(maxsat_formula->getSoftClause(i).weight, clause);
-  }
-
-  copymx->setProblemType(maxsat_formula->getProblemType());
-  copymx->updateSumWeights(maxsat_formula->getSumWeights());
-  copymx->setMaximumWeight(maxsat_formula->getMaximumWeight());
-  copymx->setHardWeight(maxsat_formula->getHardWeight());
-
-  return copymx;
-}
-///ONLY CALL IN THE BEGINNING, ASSUMES NOT NORMALIZED
-MaxSATFormula *OLL_ITER::preprocess() {
-    assert(maxsat_formula->nCard() == 0);
-    assert(maxsat_formula->nPB() == 0);
-
-    std::vector<std::vector<int> > clauses_out;
-		std::vector<uint64_t> weights_out;
-		
-    uint64_t top_orig = maxsat_formula->getSumWeights();
-
-    std::vector<int> ppClause; 
-
-    for (int i = 0; i < maxsat_formula->nHard(); i++) {
-        solClause2ppClause(maxsat_formula->getHardClause(i).clause, ppClause);
-        assert(maxsat_formula->getHardClause(i).clause.size() == ppClause.size());
-        clauses_out.push_back(ppClause);
-        weights_out.push_back(top_orig);
-    }
-
-    for (int i = 0; i < maxsat_formula->nSoft(); i++) {
-        solClause2ppClause(maxsat_formula->getSoftClause(i).clause, ppClause);
-        assert(maxsat_formula->getSoftClause(i).clause.size() == ppClause.size());
-        clauses_out.push_back(ppClause);
-        weights_out.push_back(maxsat_formula->getSoftClause(i).weight);
-    }
-		pif = new maxPreprocessor::PreprocessorInterface (clauses_out, weights_out, top_orig, false);
-
-    double timeLimit = 120;
-	  int verb = 0;
-
-	  pif->setBVEGateExtraction(false);	
-	  pif->setLabelMatching(true);
-	  pif->setSkipTechnique(20);
-
-    std::string techniques = "[bu]#[buvsrgc]";
-		pif->preprocess(techniques, verb, timeLimit);
-    
-    //pif->printInstance(std::cout, 1);
-
-    weightRemoved = pif->getRemovedWeight();
-    lbCost = weightRemoved;
-
-    //COLLECT NEW
-    std::vector<std::vector<int> > pre_Clauses; 
-		std::vector<uint64_t> pre_Weights; 
-		std::vector<int> pre_Labels; //will not be used	
-		pif->getInstance(pre_Clauses, pre_Weights, pre_Labels);
-		uint64_t top = pif->getTopWeight();
-
-    MaxSATFormula *copymx = new MaxSATFormula();
-    copymx->setProblemType(maxsat_formula->getProblemType());
-    copymx->setHardWeight(top);
-
-    int init_vars = 0;
-    uint64_t sum_of_weights = 0;
-    uint64_t max_weight = 0;
- 
-    assert(pre_Weights.size() == pre_Clauses.size());
-    for (int i = 0; i < pre_Weights.size(); i++) {
-        uint64_t cur = pre_Weights[i];
-        if (cur < top) {
-          if (cur > max_weight) {
-            max_weight = cur;
-          }
-          sum_of_weights += cur;
-        }
-        for (int j = 0; j < pre_Clauses[i].size(); j++) {
-          int var = pre_Clauses[i][j];
-
-          if (abs(var) > init_vars) {
-            init_vars = abs(var);
-          }
-        }
-
-    }
-    copymx->setInitialVars(init_vars);
-    copymx->updateSumWeights(sum_of_weights);
-    copymx->setMaximumWeight(max_weight);
-    
-    for (int i = 0; i < init_vars; i++) {
-      copymx->newVar();
-    }
-
-    vec<Lit> sol_cla;		
-		for (int i = 0; i < pre_Clauses.size(); i++) {
-			sol_cla.clear();				
-			ppClause2SolClause(sol_cla, pre_Clauses[i]);
-			assert(sol_cla.size() == pre_Clauses[i].size());
-						
-			int64_t weight = pre_Weights[i];
-			if (weight < top) {
-				//SOFT 
-				assert(sol_cla.size() == 1);
-				assert(weight > 0);
-        copymx->addSoftClause(weight, sol_cla);
-			}
-			else {
-				copymx->addHardClause(sol_cla);
-			}			
-		}
-    
-  return copymx;
-}
-
-void OLL_ITER::solClause2ppClause(const vec<Lit>  & solClause,  std::vector<int> & ppClause_out) {
-	ppClause_out.clear();
-	for (int i = 0; i < solClause.size(); i++) {
-    Lit l = solClause[i];
-    assert( int2Lit ( lit2Int( l ) ) == l ); 
-		ppClause_out.push_back( lit2Int( l ));
-	}
-}
-
-void OLL_ITER::ppClause2SolClause(vec<Lit>  & solClause_out, const std::vector<int> & ppClause) {
-	solClause_out.clear();
-	for (int i = 0; i < ppClause.size(); i++) {
-    int int_var = ppClause[i];
-
-    assert( int_var == lit2Int ( int2Lit(int_var) )  ) ;
-
-		solClause_out.push( int2Lit( int_var ));
-	}
-}
-
-int OLL_ITER::lit2Int(Lit l) {
-	if (sign(l)) {
-		return  -(var(l) + 1);
-	}
-	else {
-		return   var(l) + 1; 
-	}
-}
-
-Lit OLL_ITER::int2Lit(int l) {
-	int var = abs(l) - 1;
-	bool sign = l > 0;
-	return sign ? mkLit(var) : ~mkLit(var);
-}
-
 std::string OLL_ITER::print_timeSinceStart() {
   return std::to_string(timeSinceStart());
 }
@@ -993,24 +809,27 @@ bool OLL_ITER::checkModel() {
    uint64_t clausecost;
    uint64_t labelCost;
   
-
-   clausecost = computeCostFromClauses(solver->model);
-   labelCost = computeCostFromLabels(solver->model);
    
-   if (!do_preprocess) { 
-     if (labelCost != clausecost) logPrint("DIF: label-cost: " + std::to_string(labelCost) + " clause-cost: " + std::to_string(clausecost));
-     modelCost = clausecost;
+   labelCost = computeCostObjective(solver->model);
+   if (do_preprocess && use_reconstruct) {
+      vec<lbool> reconstruct; 
+      reconstruct_model_prepro(solver->model, reconstruct);
+      clausecost = computeCostOriginalClauses(reconstruct);
+   } 
+   else {
+      if (!do_preprocess) clausecost = computeCostOriginalClauses(solver->model);
+      else clausecost = labelCost;
+   }
+
+
+   if (labelCost != clausecost) { 
+      assert(clausecost <= labelCost);
+      modelCost = clausecost;
    }
    else {
      modelCost = labelCost;
-     if (use_reconstruct)  {
-        if (labelCost != clausecost) logPrint("DIF: label-cost: " + std::to_string(labelCost) + " clause-cost: " + std::to_string(clausecost));
-        modelCost = clausecost; // clausecost ;
-     }
-     else {
-       modelCost = labelCost;
-     }
    }  
+
    if (do_preprocess && use_reconstruct) {
      bool better_hardening = labelCost < ubLabelCost;
      if (better_hardening) {
@@ -1066,87 +885,8 @@ bool OLL_ITER::checkModel() {
  }  
 
 
- uint64_t OLL_ITER::computeCostFromLabels(vec<lbool> &currentModel) {
-  
-  assert(currentModel.size() != 0);
-  uint64_t currentCost = weightRemoved;
-  
-  for (int i = 0; i < origWeights.size(); i++) {
-      assert(maxsat_formula->getSoftClause(i).clause.size() == 1 );
 
-      Lit l =  maxsat_formula->getSoftClause(i).clause[0];
-      assert(var(l) < currentModel.size());
 
-      if (literalTrueInModel(l, currentModel)) {
-            continue; //Literal is true
-          }
-      else {
-            currentCost += origWeights[i];
-      }
-    }
-
-  return currentCost;
-  
-}
-
-uint64_t OLL_ITER::computeCostFromClauses(vec<lbool> &computed_model) {
-
-  vec<lbool> currentModel;
-  if (do_preprocess) {
-    if (use_reconstruct)
-      reconstruct(computed_model, currentModel);
-    else 
-      return ubCost;
-  }
-  else {
-    computed_model.copyTo(currentModel);
-  }
-
-  assert(currentModel.size() != 0);
-  uint64_t currentCost = 0;
-
-  for (int i = 0; i < cost_formula->nSoft(); i++) {
-    bool unsatisfied = true;
-    for (int j = 0; j < cost_formula->getSoftClause(i).clause.size(); j++) {
-      Lit l = (cost_formula->getSoftClause(i)).clause[j];
-      assert(var(l) < currentModel.size());
-      if (literalTrueInModel(l, currentModel)) {
-        unsatisfied = false;
-        break;
-      }
-    }
-    if (unsatisfied) {
-      currentCost += cost_formula->getSoftClause(i).weight;
-    }
-  }
-
-  return currentCost;
-}
-
-void OLL_ITER::reconstruct(vec<lbool> &currentModel, vec<lbool> &reconstructed_out) {
-    time_t now = time(NULL);;
-    std::vector<int> trueLiterals;
-    for (int i = 0 ; i < currentModel.size() ; i++) {
-      Lit l = mkLit(i, true); 
-      if (literalTrueInModel(l, currentModel)) {
-          trueLiterals.push_back(lit2Int(l));
-      }
-      else {
-        assert(literalTrueInModel(~l, currentModel));
-        trueLiterals.push_back(lit2Int(~l));
-      }
-    }
-    std::vector<int> true_model = pif->reconstruct(trueLiterals);
-
-    for (int i = 0; i < true_model.size() ; i ++) {
-      if (true_model[i] > 0) 
-        reconstructed_out.push(l_True);
-      else {
-        reconstructed_out.push(l_False);
-      }
-    }
-    logPrint("c rec time: " + std::to_string(time(NULL) - now));
-}
 
 
   

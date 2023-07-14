@@ -481,6 +481,11 @@ void MaxSAT::printAnswer(int type) {
   if (type == _UNKNOWN_ && model.size() > 0)
     type = _SATISFIABLE_;
   
+  if (type == _UNSATISFIABLE_) {
+     printf("s UNSATISFIABLE\n");
+     return;
+  }
+
   if (do_preprocess && model.size() > 0) {
     model_of_original.clear(); 
 
@@ -516,9 +521,6 @@ void MaxSAT::printAnswer(int type) {
       printModel();
     if (print_soft)
       printUnsatisfiedSoftClauses();
-    break;
-  case _UNSATISFIABLE_:
-    printf("s UNSATISFIABLE\n");
     break;
   case _UNKNOWN_:
     printf("s UNKNOWN\n");
@@ -707,7 +709,7 @@ MaxSATFormula* MaxSAT::preprocessed_formula() {
 			}			
 		}
       //logPrint("Preprocess time: " + print_timeSinceStart() + " removed weight: "  + std::to_string(cost_removed_preprocessing)) ;
-    
+    logPrint("Preprocessing left " + std::to_string(copymx->nHard()) + " clauses and " + std::to_string(copymx->nSoft()) + " softs");
     logPrint("Preprocessing removed " + std::to_string(cla_before - copymx->nHard()) + " clauses and " + std::to_string(softs_before - copymx->nSoft()) + " softs");
     logPrint("Preprocessing obtained ub: " + std::to_string(ub_prepro) + " lb " +std::to_string(lb));
   return copymx;
@@ -786,4 +788,49 @@ bool MaxSAT::literalTrueInModel(Lit l, vec<lbool> &model) {
   }
 
   return (sign(l) && model[var(l)] == l_False) || (!sign(l) && model[var(l)] == l_True);
+}
+
+void MaxSAT::print_statistics() {
+   printf("c |                                                                "
+           "                                       |\n");
+    printf("c ========================================[ Problem Statistics "
+           "]===========================================\n");
+    printf("c |                                                                "
+           "                                       |\n");
+
+    if (maxsat_formula->getFormat() == _FORMAT_MAXSAT_)
+      printf(
+          "c |  Problem Format:  %17s                                         "
+          "                          |\n",
+          "MaxSAT");
+    else
+      printf(
+          "c |  Problem Format:  %17s                                         "
+          "                          |\n",
+          "PB");
+
+    if (maxsat_formula->getProblemType() == _UNWEIGHTED_)
+      printf("c |  Problem Type:  %19s                                         "
+             "                          |\n",
+             "Unweighted");
+    else
+      printf("c |  Problem Type:  %19s                                         "
+             "                          |\n",
+             "Weighted");
+
+    printf("c |  Number of variables:  %12d                                    "
+           "                               |\n",
+           maxsat_formula->nVars());
+    printf("c |  Number of hard clauses:    %7d                                "
+           "                                   |\n",
+           maxsat_formula->nHard());
+    printf("c |  Number of soft clauses:    %7d                                "
+           "                                   |\n",
+           maxsat_formula->nSoft());
+    printf("c |  Number of cardinality:     %7d                                "
+           "                                   |\n",
+           maxsat_formula->nCard());
+    printf("c |  Number of PB :             %7d                                "
+           "                                   |\n",
+           maxsat_formula->nPB());
 }
