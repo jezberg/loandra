@@ -223,6 +223,8 @@ StatusCode OLL_ITER::search() {
     return _UNKNOWN_;
   }
 
+  printf("c WARNING: the OLL implementation has not been tested properly");
+
   printConfiguration();
 
   logPrint("OLL ALGORITHM ");

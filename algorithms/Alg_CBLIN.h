@@ -82,6 +82,7 @@ public:
     inLinSearch = false;
     wrong_eval_cg = 0;
     wrong_eval_lin = 0;
+    init_rhs = 0;
     delete_before_lin = delsol;
     encoder.setCardEncoding(_CARD_MTOTALIZER_); //TODO JUST UNTIL IT WORKS
     encoder.setPBEncoding( _PB_GTE_);
@@ -133,6 +134,9 @@ protected:
   uint64_t maxw_nothardened;
 
   uint64_t known_gap;
+
+  uint64_t init_rhs;
+
   void checkGap();
   bool inLinSearch;
 

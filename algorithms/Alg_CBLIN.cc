@@ -1083,15 +1083,20 @@ void CBLIN::updateBoundLinSearch (uint64_t newBound) {
   }
   else {
     logPrint("No encoding :(");
-    assert(objFunction.size() == 1);
-    assert(newBound == 0);
-    if (!incrementalVarres) {
-      solver->addClause({~objFunction[0]});
+    int added = 0;
+    for (int i = 0 ; i < objFunction.size(); i ++) {
+      if (coeffs[i] > newBound && coeffs[i] <= init_rhs) {
+          if (!incrementalVarres) {
+            solver->addClause({~objFunction[0]});
+            added++;
+          }
+          else {
+            assumptions.clear();
+            assumptions.push(~objFunction[0]);
+          }  
+      }
     }
-    else {
-      assumptions.clear();
-      assumptions.push(~objFunction[0]);
-    }
+    assert(added > 0);
   }
 } 
 
@@ -1172,10 +1177,10 @@ void CBLIN::initializePBConstraint(uint64_t rhs) {
   num_literals_ = solver->nVars();
   ///////////
   */
-
+ 
   
   enc->encodePB(solver, objFunction, coeffs, rhs);
-
+  init_rhs = rhs;
  
 
   logPrint("Encoding Done");        

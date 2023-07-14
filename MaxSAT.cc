@@ -661,9 +661,10 @@ MaxSATFormula* MaxSAT::preprocessed_formula() {
     copymx->setProblemType(maxsat_formula->getProblemType());
     copymx->setHardWeight(top);
 
-    int init_vars = 0;
+    uint64_t init_vars = 0;
     uint64_t sum_of_weights = 0;
     uint64_t max_weight = 0;
+    
  
     assert(pre_Weights.size() == pre_Clauses.size());
     for (int i = 0; i < pre_Weights.size(); i++) {
@@ -683,7 +684,15 @@ MaxSATFormula* MaxSAT::preprocessed_formula() {
         }
 
     }
-    copymx->setInitialVars(maxsat_formula->nInitialVars());
+
+    ///TODO code against maxper api... 
+    if(cost_removed_preprocessing > 0) {
+      init_vars -= 1;
+      sum_of_weights -= cost_removed_preprocessing;
+    }
+
+
+    copymx->setInitialVars(init_vars);
     copymx->updateSumWeights(sum_of_weights);
     copymx->setMaximumWeight(max_weight);
     
@@ -692,7 +701,14 @@ MaxSATFormula* MaxSAT::preprocessed_formula() {
     }
 
     vec<Lit> sol_cla;		
+    int num_skipped = 0;
 		for (int i = 0; i < pre_Clauses.size(); i++) {
+      if (pre_Clauses[i].size() == 1) {
+        if(abs(pre_Clauses[i][0]) == init_vars + 1) {
+          num_skipped++;
+          continue;
+        }
+      }
 			sol_cla.clear();				
 			ppClause2SolClause(sol_cla, pre_Clauses[i]);
 			assert(sol_cla.size() == pre_Clauses[i].size());
@@ -708,6 +724,8 @@ MaxSATFormula* MaxSAT::preprocessed_formula() {
 				copymx->addHardClause(sol_cla);
 			}			
 		}
+    assert(cost_removed_preprocessing == 0 || num_skipped == 2);
+
       //logPrint("Preprocess time: " + print_timeSinceStart() + " removed weight: "  + std::to_string(cost_removed_preprocessing)) ;
     logPrint("Preprocessing left " + std::to_string(copymx->nHard()) + " clauses and " + std::to_string(copymx->nSoft()) + " softs");
     logPrint("Preprocessing removed " + std::to_string(cla_before - copymx->nHard()) + " clauses and " + std::to_string(softs_before - copymx->nSoft()) + " softs");
