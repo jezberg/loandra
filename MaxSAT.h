@@ -328,7 +328,7 @@ public:
 
   // Utils for printing
   //
-  void printBound(int64_t bound); // Print the current bound.
+  void printBound(uint64_t bound); // Print the current bound.
   void printModel(); // Print the best satisfying model.
   void printStats(); // Print search statistics.
   std::string printSoftClause(int id); // Prints a soft clause.

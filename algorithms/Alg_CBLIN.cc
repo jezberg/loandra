@@ -592,9 +592,6 @@ StatusCode CBLIN::unsatSearch() {
 
 
   solver = updateSolver();
-  
-  logPrint("Unsat search: nvars " + std::to_string(solver->nVars()) + " clauses " + std::to_string(solver->nClauses()));
-  logPrint("Unsat search: vars " + std::to_string(maxsat_formula->nVars()) +  " hards " + std::to_string(maxsat_formula->nHard()) + " softs " + std::to_string(maxsat_formula->nSoft()));
 
   softsSatisfied();
   lbool res = searchSATSolver(solver, assumptions);
@@ -696,7 +693,6 @@ StatusCode CBLIN::unsatSearch() {
   |________________________________________________________________________________________________@*/
   StatusCode CBLIN::setup() {
 
-      // TODO does not work now
       if (maxsat_formula->nHard() == 0) {
         return _OPTIMUM_;
       }
@@ -713,10 +709,8 @@ StatusCode CBLIN::unsatSearch() {
       initAssumptions();  
       solver = newSATSolver();
       solver->setSolutionBasedPhaseSaving(false);
-      logPrint("Before UNSAT");
       StatusCode rs = unsatSearch();
       if (rs == _UNSATISFIABLE_) return rs;
-      logPrint("After UNSAT");
       
       //Here we know that the formula is SAT
       if (maxsat_formula->nSoft() == 0) {
@@ -1484,7 +1478,7 @@ StatusCode CBLIN::search() {
          return _UNSATISFIABLE_;
   }
   if (r == _OPTIMUM_) {
-    assert(pif != NULL);
+    assert(maxsat_formula->nSoft() == 0);
     logPrint("Solved by preprocessing");
     ubCost = cost_removed_preprocessing;
     printBound(ubCost);
