@@ -1089,14 +1089,14 @@ void CBLIN::updateBoundLinSearch (uint64_t newBound) {
     logPrint("No encoding :(");
     int added = 0;
     for (int i = 0 ; i < objFunction.size(); i ++) {
-      if (coeffs[i] > newBound && coeffs[i] <= init_rhs) {
+      if (coeffs[i] > newBound && coeffs[i] <= init_rhs) { //the second condition is here because literals that have coefficients higher than init_rhs are fixed to dfalse in the encoder
           if (!incrementalVarres) {
-            solver->addClause({~objFunction[0]});
+            solver->addClause({~objFunction[i]});
             added++;
           }
           else {
             assumptions.clear();
-            assumptions.push(~objFunction[0]);
+            assumptions.push(~objFunction[i]);
           }  
       }
     }
@@ -1151,7 +1151,7 @@ void CBLIN::initializePBConstraint(uint64_t rhs) {
 
     uint64_t red_p_gap = (ub_prepro - lbCost) / maxsat_formula->getMaximumWeight();
     if (rhs > red_p_gap) {
-        logPrint("reduced prepro gap: " + std::to_string(red_p_gap) + " better than computed rhs " + std::to_string(rhs));
+        logPrint("reduced cost from preprocessor gap: " + std::to_string(red_p_gap) + " better than best model " + std::to_string(rhs));
         rhs = red_p_gap;
         bound_set_by_prepro = true;
     }
@@ -1168,9 +1168,10 @@ void CBLIN::initializePBConstraint(uint64_t rhs) {
   enc = new Encoder(_INCREMENTAL_NONE_, _CARD_MTOTALIZER_,
                                _AMO_LADDER_, _PB_GTE_);
 
+  
   assert(!enc->hasPBEncoding());
   logPrint("Encoding PB with UB: " + std::to_string(rhs) + " obj size " + std::to_string(objFunction.size()));
-
+  
   /*
    ///DEBUGGING
   objFunction_.clear();
@@ -1181,16 +1182,22 @@ void CBLIN::initializePBConstraint(uint64_t rhs) {
   num_literals_ = solver->nVars();
   ///////////
   */
- 
-  
+
+ /*
+  std::string print = "";
+  for (int i = 0; i < objFunction.size() ; i ++) {
+    print += (" (" + std::to_string(lit2Int(objFunction[i])) + "/" + std::to_string(coeffs[i]) +")");
+  }
+  logPrint(print);
+  */
   enc->encodePB(solver, objFunction, coeffs, rhs);
   init_rhs = rhs;
  
 
   logPrint("Encoding Done");        
   setCardVars(bound_set_by_prepro);
-    
 }
+
 
 void CBLIN::initRelaxation() {
   objFunction.clear();
