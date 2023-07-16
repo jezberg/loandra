@@ -72,7 +72,7 @@ public:
     //  during the parsing of the MaxSAT formula.
     ubCost = 0;
     lbCost = 0;
-
+    standardization_removed = 0;
     off_set = 0;
 
     // Statistics
@@ -246,6 +246,7 @@ public:
  protected:
   //Preprocessing relatied 
   MaxSATFormula* preprocessed_formula();
+  uint64_t standardization_removed;
   MaxSATFormula* standardized_formula();
 
 
@@ -260,6 +261,7 @@ public:
   bool label_matching;
   int skip_technique; 
   uint64_t ub_prepro;
+
   
   
   int lit2Int(Lit l);

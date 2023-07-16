@@ -594,6 +594,7 @@ StatusCode CBLIN::unsatSearch() {
   solver = updateSolver();
 
   softsSatisfied();
+  //logPrint("In Unsat in solver " + std::to_string(solver->nVars()) + " vars amd " + std::to_string(solver->nClauses()) + " clauses" );
   lbool res = searchSATSolver(solver, assumptions);
   solver->resetFixes();
 
@@ -604,7 +605,7 @@ StatusCode CBLIN::unsatSearch() {
   } else if (res == l_True) {
     nbSatisfiable++;
     uint64_t beforecheck = ubCost;
-
+//    logPrint("in unsat");
     checkModel();
     
     uint64_t aftercheck = ubCost;
@@ -1591,6 +1592,12 @@ int CBLIN::nRealSoft() {
 uint64_t CBLIN::computeCostOfModel(vec<lbool> &currentModel) {
   
   assert(currentModel.size() != 0 || maxsat_formula->nHard() == 0);
+
+  if (!do_preprocess) {
+    return computeCostOriginalClauses(currentModel);
+  }
+
+
   uint64_t formula_cost = 0;
   uint64_t label_cost = computeCostObjective(currentModel);
   if (reconstruct_sol && reconstruct_iter) {
@@ -1656,7 +1663,8 @@ bool CBLIN::shouldUpdate() {
 
 //TODO parametrize on the model... 
  bool CBLIN::checkModel() {
-   logPrint("Checking model");
+   logPrint("Checking model of size " + std::to_string(solver->model.size()));
+
    uint64_t modelCost = computeCostOfModel(solver->model);
    bool isBetter = modelCost < ubCost;
    if (isBetter) {

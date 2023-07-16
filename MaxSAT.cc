@@ -160,7 +160,6 @@ void MaxSAT::saveModel(vec<lbool> &currentModel) {
   |
   |________________________________________________________________________________________________@*/
 uint64_t MaxSAT::computeCostOriginalClauses(vec<lbool> &reconstructed_model) {
-  
   assert(reconstructed_model.size() != 0 || full_original_scla->nSoft() == 0);
   uint64_t currentCost = 0;
 
@@ -185,7 +184,7 @@ uint64_t MaxSAT::computeCostOriginalClauses(vec<lbool> &reconstructed_model) {
 
 uint64_t MaxSAT::computeCostObjective(vec<lbool> &model) {
   assert(model.size() != 0);
-  uint64_t currentCost = 0;
+  uint64_t currentCost = standardization_removed; //this is 0 if no preprocessing
 
   for (int i = 0; i < original_labels->nSoft(); i++) {
     assert(original_labels->getSoftClause(i).clause.size() == 1); 
@@ -628,14 +627,17 @@ MaxSATFormula* MaxSAT::standardized_formula() {
         clause.push(int2Lit(negation));
         copymx->addSoftClause(contr_w - weight, clause);
         lbCost += weight; 
+        standardization_removed += weight;
       }
       else if (contr_w < weight) {
         clause.push(int2Lit(lit));
         copymx->addSoftClause(weight - contr_w, clause);
         lbCost += contr_w;
+        standardization_removed += contr_w;
       }
-      else { // equal
+      else { // contradicting labels have equal weight
         lbCost += contr_w;
+        standardization_removed += contr_w;
         continue;
       }
     }
