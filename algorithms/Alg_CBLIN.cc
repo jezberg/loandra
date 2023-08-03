@@ -1132,7 +1132,7 @@ void CBLIN::initializePBConstraint(uint64_t rhs) {
 
   if (minimize_sol) {
       if (rhs <= red_gap) {
-        logPrint("Minimizing in init");
+        logPrint("Minimizing in PB initialisation");
         minimizelinearsolution(bestModel);
         uint64_t minCost = computeCostReducedWeights(bestModel);       
         if (rhs != minCost) {
@@ -1324,8 +1324,6 @@ void CBLIN::minimizelinearsolution(vec<lbool> & sol) {
   }
 
   //TODO, check the model..... 
-
-
   vec<Lit> minimizable; 
   vec<bool> skip; 
   vec<Lit> fixed_assumptions; 
@@ -1352,28 +1350,21 @@ void CBLIN::minimizelinearsolution(vec<lbool> & sol) {
     }
     else {
       fixed_assumptions.push(~l);
-
     }
   }
 
   vec<Lit> assumps; 
   lbool res; 
 
-  
   int skipped = 0;
-
 
   for (int i = 0; i < minimizable.size() ; i ++) {
     if (skip[i]) continue;
-
     Lit l = minimizable[i];
-
     assumps.clear();
     fixed_assumptions.copyTo(assumps);
-
     assumps.push(~l);
     res = searchSATSolver(solver, assumps);
-
     if (res == l_True) {
       fixed_assumptions.push(~l);
       
@@ -1386,9 +1377,6 @@ void CBLIN::minimizelinearsolution(vec<lbool> & sol) {
           skipped++;
         }
       }
-      
-
-
     } else if (res == l_False) {
       fixed_assumptions.push(l);
     } else {
@@ -1396,12 +1384,13 @@ void CBLIN::minimizelinearsolution(vec<lbool> & sol) {
       exit(1);
     }
   }
+  
   if (res == l_False) {
     res = searchSATSolver(solver, fixed_assumptions);
     assert(res == l_True);
   }
-  solver->model.copyTo(sol);
-   time_t done = time(NULL);
+  checkModel();
+  time_t done = time(NULL);
   logPrint("Minimization time " +std::to_string(done - rec) + " init minsize " + std::to_string(minimizable.size()) + " skipped " + std::to_string(skipped));
 
 } 
