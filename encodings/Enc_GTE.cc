@@ -200,7 +200,7 @@ void GTE::encode(Solver *S, vec<Lit> &lits, vec<uint64_t> &coeffs,
       exit(_ERROR_);
     }
 
-    if (simp_coeffs[i] <= (unsigned)rhs) {
+    if (simp_coeffs[i] <= rhs) {
       lits.push(simp_lits[i]);
       coeffs.push(simp_coeffs[i]);
     } else
