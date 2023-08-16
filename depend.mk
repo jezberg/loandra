@@ -25,6 +25,26 @@
   /Users/jezberg/Documents/Public-Solvers/loandra/encodings/Enc_SWC.h \
   /Users/jezberg/Documents/Public-Solvers/loandra/encodings/Enc_Totalizer.h \
   /Users/jezberg/Documents/Public-Solvers/loandra/encodings/Enc_Adder.h
+/Users/jezberg/Documents/Public-Solvers/loandra/ICadical.o /Users/jezberg/Documents/Public-Solvers/loandra/ICadical.or /Users/jezberg/Documents/Public-Solvers/loandra/ICadical.od /Users/jezberg/Documents/Public-Solvers/loandra/ICadical.op: /Users/jezberg/Documents/Public-Solvers/loandra/ICadical.cc \
+  /Users/jezberg/Documents/Public-Solvers/loandra/ICadical.h \
+  /Users/jezberg/Documents/Public-Solvers/loandra/solvers/glucose4.1/core/Solver.h \
+  /Users/jezberg/Documents/Public-Solvers/loandra/solvers/glucose4.1/mtl/Heap.h \
+  /Users/jezberg/Documents/Public-Solvers/loandra/solvers/glucose4.1/mtl/Vec.h \
+  /Users/jezberg/Documents/Public-Solvers/loandra/solvers/glucose4.1/mtl/IntTypes.h \
+  /Users/jezberg/Documents/Public-Solvers/loandra/solvers/glucose4.1/mtl/XAlloc.h \
+  /Users/jezberg/Documents/Public-Solvers/loandra/solvers/glucose4.1/mtl/Alg.h \
+  /Users/jezberg/Documents/Public-Solvers/loandra/solvers/glucose4.1/utils/Options.h \
+  /Users/jezberg/Documents/Public-Solvers/loandra/solvers/glucose4.1/utils/ParseUtils.h \
+  /Users/jezberg/Documents/Public-Solvers/loandra/solvers/glucose4.1/core/SolverTypes.h \
+  /Users/jezberg/Documents/Public-Solvers/loandra/solvers/glucose4.1/mtl/Map.h \
+  /Users/jezberg/Documents/Public-Solvers/loandra/solvers/glucose4.1/mtl/Alloc.h \
+  /Users/jezberg/Documents/Public-Solvers/loandra/solvers/glucose4.1/core/BoundedQueue.h \
+  /Users/jezberg/Documents/Public-Solvers/loandra/solvers/glucose4.1/core/Constants.h \
+  /Users/jezberg/Documents/Public-Solvers/loandra/solvers/glucose4.1/mtl/Clone.h \
+  /Users/jezberg/Documents/Public-Solvers/loandra/solvers/glucose4.1/core/SolverStats.h \
+  /Users/jezberg/Documents/Public-Solvers/loandra/MaxTypes.h \
+  /Users/jezberg/Documents/Public-Solvers/loandra/solvers/glucose4.1/utils/System.h \
+  /Users/jezberg/Documents/Public-Solvers/loandra/cadical/src/cadical.hpp
 /Users/jezberg/Documents/Public-Solvers/loandra/Main.o /Users/jezberg/Documents/Public-Solvers/loandra/Main.or /Users/jezberg/Documents/Public-Solvers/loandra/Main.od /Users/jezberg/Documents/Public-Solvers/loandra/Main.op: /Users/jezberg/Documents/Public-Solvers/loandra/Main.cc \
   /Users/jezberg/Documents/Public-Solvers/loandra/solvers/glucose4.1/utils/Options.h \
   /Users/jezberg/Documents/Public-Solvers/loandra/solvers/glucose4.1/mtl/IntTypes.h \
@@ -75,6 +95,7 @@
   /Users/jezberg/Documents/Public-Solvers/loandra/maxpre2/src/satsolver/solvers/glucose3/core/../utils/../mtl/Vec.h \
   /Users/jezberg/Documents/Public-Solvers/loandra/maxpre2/src/satsolver/solvers/glucose3/core/../core/BoundedQueue.h \
   /Users/jezberg/Documents/Public-Solvers/loandra/maxpre2/src/satsolver/solvers/glucose3/core/../core/Constants.h \
+  /Users/jezberg/Documents/Public-Solvers/loandra/ICadical.h \
   /Users/jezberg/Documents/Public-Solvers/loandra/cadical/src/cadical.hpp \
   /Users/jezberg/Documents/Public-Solvers/loandra/ParserMaxSAT.h \
   /Users/jezberg/Documents/Public-Solvers/loandra/ParserPB.h \
@@ -143,6 +164,7 @@
   /Users/jezberg/Documents/Public-Solvers/loandra/maxpre2/src/satsolver/solvers/glucose3/core/../utils/../mtl/Vec.h \
   /Users/jezberg/Documents/Public-Solvers/loandra/maxpre2/src/satsolver/solvers/glucose3/core/../core/BoundedQueue.h \
   /Users/jezberg/Documents/Public-Solvers/loandra/maxpre2/src/satsolver/solvers/glucose3/core/../core/Constants.h \
+  /Users/jezberg/Documents/Public-Solvers/loandra/ICadical.h \
   /Users/jezberg/Documents/Public-Solvers/loandra/cadical/src/cadical.hpp
 /Users/jezberg/Documents/Public-Solvers/loandra/MaxSATFormula.o /Users/jezberg/Documents/Public-Solvers/loandra/MaxSATFormula.or /Users/jezberg/Documents/Public-Solvers/loandra/MaxSATFormula.od /Users/jezberg/Documents/Public-Solvers/loandra/MaxSATFormula.op: \
   /Users/jezberg/Documents/Public-Solvers/loandra/MaxSATFormula.cc \

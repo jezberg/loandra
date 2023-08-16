@@ -1640,12 +1640,12 @@ bool CBLIN::shouldUpdate() {
  }
 
  void CBLIN::testCadical() {
-  solverCad = newSATSolverCad();
+  solverCad = ICadical::newSATSolver();
   for (int i = 0; i < maxsat_formula->nHard(); i++)
-    addClauseCad(solverCad, maxsat_formula->getHardClause(i).clause);
+    ICadical::addClause(solverCad, maxsat_formula->getHardClause(i).clause);
   
   vec<Lit> ass;
-  lbool res = searchSATSolverCad(solverCad, ass);
+  lbool res = ICadical::searchSATSolver(solverCad, ass);
   
   assert(res==l_True);
   logPrint("CADICAL DONE");

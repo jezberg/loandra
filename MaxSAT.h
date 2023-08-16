@@ -40,14 +40,15 @@
 #include "MaxTypes.h"
 #include "utils/System.h"
 #include "maxpre2/src/preprocessorinterface.hpp"
+
+#include "ICadical.h"
+
 #include <algorithm>
 #include <map>
 #include <set>
 #include <utility>
 #include <iostream>
 #include <vector>
-
-#include "cadical/src/cadical.hpp"
 
 using NSPACE::vec;
 using NSPACE::Lit;
@@ -341,12 +342,7 @@ public:
   // Greater than comparator.
   bool static greaterThan(uint64_t i, uint64_t j) { return (i > j); }
 
-  // Cadical related 
-  //TODO remove dependency on literals 
 
-  CaDiCaL::Solver * newSATSolverCad();
-  void addClauseCad(CaDiCaL::Solver * solverCad, vec<Lit> &clause);
-  lbool searchSATSolverCad(CaDiCaL::Solver *solverCad, vec<Lit> &assumptions);
 
 };
 } // namespace openwbo
