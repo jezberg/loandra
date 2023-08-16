@@ -13,6 +13,7 @@ DSRCS      = $(foreach dir, $(DEPDIR), $(filter-out $(MROOT)/$(dir)/Main.cc, $(w
 CHDRS      = $(wildcard $(PWD)/*.h)
 COBJS      = $(CSRCS:.cc=.o) $(DSRCS:.cc=.o)
 PREOBJ	   = $(wildcard $(PREPRO_DIR)/src/lib/*.a) 
+CADOBJ	   = $(wildcard $(CADICAL_DIR)/build/*.a) 
 
 
 PCOBJS     = $(addsuffix p,  $(COBJS))
@@ -75,7 +76,7 @@ lib$(LIB)_release.a:	$(filter-out */Main.or, $(RCOBJS))
 ## Linking rules (standard/profile/debug/release)
 $(EXEC) $(EXEC)_profile $(EXEC)_debug $(EXEC)_release $(EXEC)_static:
 	@echo Linking: "$@ ( $(foreach f,$^,$(subst $(MROOT)/,,$f)) )"
-	@$(CXX) $^ $(PREOBJ) $(LFLAGS) -o $@
+	@$(CXX) $^ $(PREOBJ) $(CADOBJ) $(LFLAGS) -o $@
 
 ## Library rules (standard/profile/debug/release)
 lib$(LIB)_standard.a lib$(LIB)_profile.a lib$(LIB)_release.a lib$(LIB)_debug.a:
@@ -95,9 +96,13 @@ clean:
 	rm -f $(EXEC) $(EXEC)_profile $(EXEC)_debug $(EXEC)_release $(EXEC)_static \
 	  $(COBJS) $(PCOBJS) $(DCOBJS) $(RCOBJS) *.core depend.mk 
 	$(MAKE) -C $(PREPRO_DIR) clean
+	$(MAKE) -C $(CADICAL_DIR) clean
 
 ## Make dependencies
 depend.mk: $(CSRCS) $(CHDRS)
+	@echo Making cadical 
+	(cd $(CADICAL_DIR) && ./configure)
+	$(MAKE) -C $(CADICAL_DIR)
 	@echo Making preprocessor
 	$(MAKE) -C $(PREPRO_DIR) lib
 	@echo Making dependencies

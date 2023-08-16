@@ -47,6 +47,8 @@
 #include <iostream>
 #include <vector>
 
+#include "cadical/src/cadical.hpp"
+
 using NSPACE::vec;
 using NSPACE::Lit;
 using NSPACE::lit_Undef;
@@ -95,7 +97,6 @@ public:
     gate_extraction = false; 
     label_matching = true;
     skip_technique = 20; 
-
   }
 
   MaxSAT() {
@@ -244,7 +245,7 @@ public:
 
 
  protected:
-  //Preprocessing relatied 
+  //Preprocessing related 
   MaxSATFormula* preprocessed_formula();
   uint64_t standardization_removed;
   MaxSATFormula* standardized_formula();
@@ -287,7 +288,7 @@ public:
   // Properties of the MaxSAT formula
   //
   vec<lbool> model; // Stores the best satisfying model.
-  vec<lbool> model_of_original; // stores the best known solution of the non-åreårocessed isntance, obtained by calling reconstruct_model_prepro
+  vec<lbool> model_of_original; // stores the best known solution of the non-preprocessed instance, obtained by calling reconstruct_model_prepro
   StatusCode searchStatus; // Stores the current state of the formula
 
   // Statistics
@@ -339,6 +340,14 @@ public:
 
   // Greater than comparator.
   bool static greaterThan(uint64_t i, uint64_t j) { return (i > j); }
+
+  // Cadical related 
+  //TODO remove dependency on literals 
+
+  CaDiCaL::Solver * newSATSolverCad();
+  void addClauseCad(CaDiCaL::Solver * solverCad, vec<Lit> &clause);
+  lbool searchSATSolverCad(CaDiCaL::Solver *solverCad, vec<Lit> &assumptions);
+
 };
 } // namespace openwbo
 

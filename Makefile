@@ -13,9 +13,8 @@ include $(PWD)/solvers/$(SOLVER).mk
 # THE REMAINING OF THE MAKEFILE SHOULD BE LEFT UNCHANGED
 EXEC       = loandra
 PREPRO_DIR = maxpre2
+CADICAL_DIR = cadical
 DEPDIR     += mtl utils core
-#LIBD 	   = -L $(PWD)/maxpre/lib -l preprocessor
-##INCLUDES   = $(PWD)/maxpre2/
 DEPDIR     +=  ../../maxpre2 ../../encodings ../../algorithms ../../graph ../../classifier
 MROOT      ?= $(PWD)/solvers/$(SOLVERDIR)
 LFLAGS     += -lgmpxx -lgmp

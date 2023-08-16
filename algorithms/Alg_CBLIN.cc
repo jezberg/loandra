@@ -590,6 +590,7 @@ StatusCode CBLIN::unsatSearch() {
 
   assert(assumptions.size() == 0);
 
+  testCadical();
 
   solver = updateSolver();
 
@@ -1173,24 +1174,6 @@ void CBLIN::initializePBConstraint(uint64_t rhs) {
   assert(!enc->hasPBEncoding());
   logPrint("Encoding PB with UB: " + std::to_string(rhs) + " obj size " + std::to_string(objFunction.size()));
   
-  /*
-   ///DEBUGGING
-  objFunction_.clear();
-  coeffs_.clear();
-  objFunction.copyTo(objFunction_);
-  coeffs.copyTo(coeffs_);
-  rhs_ = rhs;
-  num_literals_ = solver->nVars();
-  ///////////
-  */
-
- /*
-  std::string print = "";
-  for (int i = 0; i < objFunction.size() ; i ++) {
-    print += (" (" + std::to_string(lit2Int(objFunction[i])) + "/" + std::to_string(coeffs[i]) +")");
-  }
-  logPrint(print);
-  */
   enc->encodePB(solver, objFunction, coeffs, rhs);
   init_rhs = rhs;
  
@@ -1251,8 +1234,6 @@ void CBLIN::setCardVars(bool prepro_bound) {
     lbool res = searchSATSolver(solver, cardAssumps);
     if (res == l_False) {
       logPrint("Warning: UNSAT in card setting");
-      //DEBUG
-      //test_pb_enc();
       return;
     }
     assert(res == l_True);
@@ -1263,34 +1244,6 @@ void CBLIN::setCardVars(bool prepro_bound) {
     
     assumptions.clear();
 
-}
-
-void CBLIN::test_pb_enc(){
-  logPrint("Testing PB encoding with " + std::to_string(objFunction_.size()) + " literals and rhs " + std::to_string(rhs_) + " num lits " + std::to_string(num_literals_));
-  assert(objFunction_.size() > 0);
-  assert(objFunction_.size() == coeffs_.size());
-
-  Solver* testsolver = newSATSolver();
-  while(testsolver->nVars() < num_literals_) testsolver->newVar();
-
-  Encoder * enc_ = new Encoder(_INCREMENTAL_NONE_, _CARD_MTOTALIZER_,
-                               _AMO_LADDER_, _PB_GTE_);
-
-  assert(!enc_->hasPBEncoding());
-  enc_->encodePB(testsolver, objFunction_, coeffs_, rhs_);
-  assert(enc_->hasPBEncoding());
-
-  vec<Lit> assumps;
-  lbool res = searchSATSolver(testsolver, assumps);
-  logPrint("first bound " + std::to_string(rhs_));
-  assert(res == l_True);
-
-  for (uint64_t k = 0; k < maxsat_formula->nHard(); k++) {
-    testsolver->addClause(maxsat_formula->getHardClause(k).clause); 
-    res = searchSATSolver(testsolver, assumps);
-    logPrint("num_clauses added " +  std::to_string(k));
-    assert(res == l_True);
-  }
 }
 
 void CBLIN::extendBestModel() {
@@ -1684,6 +1637,19 @@ bool CBLIN::shouldUpdate() {
      else 
         logPrint("CG GAP: " + std::to_string(known_gap) + " T " + print_timeSinceStart());
    }
+ }
+
+ void CBLIN::testCadical() {
+  solverCad = newSATSolverCad();
+  for (int i = 0; i < maxsat_formula->nHard(); i++)
+    addClauseCad(solverCad, maxsat_formula->getHardClause(i).clause);
+  
+  vec<Lit> ass;
+  lbool res = searchSATSolverCad(solverCad, ass);
+  
+  assert(res==l_True);
+  logPrint("CADICAL DONE");
+
  }
 
 

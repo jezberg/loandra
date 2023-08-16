@@ -56,6 +56,8 @@ public:
         bool u = false, bool m = false, int m_strat = 0) {
     
     solver = NULL;
+    solverCad = NULL;
+
     verbosity = verb;
 
     nbCurrentSoft = 0;
@@ -195,13 +197,7 @@ protected:
   vec<uint64_t> coeffs; // Coefficients of the literals that are used in the
                         // constraint that excludes models.
  
-  //DEBUGGING
-  vec<Lit> objFunction_;
-  vec<uint64_t> coeffs_;
-  uint64_t rhs_;
-  uint64_t num_literals_;
-
-
+ 
 
   vec<Lit> minimisable_lits;
  
@@ -251,9 +247,11 @@ protected:
  bool minimize_sol;
  int  minimize_strat;
  void minimizelinearsolution( vec<lbool> & sol);
+ 
+ //Cadical Related
+ CaDiCaL:: Solver* solverCad;
+ void testCadical();
 
-
- void test_pb_enc();
 
 };
 } // namespace openwbo

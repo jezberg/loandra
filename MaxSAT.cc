@@ -904,3 +904,44 @@ void MaxSAT::print_statistics() {
            "                                   |\n",
            maxsat_formula->nPB());
 }
+
+/************************************************************************************************
+ //
+ // Utils for Cadical 
+ // At this stage a lot of conversion from the clucose types to cadical types. 
+ // If the initial tests are promising, the next step is to remove the dependency on glucose types
+ //
+ ************************************************************************************************/
+// Creates an empty SAT Solver.
+CaDiCaL::Solver *MaxSAT::newSATSolverCad() {
+  CaDiCaL::Solver *S = new CaDiCaL::Solver;
+  return S;
+}
+
+void MaxSAT::addClauseCad(CaDiCaL::Solver * solverCad, vec<Lit> &clause) {
+  assert(solverCad != NULL);
+  for (int i = 0; i < clause.size(); i++) {
+    Lit l = clause[i];
+    solverCad->add(lit2Int(l));
+  }
+  solverCad->add(0);
+}
+
+lbool MaxSAT::searchSATSolverCad(CaDiCaL::Solver *solverCad, vec<Lit> &assumptions) {
+  assert(solverCad != NULL);
+  for (int i = 0; i < assumptions.size(); i++) {
+    Lit l = assumptions[i];
+    solverCad->assume(lit2Int(l));
+  }
+  int res = solverCad->solve();
+  if (res == 10) {
+    return l_True;
+  }
+  if (res == 20) {
+    return l_False;
+  }
+  if (res == 0) {
+    return l_Undef;
+  }
+  assert(false); // something went wrong with the IPASIR call.
+}
