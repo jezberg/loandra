@@ -70,8 +70,10 @@ Solver *CBLIN::updateSolver() {
 
   vars_added = maxsat_formula->nVars();
 
-  for (int i = clauses_added; i < maxsat_formula->nHard(); i++)
+  for (int i = clauses_added; i < maxsat_formula->nHard(); i++) {
     solver->addClause(maxsat_formula->getHardClause(i).clause);
+    ICadical::addClause(solverCad, maxsat_formula->getHardClause(i).clause);
+  }
   
   clauses_added = maxsat_formula->nHard();
 
@@ -590,13 +592,16 @@ StatusCode CBLIN::unsatSearch() {
 
   assert(assumptions.size() == 0);
 
-  testCadical();
-
   solver = updateSolver();
 
   softsSatisfied();
   //logPrint("In Unsat in solver " + std::to_string(solver->nVars()) + " vars amd " + std::to_string(solver->nClauses()) + " clauses" );
   lbool res = searchSATSolver(solver, assumptions);
+  
+  //Cadical extra
+  lbool resCad = ICadical::searchSATSolver(solverCad, assumptions);
+  assert(res == resCad);
+
   solver->resetFixes();
 
   if (res == l_False) {
@@ -649,15 +654,28 @@ StatusCode CBLIN::unsatSearch() {
       lbool res; 
       res = searchSATSolver(solver, assumptions);
 
+      lbool resCad;
+      resCad = ICadical::searchSATSolver(solverCad, assumptions);
+
+      
+
       if (res == l_Undef) {
         //Interrupted
         return _UNKNOWN_;
       }
 
+      assert(resCad == res);
+
       if (res == l_False) {
       
         nbCores++;
         assert(solver->conflict.size() > 0);
+
+        logPrint("Core from glucose: " + core_2_string(solver->conflict));
+        vec<Lit> cad_core;
+        ICadical::getCore(solverCad, assumptions, cad_core);
+        logPrint("Core from cadical: " + core_2_string(cad_core));
+
         uint64_t coreCost = computeCostCore(solver->conflict);
         lbCost += coreCost;
         checkGap();
@@ -710,6 +728,10 @@ StatusCode CBLIN::unsatSearch() {
       
       initAssumptions();  
       solver = newSATSolver();
+       //CADICAL DEBUG
+      solverCad = ICadical::newSATSolver();
+
+
       solver->setSolutionBasedPhaseSaving(false);
       StatusCode rs = unsatSearch();
       if (rs == _UNSATISFIABLE_) return rs;
@@ -1639,18 +1661,9 @@ bool CBLIN::shouldUpdate() {
    }
  }
 
- void CBLIN::testCadical() {
-  solverCad = ICadical::newSATSolver();
-  for (int i = 0; i < maxsat_formula->nHard(); i++)
-    ICadical::addClause(solverCad, maxsat_formula->getHardClause(i).clause);
-  
-  vec<Lit> ass;
-  lbool res = ICadical::searchSATSolver(solverCad, ass);
-  
-  assert(res==l_True);
-  logPrint("CADICAL DONE");
+ 
 
- }
+
 
 
 

@@ -250,7 +250,7 @@ protected:
  
  //Cadical Related
  CaDiCaL:: Solver* solverCad;
- void testCadical();
+ 
 
 
 };

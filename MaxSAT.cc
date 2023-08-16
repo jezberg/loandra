@@ -905,3 +905,11 @@ void MaxSAT::print_statistics() {
            maxsat_formula->nPB());
 }
 
+std::string MaxSAT::core_2_string(vec<Lit> & core) {
+  std::string s = "";
+  for (int i = 0; i < core.size() ; i++) {
+    s += " " + std::to_string(lit2Int(core[i]));
+  }
+  return s;
+ }
+
