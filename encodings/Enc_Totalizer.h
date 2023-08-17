@@ -54,15 +54,15 @@ public:
   }
   ~Totalizer() {}
 
-  void build(Solver *S, vec<Lit> &lits, int64_t rhs);
-  void join(Solver *S, vec<Lit> &lits, int64_t rhs);
-  void update(Solver *S, int64_t rhs, vec<Lit> &lits, vec<Lit> &assumptions);
-  void update(Solver *S, int64_t rhs) {
+  void build(Solver *S, CaDiCaL::Solver * SC, vec<Lit> &lits, int64_t rhs);
+  void join(Solver *S, CaDiCaL::Solver * SC, vec<Lit> &lits, int64_t rhs);
+  void update(Solver *S, CaDiCaL::Solver * SC, int64_t rhs, vec<Lit> &lits, vec<Lit> &assumptions);
+  void update(Solver *S, CaDiCaL::Solver * SC, int64_t rhs) {
     vec<Lit> lits;
     vec<Lit> assumptions;
-    update(S, rhs, lits, assumptions);
+    update(S, SC, rhs, lits, assumptions);
   }
-  void add(Solver *S, Totalizer &tot, int64_t rhs);
+  void add(Solver *S, CaDiCaL::Solver * SC, Totalizer &tot, int64_t rhs);
 
   bool hasCreatedEncoding() { return hasEncoding; }
   void setIncremental(int incremental) { incremental_strategy = incremental; }
@@ -99,10 +99,10 @@ public:
   vec<Lit> &outputs() { return cardinality_outlits; }
 
 protected:
-  void encode(Solver *S, vec<Lit> &lits);
-  void adder(Solver *S, vec<Lit> &left, vec<Lit> &right, vec<Lit> &output);
-  void incremental(Solver *S, int64_t rhs);
-  void toCNF(Solver *S, vec<Lit> &lits);
+  void encode(Solver *S, CaDiCaL::Solver * SC, vec<Lit> &lits);
+  void adder(Solver *S, CaDiCaL::Solver * SC, vec<Lit> &left, vec<Lit> &right, vec<Lit> &output);
+  void incremental(Solver *S, CaDiCaL::Solver * SC, int64_t rhs);
+  void toCNF(Solver *S, CaDiCaL::Solver * SC, vec<Lit> &lits);
 
   vec<vec<Lit>> totalizerIterative_left;
   vec<vec<Lit>> totalizerIterative_right;

@@ -212,6 +212,9 @@ StatusCode OLL_ITER::weighted() {
 
 
 StatusCode OLL_ITER::search() {
+  printf("Error: development branch, OLL not supported atm");
+  exit(1);
+
 
   if (encoding != _CARD_TOTALIZER_) {
     if(print) {
@@ -416,7 +419,8 @@ void OLL_ITER::reformulateCore(const vec<Lit> &core, const uint64_t min_core, ve
 
     Encoder *e = new Encoder();
     e->setIncremental(_INCREMENTAL_ITERATIVE_);
-    e->buildCardinality(solver, newCore, 1);
+    //Terrible hack 
+    e->buildCardinality(solver, NULL, newCore, 1);
 
     soft_cardinality.push(e);
     assert(e->outputs().size() > 1);
@@ -454,7 +458,7 @@ void OLL_ITER::extendCardEnc(Lit p, vec<Encoder *> & soft_cardinality) {
   joinObjFunction.clear();
   encodingAssumptions.clear();
 
-  cur->incUpdateCardinality( solver, joinObjFunction, cur->lits(), newBound, encodingAssumptions);
+  cur->incUpdateCardinality( solver, NULL, joinObjFunction, cur->lits(), newBound, encodingAssumptions);
 
 } 
 

@@ -52,7 +52,7 @@ public:
   // NOTE: currently the encoding is not set as an input parameter.
   CBLIN(int verb = _VERBOSITY_MINIMAL_, int weight = _WEIGHT_NORMAL_, 
         int linear = 0, bool delsol = false, bool varR = false, bool varRCG = false,
-        int gcLim = -1, bool r2strat = false, bool incrementalV = false, 
+        int gcLim = -1, bool r2strat = false, 
         bool u = false, bool m = false, int m_strat = 0) {
     
     solver = NULL;
@@ -79,7 +79,6 @@ public:
     relaxBeforeStrat = r2strat;
     reconstruct_sol = u;
     reconstruct_iter = false;
-    incrementalVarres = incrementalV;
 
     inLinSearch = false;
     wrong_eval_cg = 0;
@@ -143,7 +142,6 @@ protected:
   bool inLinSearch;
 
   //Varying Resolutio
-  bool incrementalVarres;
   int varresFactor;
   bool varyingres; 
   bool varyingresCG;
@@ -183,7 +181,6 @@ protected:
   StatusCode setup(); // unsat search and other setups
   StatusCode coreGuidedLinearSearch();
   StatusCode weightDivisionSearch();
-  StatusCode onlyLinearSearch();
 
 
   bool enoughSoftAboveWeight(uint64_t weightCand);

@@ -30,7 +30,7 @@
 using namespace openwbo;
 
 // Creates an unit clause in the SAT solver
-void Encodings::addUnitClause(Solver *S, Lit a, Lit blocking) {
+void Encodings::addUnitClause(Solver *S, CaDiCaL::Solver *SCad, Lit a, Lit blocking) {
   assert(clause.size() == 0);
   assert(a != lit_Undef);
   assert(var(a) < S->nVars());
@@ -38,11 +38,12 @@ void Encodings::addUnitClause(Solver *S, Lit a, Lit blocking) {
   if (blocking != lit_Undef)
     clause.push(blocking);
   S->addClause(clause);
+  ICadical::addClause(SCad, clause);
   clause.clear();
 }
 
 // Creates a binary clause in the SAT solver
-void Encodings::addBinaryClause(Solver *S, Lit a, Lit b, Lit blocking) {
+void Encodings::addBinaryClause(Solver *S, CaDiCaL::Solver *SCad, Lit a, Lit b, Lit blocking) {
   assert(clause.size() == 0);
   assert(a != lit_Undef && b != lit_Undef);
   assert(var(a) < S->nVars() && var(b) < S->nVars());
@@ -51,11 +52,12 @@ void Encodings::addBinaryClause(Solver *S, Lit a, Lit b, Lit blocking) {
   if (blocking != lit_Undef)
     clause.push(blocking);
   S->addClause(clause);
+  ICadical::addClause(SCad, clause);
   clause.clear();
 }
 
 // Creates a ternary clause in the SAT solver
-void Encodings::addTernaryClause(Solver *S, Lit a, Lit b, Lit c, Lit blocking) {
+void Encodings::addTernaryClause(Solver *S, CaDiCaL::Solver *SCad, Lit a, Lit b, Lit c, Lit blocking) {
   assert(clause.size() == 0);
   assert(a != lit_Undef && b != lit_Undef && c != lit_Undef);
   assert(var(a) < S->nVars() && var(b) < S->nVars() && var(c) < S->nVars());
@@ -65,11 +67,12 @@ void Encodings::addTernaryClause(Solver *S, Lit a, Lit b, Lit c, Lit blocking) {
   if (blocking != lit_Undef)
     clause.push(blocking);
   S->addClause(clause);
+  ICadical::addClause(SCad, clause);
   clause.clear();
 }
 
 // Creates a quaternary clause in the SAT solver
-void Encodings::addQuaternaryClause(Solver *S, Lit a, Lit b, Lit c, Lit d,
+void Encodings::addQuaternaryClause(Solver *S, CaDiCaL::Solver *SCad, Lit a, Lit b, Lit c, Lit d,
                                     Lit blocking) {
   assert(clause.size() == 0);
   assert(a != lit_Undef && b != lit_Undef && c != lit_Undef && d != lit_Undef);
@@ -82,5 +85,6 @@ void Encodings::addQuaternaryClause(Solver *S, Lit a, Lit b, Lit c, Lit d,
   if (blocking != lit_Undef)
     clause.push(blocking);
   S->addClause(clause);
+  ICadical::addClause(SCad, clause);
   clause.clear();
 }

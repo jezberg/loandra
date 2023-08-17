@@ -37,6 +37,8 @@
 #include "../MaxTypes.h"
 #include "core/SolverTypes.h"
 
+#include "../ICadical.h"
+
 using NSPACE::vec;
 using NSPACE::Lit;
 using NSPACE::mkLit;
@@ -56,14 +58,14 @@ public:
   // Auxiliary methods for creating clauses
   //
   // Add a unit clause to a SAT solver
-  void addUnitClause(Solver *S, Lit a, Lit blocking = lit_Undef);
+  void addUnitClause(Solver *S, CaDiCaL::Solver *SCad,  Lit a, Lit blocking = lit_Undef);
   // Add a binary clause to a SAT solver
-  void addBinaryClause(Solver *S, Lit a, Lit b, Lit blocking = lit_Undef);
+  void addBinaryClause(Solver *S, CaDiCaL::Solver *SCad, Lit a, Lit b, Lit blocking = lit_Undef);
   // Add a ternary clause to a SAT solver
-  void addTernaryClause(Solver *S, Lit a, Lit b, Lit c,
+  void addTernaryClause(Solver *S, CaDiCaL::Solver *SCad, Lit a, Lit b, Lit c,
                         Lit blocking = lit_Undef);
   // Add a quaternary clause to a SAT solver
-  void addQuaternaryClause(Solver *S, Lit a, Lit b, Lit c, Lit d,
+  void addQuaternaryClause(Solver *S, CaDiCaL::Solver *SCad, Lit a, Lit b, Lit c, Lit d,
                            Lit blocking = lit_Undef);
 
   // Creates a new variable in the SAT solver

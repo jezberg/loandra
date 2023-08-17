@@ -39,13 +39,13 @@
 #include "core/SolverTypes.h"
 
 // Encodings
-#include "encodings/Enc_CNetworks.h"
 #include "encodings/Enc_GTE.h"
-#include "encodings/Enc_Ladder.h"
-#include "encodings/Enc_MTotalizer.h"
-#include "encodings/Enc_SWC.h"
 #include "encodings/Enc_Totalizer.h"
 #include "encodings/Enc_Adder.h"
+
+//
+#include "ICadical.h"
+
 
 using NSPACE::vec;
 using NSPACE::Lit;
@@ -78,17 +78,15 @@ public:
   vec<Lit> &outputs();
 
   // At-most-one encodings:
-  //
-  // Encode exactly-one constraint into CNF.
-  void encodeAMO(Solver *S, vec<Lit> &lits);
+
 
   // Cardinality encodings:
   //
   // Encode cardinality constraint into CNF.
-  void encodeCardinality(Solver *S, vec<Lit> &lits, int64_t rhs);
+  void encodeCardinality(Solver *S, CaDiCaL::Solver* SC, vec<Lit> &lits, int64_t rhs);
 
   // Update the rhs of an already existent cardinality constraint
-  void updateCardinality(Solver *S, int64_t rhs);
+  void updateCardinality(Solver *S, CaDiCaL::Solver* SC,  int64_t rhs);
   
 
   // Incremental cardinality encodings:
@@ -97,49 +95,36 @@ public:
   // No restriction is made on the value of 'rhs'.
   // buildCardinality + updateCardinality is equivalent to encodeCardinality.
   // Useful for incremental encodings.
-  void buildCardinality(Solver *S, vec<Lit> &lits, int64_t rhs);
+  void buildCardinality(Solver *S, CaDiCaL::Solver * SC, vec<Lit> &lits, int64_t rhs);
 
   // Incremental update for cardinality constraints;
-  void incUpdateCardinality(Solver *S, vec<Lit> &join, vec<Lit> &lits,
+  void incUpdateCardinality(Solver *S, CaDiCaL::Solver * SC, vec<Lit> &join, vec<Lit> &lits,
                             int64_t rhs, vec<Lit> &assumptions);
-  void incUpdateCardinality(Solver *S, vec<Lit> &lits, int64_t rhs,
+  void incUpdateCardinality(Solver *S, CaDiCaL::Solver * SC, vec<Lit> &lits, int64_t rhs,
                             vec<Lit> &assumptions) {
 
     vec<Lit> empty;
-    incUpdateCardinality(S, empty, lits, rhs, assumptions);
+    incUpdateCardinality(S, SC,  empty, lits, rhs, assumptions);
   }
 
   // Add two disjoint cardinality constraints
-  void addCardinality(Solver *S, Encoder &enc, int64_t rhs);
+  void addCardinality(Solver *S, CaDiCaL::Solver * SC, Encoder &enc, int64_t rhs);
 
   // PB encodings:
   //
   // Encode pseudo-Boolean constraint into CNF.
-  void encodePB(Solver *S, vec<Lit> &lits, vec<uint64_t> &coeffs, uint64_t rhs);
+  void encodePB(Solver *S, CaDiCaL::Solver * SC,  vec<Lit> &lits, vec<uint64_t> &coeffs, uint64_t rhs);
   // Update the rhs of an already existent pseudo-Boolean constraint.
-  void updatePB(Solver *S, uint64_t rhs);
-  void updatePBA(vec<Lit>& assumps, uint64_t rhs);
+  void updatePB(Solver *S, CaDiCaL::Solver * SC, uint64_t rhs);
   // Predicts the number of clauses needed for the encoding
   int predictPB(Solver *S, vec<Lit> &lits, vec<uint64_t> &coeffs, uint64_t rhs);
 
-  // Incremental PB encodings:
-  //
-  // Incremental PB encoding.
-  void incEncodePB(Solver *S, vec<Lit> &lits, vec<uint64_t> &coeffs,
-                   int64_t rhs, vec<Lit> &assumptions, int size);
-
-  // Incremental update of PB encodings.
-  void incUpdatePB(Solver *S, vec<Lit> &lits, vec<uint64_t> &coeffs,
-                   int64_t rhs, vec<Lit> &assumptions);
-
-  // Incremental update of assumptions.
-  void incUpdatePBAssumptions(Solver *S, vec<Lit> &assumptions);
-
+  
   // Incremental construction of the totalizer encoding.
   // Joins a set of new literals, x_1 + ... + x_i, to an existing encoding of
   // the type
   // y_1 + ... + y_j <= k. It also updates 'k' to 'rhs'.
-  void joinEncoding(Solver *S, vec<Lit> &lits, int64_t rhs);
+  void joinEncoding(Solver *S, CaDiCaL::Solver * SC, vec<Lit> &lits, int64_t rhs);
 
   // Other:
   //
@@ -158,10 +143,6 @@ public:
   void setAMOEncoding(int enc) { amo_encoding = enc; }
   int getAMOEncoding() { return amo_encoding; }
 
-  // Controls the modulo value that is used in the modulo totalizer encoding.
-  //
-  void setModulo(int m) { mtotalizer.setModulo(m); }
-  int getModulo() { return mtotalizer.getModulo(); }
 
   // Sets the incremental strategy for the totalizer encoding.
   //
@@ -176,17 +157,10 @@ public:
   int pb_encoding;
   int amo_encoding;
 
-  // At-most-one encodings
-  Ladder ladder;
-
-  // Cardinality encodings
-  CNetworks cnetworks;
-  MTotalizer mtotalizer;
   Totalizer totalizer;
   Adder adder;
 
   // PB encodings
-  SWC swc;
   GTE gte;
 };
 } // namespace openwbo

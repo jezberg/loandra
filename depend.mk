@@ -16,15 +16,15 @@
   /Users/jezberg/Documents/Public-Solvers/loandra/solvers/glucose4.1/mtl/Clone.h \
   /Users/jezberg/Documents/Public-Solvers/loandra/solvers/glucose4.1/core/SolverStats.h \
   /Users/jezberg/Documents/Public-Solvers/loandra/MaxTypes.h \
-  /Users/jezberg/Documents/Public-Solvers/loandra/encodings/Enc_CNetworks.h \
+  /Users/jezberg/Documents/Public-Solvers/loandra/encodings/Enc_GTE.h \
   /Users/jezberg/Documents/Public-Solvers/loandra/encodings/Encodings.h \
   /Users/jezberg/Documents/Public-Solvers/loandra/encodings/../MaxTypes.h \
-  /Users/jezberg/Documents/Public-Solvers/loandra/encodings/Enc_GTE.h \
-  /Users/jezberg/Documents/Public-Solvers/loandra/encodings/Enc_Ladder.h \
-  /Users/jezberg/Documents/Public-Solvers/loandra/encodings/Enc_MTotalizer.h \
-  /Users/jezberg/Documents/Public-Solvers/loandra/encodings/Enc_SWC.h \
+  /Users/jezberg/Documents/Public-Solvers/loandra/encodings/../ICadical.h \
+  /Users/jezberg/Documents/Public-Solvers/loandra/solvers/glucose4.1/utils/System.h \
+  /Users/jezberg/Documents/Public-Solvers/loandra/cadical/src/cadical.hpp \
   /Users/jezberg/Documents/Public-Solvers/loandra/encodings/Enc_Totalizer.h \
-  /Users/jezberg/Documents/Public-Solvers/loandra/encodings/Enc_Adder.h
+  /Users/jezberg/Documents/Public-Solvers/loandra/encodings/Enc_Adder.h \
+  /Users/jezberg/Documents/Public-Solvers/loandra/ICadical.h
 /Users/jezberg/Documents/Public-Solvers/loandra/ICadical.o /Users/jezberg/Documents/Public-Solvers/loandra/ICadical.or /Users/jezberg/Documents/Public-Solvers/loandra/ICadical.od /Users/jezberg/Documents/Public-Solvers/loandra/ICadical.op: /Users/jezberg/Documents/Public-Solvers/loandra/ICadical.cc \
   /Users/jezberg/Documents/Public-Solvers/loandra/ICadical.h \
   /Users/jezberg/Documents/Public-Solvers/loandra/solvers/glucose4.1/core/Solver.h \
@@ -101,13 +101,10 @@
   /Users/jezberg/Documents/Public-Solvers/loandra/ParserPB.h \
   /Users/jezberg/Documents/Public-Solvers/loandra/algorithms/Alg_OLL_ITER.h \
   /Users/jezberg/Documents/Public-Solvers/loandra/algorithms/../Encoder.h \
-  /Users/jezberg/Documents/Public-Solvers/loandra/encodings/Enc_CNetworks.h \
+  /Users/jezberg/Documents/Public-Solvers/loandra/encodings/Enc_GTE.h \
   /Users/jezberg/Documents/Public-Solvers/loandra/encodings/Encodings.h \
   /Users/jezberg/Documents/Public-Solvers/loandra/encodings/../MaxTypes.h \
-  /Users/jezberg/Documents/Public-Solvers/loandra/encodings/Enc_GTE.h \
-  /Users/jezberg/Documents/Public-Solvers/loandra/encodings/Enc_Ladder.h \
-  /Users/jezberg/Documents/Public-Solvers/loandra/encodings/Enc_MTotalizer.h \
-  /Users/jezberg/Documents/Public-Solvers/loandra/encodings/Enc_SWC.h \
+  /Users/jezberg/Documents/Public-Solvers/loandra/encodings/../ICadical.h \
   /Users/jezberg/Documents/Public-Solvers/loandra/encodings/Enc_Totalizer.h \
   /Users/jezberg/Documents/Public-Solvers/loandra/encodings/Enc_Adder.h \
   /Users/jezberg/Documents/Public-Solvers/loandra/algorithms/../MaxSAT.h \

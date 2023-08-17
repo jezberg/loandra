@@ -913,3 +913,22 @@ std::string MaxSAT::core_2_string(vec<Lit> & core) {
   return s;
  }
 
+
+std::string MaxSAT::model_2_string(vec<lbool> & model) {
+  std::string s = "";
+  for (int i = 0; i < model.size() ; i++) {
+    if (model[i] == l_True) {
+      s += "T";
+    }
+    else if (model[i] == l_True) {
+      s += "F";
+    }
+    else {
+      s += "U";
+    }
+    
+  }
+  return s;
+}
+
+

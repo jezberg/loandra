@@ -32,78 +32,78 @@
 
 using namespace openwbo;
 
-void Adder::FA_extra ( Solver *S, Lit xc, Lit xs, Lit a, Lit b, Lit c )
+void Adder::FA_extra ( Solver *S, CaDiCaL::Solver * SC, Lit xc, Lit xs, Lit a, Lit b, Lit c )
 {
   
   clause.clear();
-  addTernaryClause(S, ~xc, ~xs, a);
-  addTernaryClause(S, ~xc, ~xs, b);
-  addTernaryClause(S, ~xc, ~xs, c);
+  addTernaryClause(S, SC, ~xc, ~xs, a);
+  addTernaryClause(S, SC, ~xc, ~xs, b);
+  addTernaryClause(S, SC, ~xc, ~xs, c);
 
-  addTernaryClause(S, xc, xs, ~a);
-  addTernaryClause(S, xc, xs, ~b);
-  addTernaryClause(S, xc, xs, ~c);
+  addTernaryClause(S, SC, xc, xs, ~a);
+  addTernaryClause(S, SC, xc, xs, ~b);
+  addTernaryClause(S, SC, xc, xs, ~c);
 }
 
 
-Lit Adder::FA_carry ( Solver *S, Lit a, Lit b, Lit c ) {
+Lit Adder::FA_carry ( Solver *S, CaDiCaL::Solver * SC, Lit a, Lit b, Lit c ) {
   
   Lit x = mkLit(S->newVar(), false);
 
-  addTernaryClause(S, b, c, ~x);
-  addTernaryClause(S, a, c, ~x);
-  addTernaryClause(S, a, b, ~x);
+  addTernaryClause(S, SC, b, c, ~x);
+  addTernaryClause(S, SC, a, c, ~x);
+  addTernaryClause(S, SC, a, b, ~x);
 
-  addTernaryClause(S, ~b, ~c, x);
-  addTernaryClause(S, ~a, ~c, x);
-  addTernaryClause(S, ~a, ~b, x);
+  addTernaryClause(S, SC, ~b, ~c, x);
+  addTernaryClause(S, SC, ~a, ~c, x);
+  addTernaryClause(S, SC, ~a, ~b, x);
 
   return x;
 }
 
-Lit Adder::FA_sum ( Solver *S, Lit a, Lit b, Lit c )
+Lit Adder::FA_sum ( Solver *S, CaDiCaL::Solver * SC, Lit a, Lit b, Lit c )
 {
     Lit x = mkLit(S->newVar(), false);
 
-    addQuaternaryClause(S, a, b, c, ~x);
-    addQuaternaryClause(S, a, ~b, ~c, ~x);
-    addQuaternaryClause(S, ~a, b, ~c, ~x);
-    addQuaternaryClause(S, ~a, ~b, c, ~x);
+    addQuaternaryClause(S, SC, a, b, c, ~x);
+    addQuaternaryClause(S, SC, a, ~b, ~c, ~x);
+    addQuaternaryClause(S, SC, ~a, b, ~c, ~x);
+    addQuaternaryClause(S, SC, ~a, ~b, c, ~x);
 
-    addQuaternaryClause(S, ~a, ~b, ~c, x);
-    addQuaternaryClause(S, ~a, b, c, x);
-    addQuaternaryClause(S, a, ~b, c, x);
-    addQuaternaryClause(S, a, b, ~c, x);
+    addQuaternaryClause(S, SC, ~a, ~b, ~c, x);
+    addQuaternaryClause(S, SC, ~a, b, c, x);
+    addQuaternaryClause(S, SC, a, ~b, c, x);
+    addQuaternaryClause(S, SC, a, b, ~c, x);
 
     return x;
 }
 
-Lit Adder::HA_carry ( Solver *S, Lit a, Lit b) // a AND b
+Lit Adder::HA_carry ( Solver *S, CaDiCaL::Solver * SC, Lit a, Lit b) // a AND b
 {  
   Lit x = mkLit(S->newVar(), false);
 
-  addBinaryClause(S, a, ~x);
-  addBinaryClause(S, b, ~x);
-  addTernaryClause(S, ~a, ~b, x);
+  addBinaryClause(S, SC, a, ~x);
+  addBinaryClause(S, SC, b, ~x);
+  addTernaryClause(S, SC, ~a, ~b, x);
 
   return x;
 }
 
-Lit Adder::HA_sum ( Solver *S, Lit a, Lit b ) // a XOR b
+Lit Adder::HA_sum ( Solver *S, CaDiCaL::Solver * SC, Lit a, Lit b ) // a XOR b
 {
   Lit x = mkLit(S->newVar(), false);
 
-  addTernaryClause(S, ~a, ~b, ~x);
-  addTernaryClause(S, a, b, ~x);
+  addTernaryClause(S, SC, ~a, ~b, ~x);
+  addTernaryClause(S, SC, a, b, ~x);
   
-  addTernaryClause(S, ~a, b, x);
-  addTernaryClause(S, a, ~b, x);
+  addTernaryClause(S, SC, ~a, b, x);
+  addTernaryClause(S, SC,  a, ~b, x);
 
   return x;
 }
 
 
-void Adder::adderTree (Solver *S, std::vector< std::queue< Lit > > & buckets, vec< Lit >& result ) {
+void Adder::adderTree (Solver *S, CaDiCaL::Solver * SC, std::vector< std::queue< Lit > > & buckets, vec< Lit >& result ) {
   Lit x,y,z;
   Lit u = lit_Undef;
 
@@ -123,11 +123,11 @@ void Adder::adderTree (Solver *S, std::vector< std::queue< Lit > > & buckets, ve
     buckets[i].pop();
     z = buckets[i].front();
     buckets[i].pop();
-    Lit xs = FA_sum ( S, x,y,z );
-    Lit xc = FA_carry ( S, x,y,z );
+    Lit xs = FA_sum ( S, SC, x,y,z );
+    Lit xc = FA_carry ( S, SC, x,y,z );
     buckets[i  ].push ( xs );
     buckets[i+1].push ( xc );
-    FA_extra(S, xc, xs, x, y, z);
+    FA_extra(S, SC, xc, xs, x, y, z);
     }
 
       if ( buckets[i].size() == 2 ) {
@@ -135,8 +135,8 @@ void Adder::adderTree (Solver *S, std::vector< std::queue< Lit > > & buckets, ve
     buckets[i].pop();
     y = buckets[i].front();
     buckets[i].pop();
-    buckets[i  ].push ( HA_sum ( S, x,y ) );
-    buckets[i+1].push ( HA_carry ( S, x,y ) );
+    buckets[i  ].push ( HA_sum ( S, SC,  x,y ) );
+    buckets[i+1].push ( HA_carry ( S, SC, x,y ) );
     }
 
 
@@ -149,7 +149,7 @@ void Adder::adderTree (Solver *S, std::vector< std::queue< Lit > > & buckets, ve
   // Generates clauses for “xs <= ys”, assuming ys has only constant signals (0 or 1).
 // xs and ys must have the same size
 
-void Adder::lessThanOrEqual (Solver *S, vec< Lit > & xs, std::vector< uint64_t > & ys) {
+void Adder::lessThanOrEqual (Solver *S, CaDiCaL::Solver * SC, vec< Lit > & xs, std::vector< uint64_t > & ys) {
   assert ( xs.size() == ys.size() );
   vec<Lit> clause;
   bool skip;
@@ -191,11 +191,12 @@ void Adder::lessThanOrEqual (Solver *S, vec< Lit > & xs, std::vector< uint64_t >
 
       //formula.addClause( clause );
       S->addClause(clause);
+      ICadical::addClause(SC, clause);
       }
 
 }
 
-void Adder::lessThanOrEqualInc (Solver *S, vec< Lit > & xs, std::vector< uint64_t > & ys, vec<Lit>& assumptions) {
+void Adder::lessThanOrEqualInc (Solver *S, CaDiCaL::Solver * SC, vec< Lit > & xs, std::vector< uint64_t > & ys, vec<Lit>& assumptions) {
   assert ( xs.size() == ys.size() );
   vec<Lit> clause;
   bool skip;
@@ -240,6 +241,7 @@ void Adder::lessThanOrEqualInc (Solver *S, vec< Lit > & xs, std::vector< uint64_
       clause.push(t);
       assumptions.push(~t);
       S->addClause(clause);
+      ICadical::addClause(SC, clause);
       }
 
 }
@@ -262,7 +264,7 @@ void Adder::numToBits ( std::vector<uint64_t> & bits, uint64_t n, uint64_t numbe
   reverse ( bits.begin(), bits.end() );
 }
 
-void Adder::encode(Solver *S, vec<Lit> &lits, vec<uint64_t> &coeffs, uint64_t rhs){
+void Adder::encode(Solver *S, CaDiCaL::Solver * SC, vec<Lit> &lits, vec<uint64_t> &coeffs, uint64_t rhs){
 
     _output.clear();
 
@@ -280,15 +282,15 @@ void Adder::encode(Solver *S, vec<Lit> &lits, vec<uint64_t> &coeffs, uint64_t rh
 
     std::vector<uint64_t> kBits;
 
-    adderTree (S, _buckets, _output);
+    adderTree (S, SC, _buckets, _output);
   
     numToBits (kBits, _buckets.size(), rhs );
 
-    lessThanOrEqual (S, _output, kBits);
+    lessThanOrEqual (S, SC, _output, kBits);
     hasEncoding = true;
 }
 
-void Adder::encodeInc(Solver *S, vec<Lit> &lits, vec<uint64_t> &coeffs, uint64_t rhs, vec<Lit> &assumptions){
+void Adder::encodeInc(Solver *S, CaDiCaL::Solver * SC, vec<Lit> &lits, vec<uint64_t> &coeffs, uint64_t rhs, vec<Lit> &assumptions){
     _output.clear();
 
     uint64_t nb = ld64(rhs); // number of bits
@@ -305,26 +307,26 @@ void Adder::encodeInc(Solver *S, vec<Lit> &lits, vec<uint64_t> &coeffs, uint64_t
 
     std::vector<uint64_t> kBits;
 
-    adderTree (S, _buckets, _output);
+    adderTree (S, SC, _buckets, _output);
     numToBits (kBits, _buckets.size(), rhs );
 
-    lessThanOrEqualInc (S, _output, kBits, assumptions);
+    lessThanOrEqualInc (S, SC, _output, kBits, assumptions);
     hasEncoding = true;
 
 }
 
-void Adder::updateInc(Solver *S, uint64_t rhs, vec<Lit>& assumptions){
+void Adder::updateInc(Solver *S, CaDiCaL::Solver * SC, uint64_t rhs, vec<Lit>& assumptions){
       
       std::vector<uint64_t> kBits;
       numToBits (kBits, _buckets.size(), rhs );
-      lessThanOrEqualInc (S, _output, kBits, assumptions);
+      lessThanOrEqualInc (S, SC,  _output, kBits, assumptions);
 }
 
-void Adder::update(Solver *S, uint64_t rhs){
+void Adder::update(Solver *S,CaDiCaL::Solver * SC, uint64_t rhs){
       
       std::vector<uint64_t> kBits;
       numToBits (kBits, _buckets.size(), rhs );
-      lessThanOrEqual (S, _output, kBits);
+      lessThanOrEqual (S, SC,  _output, kBits);
 }
 
 

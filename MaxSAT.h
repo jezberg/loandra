@@ -343,7 +343,7 @@ public:
   bool static greaterThan(uint64_t i, uint64_t j) { return (i > j); }
 
   std::string core_2_string(vec<Lit> & core);
-
+  std::string model_2_string(vec<lbool> & model);
 };
 } // namespace openwbo
 

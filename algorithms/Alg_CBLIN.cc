@@ -64,6 +64,7 @@ using namespace openwbo;
 Solver *CBLIN::updateSolver() {
 
   reserveSATVariables(solver, maxsat_formula->nVars());
+  solverCad->reserve(maxsat_formula->nVars());
 
   for (int i = vars_added; i < maxsat_formula->nVars(); i++)
     newSATVariable(solver);
@@ -230,15 +231,10 @@ uint64_t CBLIN::findNextWeightDiversity(uint64_t weight) {
 		  {
 			bool satisfied = false;
 			if (maxsat_formula->getSoftClause(i).weight == bound) {
-				 assert(maxsat_formula->getSoftClause(i).clause.size() == 1 );
-
+				  assert(maxsat_formula->getSoftClause(i).clause.size() == 1 );
           Lit l =  maxsat_formula->getSoftClause(i).clause[0];
           assert(var(l) < currentModel.size());
-
-          if ((sign(l) && currentModel[var(l)] == l_False) ||
-            (!sign(l) && currentModel[var(l)] == l_True)) {
-            satisfied = true;
-          }
+          satisfied = literalTrueInModel(l, currentModel);
 			  }
 			if (maxsat_formula->getSoftClause(i).weight > bound || (maxsat_formula->getSoftClause(i).weight == bound && satisfied) ) {  // 
  
@@ -249,6 +245,7 @@ uint64_t CBLIN::findNextWeightDiversity(uint64_t weight) {
 				assert(l != lit_Undef);
 				clause.push(~l);
 				solver->addClause(clause);
+        ICadical::addClause(solverCad, clause);
 
         if (!hardenLazily()) {
           maxsat_formula->addHardClause(clause); 
@@ -651,7 +648,8 @@ StatusCode CBLIN::unsatSearch() {
         solver->setTimeBudget(timeLimitCores- timeSinceStart());
       }
       setAssumptions(assumptions);
-      lbool res; 
+     
+     lbool res; 
       res = searchSATSolver(solver, assumptions);
 
       lbool resCad;
@@ -672,6 +670,7 @@ StatusCode CBLIN::unsatSearch() {
         assert(solver->conflict.size() > 0);
 
         logPrint("Core from glucose: " + core_2_string(solver->conflict));
+        
         vec<Lit> cad_core;
         ICadical::getCore(solverCad, assumptions, cad_core);
         logPrint("Core from cadical: " + core_2_string(cad_core));
@@ -717,7 +716,6 @@ StatusCode CBLIN::unsatSearch() {
         return _OPTIMUM_;
       }
 
-
       while (isSoft.size() < maxsat_formula->nVars()) isSoft.push(false);
       for (int i = 0; i < maxsat_formula->nSoft(); i++)  {
           assert( maxsat_formula->getSoftClause(i).clause.size() == 1);
@@ -727,11 +725,10 @@ StatusCode CBLIN::unsatSearch() {
       }
       
       initAssumptions();  
-      solver = newSATSolver();
+      
+     solver = newSATSolver();
        //CADICAL DEBUG
       solverCad = ICadical::newSATSolver();
-
-
       solver->setSolutionBasedPhaseSaving(false);
       StatusCode rs = unsatSearch();
       if (rs == _UNSATISFIABLE_) return rs;
@@ -800,12 +797,9 @@ StatusCode CBLIN::weightSearch() {
     //At this point solver returned true and as such has a model
    
     nbSatisfiable++;
-    uint64_t modelCost = computeCostOfModel(solver->model);
-    if (modelCost < ubCost) {
-        ubCost = modelCost;
-        saveModel(solver->model);
-        printBound(ubCost);
-    }
+
+    checkModel();
+
     if (lbCost == ubCost) {
       if (verbosity > 0)
         printf("c LB = UB\n");          
@@ -813,14 +807,10 @@ StatusCode CBLIN::weightSearch() {
         return _OPTIMUM_;
     }
     if (nbCurrentSoft == nRealSoft()) {
-      assert(modelCost == lbCost);
-      if (lbCost < ubCost) {
-        ubCost = lbCost;
-        saveModel(solver->model);
-        printBound(lbCost);
-      }
-        printAnswer(_OPTIMUM_);
-        return _OPTIMUM_;
+      assert(ubCost == lbCost);
+      printBound(lbCost);
+      printAnswer(_OPTIMUM_);
+      return _OPTIMUM_;
     } 
     if (ubCost - lbCost < maxw_nothardened) {
       solver = hardenClauses();
@@ -964,11 +954,6 @@ StatusCode CBLIN::getModelAfterCG() {
 
 
 
-StatusCode CBLIN::onlyLinearSearch() {
-  return linearSearch();
-  
-}
-
 
 StatusCode CBLIN::linearSearch() {
   logPrint( "Starting lin search with: LB: " + std::to_string(lbCost) + " UB: " + std::to_string(ubCost) + 
@@ -991,11 +976,9 @@ StatusCode CBLIN::linearSearch() {
 
   initializeDivisionFactor(varyingres);
   setPBencodings();
-  
-
-
 
   lbool res = l_True;
+  lbool resCad = l_True;
 
   bool minimize_iteration = true;
   reconstruct_iter = true;
@@ -1003,12 +986,12 @@ StatusCode CBLIN::linearSearch() {
   while (res == l_True) {
 
     logPrint("SAT Call at " + print_timeSinceStart());
-   
-    if (!incrementalVarres) {
-      assumptions.clear();
-    }     
+    assumptions.clear();
     res = searchSATSolver(solver, assumptions);
+
+    resCad = ICadical::searchSATSolver(solverCad, assumptions);
     
+    assert(resCad == res);
     
     
     if (res == l_True) {
@@ -1016,6 +999,11 @@ StatusCode CBLIN::linearSearch() {
       
 
       uint64_t new_reduced_cost = computeCostReducedWeights(solver->model);
+
+      vec<lbool> modelCad;
+      ICadical::getModel(solverCad,modelCad);
+      uint64_t new_reduced_cost_cad = computeCostReducedWeights(modelCad);
+      logPrint("Red cost glucose: " + std::to_string(new_reduced_cost) + " red cost cad " + std::to_string(new_reduced_cost_cad));
       
       if (minimize_sol && new_reduced_cost > 0 && minimize_iteration && minimize_strat > 0) {
 
@@ -1060,9 +1048,7 @@ StatusCode CBLIN::linearSearch() {
           logPrint("Rebuilding after SAT");
           minimize_iteration = true;
           reconstruct_iter = true;
-          if (!incrementalVarres) {
-            solver = resetSolver();
-          } 
+          solver = resetSolver(); 
           updateDivisionFactorLinear();
           setPBencodings();
         }
@@ -1076,9 +1062,7 @@ StatusCode CBLIN::linearSearch() {
         }
         else {
           logPrint("Rebuilding after UNSAT");
-          if (!incrementalVarres) {
-            solver = resetSolver();
-          } 
+          solver = resetSolver();
           minimize_iteration = true;
           reconstruct_iter = true;
           updateDivisionFactorLinear();
@@ -1096,32 +1080,16 @@ void CBLIN::updateBoundLinSearch (uint64_t newBound) {
   logPrint("BOUND UPDATE RHS: " + std::to_string(newBound) + " at " + print_timeSinceStart());
   
   if (enc->hasPBEncoding()) {
-    if(!incrementalVarres) {
-      if (maxsat_formula->getProblemType() == _WEIGHTED_) {
-        enc->updatePB(solver, newBound);
-      } else {
-        enc->updateCardinality(solver, newBound);
-      }
-    }
-    else {
-      assert(maxsat_formula->getProblemType() == _WEIGHTED_ );
-      assumptions.clear();
-      enc->updatePBA(assumptions, newBound);
-    }
+        enc->updatePB(solver, solverCad, newBound);
   }
   else {
     logPrint("No encoding :(");
     int added = 0;
     for (int i = 0 ; i < objFunction.size(); i ++) {
-      if (coeffs[i] > newBound && coeffs[i] <= init_rhs) { //the second condition is here because literals that have coefficients higher than init_rhs are fixed to dfalse in the encoder
-          if (!incrementalVarres) {
+      if (coeffs[i] > newBound && coeffs[i] <= init_rhs) { 
+        //the second condition is here because literals that have coefficients higher than init_rhs are fixed to dfalse in the encoder
             solver->addClause({~objFunction[i]});
-            added++;
-          }
-          else {
-            assumptions.clear();
-            assumptions.push(~objFunction[i]);
-          }  
+            added++;   
       }
     }
     assert(added > 0);
@@ -1196,7 +1164,7 @@ void CBLIN::initializePBConstraint(uint64_t rhs) {
   assert(!enc->hasPBEncoding());
   logPrint("Encoding PB with UB: " + std::to_string(rhs) + " obj size " + std::to_string(objFunction.size()));
   
-  enc->encodePB(solver, objFunction, coeffs, rhs);
+  enc->encodePB(solver, solverCad, objFunction, coeffs, rhs);
   init_rhs = rhs;
  
 
@@ -1254,6 +1222,9 @@ void CBLIN::setCardVars(bool prepro_bound) {
       }
     }
     lbool res = searchSATSolver(solver, cardAssumps);
+
+    lbool cadRes = ICadical::searchSATSolver(solverCad, cardAssumps);
+
     if (res == l_False) {
       logPrint("Warning: UNSAT in card setting");
       return;
@@ -1285,6 +1256,8 @@ void CBLIN::extendBestModel() {
 
     solver->setSolutionBasedPhaseSaving(false);
     lbool res = searchSATSolver(solver, modelAssumps);
+    lbool cadRes = ICadical::searchSATSolver(solverCad, modelAssumps);
+    assert(res == cadRes);
     assert(res == l_True);
 
     solver->setSolutionBasedPhaseSaving(true);
@@ -1330,6 +1303,7 @@ void CBLIN::minimizelinearsolution(vec<lbool> & sol) {
 
   vec<Lit> assumps; 
   lbool res; 
+  lbool cadRes;
 
   int skipped = 0;
 
@@ -1340,6 +1314,8 @@ void CBLIN::minimizelinearsolution(vec<lbool> & sol) {
     fixed_assumptions.copyTo(assumps);
     assumps.push(~l);
     res = searchSATSolver(solver, assumps);
+    cadRes = ICadical::searchSATSolver(solverCad, assumps);
+    assert(cadRes == res);
     if (res == l_True) {
       fixed_assumptions.push(~l);
       
@@ -1362,6 +1338,8 @@ void CBLIN::minimizelinearsolution(vec<lbool> & sol) {
   
   if (res == l_False) {
     res = searchSATSolver(solver, fixed_assumptions);
+    cadRes = ICadical::searchSATSolver(solverCad, fixed_assumptions);
+    assert(cadRes == res);
     assert(res == l_True);
   }
   checkModel();
@@ -1435,7 +1413,6 @@ StatusCode CBLIN::search() {
   logPrint("varying_resCG=" + std::to_string(varyingresCG));
   logPrint("time limit on cg-phase (s)=" + std::to_string(timeLimitCores));
   logPrint("relax prior to strat =" + std::to_string(relaxBeforeStrat));
-  logPrint("do varying resolution incrementally =" + std::to_string(incrementalVarres));
   logPrint("minimize the solution =" + std::to_string(minimize_sol));
   logPrint("minimizing strat =" + std::to_string(minimize_strat));
   
@@ -1470,7 +1447,7 @@ StatusCode CBLIN::search() {
       break;
 
     case 2: 
-      return onlyLinearSearch();
+      return linearSearch();
       break;
 
     default:
@@ -1597,6 +1574,10 @@ uint64_t CBLIN::computeCostOfModel(vec<lbool> &currentModel) {
 Solver * CBLIN::resetSolver() {
     logPrint("Deleting solver");
     delete solver; 
+    delete solverCad;
+
+    solverCad = ICadical::newSATSolver();
+
     solver = newSATSolver();
     clauses_added = 0;
     softs_added = 0;
@@ -1629,7 +1610,15 @@ bool CBLIN::shouldUpdate() {
  bool CBLIN::checkModel() {
    logPrint("Checking model of size " + std::to_string(solver->model.size()));
 
+   vec<lbool> cadModel; 
+   ICadical::getModel(solverCad, cadModel);
+
    uint64_t modelCost = computeCostOfModel(solver->model);
+
+   uint64_t cadCost = computeCostOfModel(cadModel);
+
+   logPrint("Cadical Cost: " + std::to_string(cadCost) + " glucose cost " + std::to_string(modelCost));
+
    bool isBetter = modelCost < ubCost;
    if (isBetter) {
         ubCost = modelCost;

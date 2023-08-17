@@ -90,21 +90,15 @@ libs libp libd libr:
 
 ## Clean rule
 allclean: clean
-	
 	@rm -f ../simp/*.o ../simp/*.or ../simp/*.od  ../core/*.o ../core/*.or ../core/*.od
+	$(MAKE) -C $(PREPRO_DIR) clean
+	$(MAKE) -C $(CADICAL_DIR) clean
 clean:
 	rm -f $(EXEC) $(EXEC)_profile $(EXEC)_debug $(EXEC)_release $(EXEC)_static \
 	  $(COBJS) $(PCOBJS) $(DCOBJS) $(RCOBJS) *.core depend.mk 
-	$(MAKE) -C $(PREPRO_DIR) clean
-	$(MAKE) -C $(CADICAL_DIR) clean
 
 ## Make dependencies
 depend.mk: $(CSRCS) $(CHDRS)
-	@echo Making cadical 
-	(cd $(CADICAL_DIR) && ./configure)
-	$(MAKE) -C $(CADICAL_DIR)
-	@echo Making preprocessor
-	$(MAKE) -C $(PREPRO_DIR) lib
 	@echo Making dependencies
 	@$(CXX) $(CFLAGS) -I$(MROOT) \
 	   $(CSRCS) -MM | sed 's|\(.*\):|$(PWD)/\1 $(PWD)/\1r $(PWD)/\1d $(PWD)/\1p:|' > depend.mk

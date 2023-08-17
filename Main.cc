@@ -89,7 +89,7 @@ static void SIGINT_exit(int signum) {
 
 int main(int argc, char **argv) {
   printf("c\nc LOANDRA:\t an extension of Open-WBO to core-boosted linear search.\n");
-  printf("c Version:\t July 2019 2018 -- Release: 1.2\n");
+  printf("c Version:\t July 2019 2018 -- Release: 2.0\n");
   printf("c Authors:\t Jeremias Berg, Emir Demirovic, Peter Stuckey\n");
   printf("c We thank the developers of Open-WBO for their work\n");
   printf(
@@ -164,7 +164,6 @@ int main(int argc, char **argv) {
    BoolOption pmreslin_varres("CBLIN", "cb-varres", "Do varying resolution.\n", true);
    BoolOption pmreslin_relax2strat("CBLIN", "cb-r-2-s", "Relax cores before lowering the stratification bound.\n", false);
    BoolOption pmreslin_varresCG("CBLIN", "cb-varCG", "Do varying resolution during core-guided search.\n", false);
-   BoolOption pmreslin_incvarres("CBLIN", "cb-i-varres", "Do varying resolution incrementally, without reinitialising the SAT solver.\n", false);
    IntOption pmreslin_cgLim("CBLIN", "cb-cglim", "Time limit for core guided phase (s): "
                                             "(-1=unlimited) .\n", 30,
                   IntRange(-1, INT_MAX));
@@ -188,7 +187,7 @@ int main(int argc, char **argv) {
     
     case _ALGORITHM_CBLIN_:
       S = new CBLIN(verbosity, weight, pmreslin, pmreslin_delsol, pmreslin_varres, pmreslin_varresCG, 
-                    pmreslin_cgLim, pmreslin_relax2strat, pmreslin_incvarres, prepro_rec, 
+                    pmreslin_cgLim, pmreslin_relax2strat, prepro_rec, 
                     prepro_min,prepro_min_strat);
       break;
     

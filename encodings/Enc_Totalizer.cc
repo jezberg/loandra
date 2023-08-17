@@ -29,7 +29,7 @@
 
 using namespace openwbo;
 
-void Totalizer::incremental(Solver *S, int64_t rhs) {
+void Totalizer::incremental(Solver *S, CaDiCaL::Solver * SC, int64_t rhs) {
 
   for (int z = 0; z < totalizerIterative_rhs.size(); z++) {
 
@@ -46,15 +46,15 @@ void Totalizer::incremental(Solver *S, int64_t rhs) {
         }
 
         if (i == 0) {
-          addBinaryClause(S, ~(totalizerIterative_right[z])[j - 1],
+          addBinaryClause(S, SC, ~(totalizerIterative_right[z])[j - 1],
                           (totalizerIterative_output[z])[j - 1], blocking);
           n_clauses++;
         } else if (j == 0) {
-          addBinaryClause(S, ~(totalizerIterative_left[z])[i - 1],
+          addBinaryClause(S, SC, ~(totalizerIterative_left[z])[i - 1],
                           (totalizerIterative_output[z])[i - 1], blocking);
           n_clauses++;
         } else {
-          addTernaryClause(S, ~(totalizerIterative_left[z])[i - 1],
+          addTernaryClause(S, SC, ~(totalizerIterative_left[z])[i - 1],
                            ~(totalizerIterative_right[z])[j - 1],
                            (totalizerIterative_output[z])[i + j - 1], blocking);
           n_clauses++;
@@ -65,7 +65,7 @@ void Totalizer::incremental(Solver *S, int64_t rhs) {
   }
 }
 
-void Totalizer::join(Solver *S, vec<Lit> &lits, int64_t rhs) {
+void Totalizer::join(Solver *S, CaDiCaL::Solver * SC, vec<Lit> &lits, int64_t rhs) {
 
   assert(incremental_strategy == _INCREMENTAL_ITERATIVE_);
 
@@ -74,7 +74,7 @@ void Totalizer::join(Solver *S, vec<Lit> &lits, int64_t rhs) {
   int old_cardinality = current_cardinality_rhs;
 
   if (lits.size() > 1) {
-    build(S, lits, rhs < lits.size() ? rhs : lits.size());
+    build(S, SC, lits, rhs < lits.size() ? rhs : lits.size());
   } else {
     assert(lits.size() == 1);
     cardinality_outlits.clear();
@@ -96,7 +96,7 @@ void Totalizer::join(Solver *S, vec<Lit> &lits, int64_t rhs) {
 
   current_cardinality_rhs = rhs;
   // TO_adder is using the 'current_cardinality_rhs' value
-  adder(S, left_cardinality_outlits, right_cardinality_outlits,
+  adder(S, SC, left_cardinality_outlits, right_cardinality_outlits,
         cardinality_outlits);
   current_cardinality_rhs = old_cardinality;
 
@@ -104,7 +104,7 @@ void Totalizer::join(Solver *S, vec<Lit> &lits, int64_t rhs) {
     ilits.push(lits[i]);
 }
 
-void Totalizer::adder(Solver *S, vec<Lit> &left, vec<Lit> &right,
+void Totalizer::adder(Solver *S, CaDiCaL::Solver * SC, vec<Lit> &left, vec<Lit> &right,
                       vec<Lit> &output) {
   assert(output.size() == left.size() + right.size());
   if (incremental_strategy == _INCREMENTAL_ITERATIVE_) {
@@ -133,13 +133,13 @@ void Totalizer::adder(Solver *S, vec<Lit> &left, vec<Lit> &right,
         continue;
 
       if (i == 0) {
-        addBinaryClause(S, ~right[j - 1], output[j - 1], blocking);
+        addBinaryClause(S, SC, ~right[j - 1], output[j - 1], blocking);
         n_clauses++;
       } else if (j == 0) {
-        addBinaryClause(S, ~left[i - 1], output[i - 1], blocking);
+        addBinaryClause(S, SC, ~left[i - 1], output[i - 1], blocking);
         n_clauses++;
       } else {
-        addTernaryClause(S, ~left[i - 1], ~right[j - 1], output[i + j - 1],
+        addTernaryClause(S, SC, ~left[i - 1], ~right[j - 1], output[i + j - 1],
                          blocking);
         n_clauses++;
       }
@@ -147,7 +147,7 @@ void Totalizer::adder(Solver *S, vec<Lit> &left, vec<Lit> &right,
   }
 }
 
-void Totalizer::toCNF(Solver *S, vec<Lit> &lits) {
+void Totalizer::toCNF(Solver *S, CaDiCaL::Solver * SC, vec<Lit> &lits) {
 
   vec<Lit> left;
   vec<Lit> right;
@@ -184,13 +184,13 @@ void Totalizer::toCNF(Solver *S, vec<Lit> &lits) {
   }
 
   if (left.size() > 1)
-    toCNF(S, left);
+    toCNF(S, SC, left);
   if (right.size() > 1)
-    toCNF(S, right);
-  adder(S, left, right, lits);
+    toCNF(S, SC, right);
+  adder(S, SC, left, right, lits);
 }
 
-void Totalizer::update(Solver *S, int64_t rhs, vec<Lit> &lits,
+void Totalizer::update(Solver *S, CaDiCaL::Solver * SC, int64_t rhs, vec<Lit> &lits,
                        vec<Lit> &assumptions) {
 
   assert(hasEncoding);
@@ -198,7 +198,7 @@ void Totalizer::update(Solver *S, int64_t rhs, vec<Lit> &lits,
   switch (incremental_strategy) {
   case _INCREMENTAL_NONE_:
     for (int i = rhs; i < cardinality_outlits.size(); i++)
-      addUnitClause(S, ~cardinality_outlits[i]);
+      addUnitClause(S, SC, ~cardinality_outlits[i]);
     break;
 
   case _INCREMENTAL_BLOCKING_:
@@ -206,14 +206,14 @@ void Totalizer::update(Solver *S, int64_t rhs, vec<Lit> &lits,
 
     // Disable previous iterations
     for (int i = 0; i < disable_lits.size(); i++)
-      addUnitClause(S, disable_lits[i]);
+      addUnitClause(S, SC, disable_lits[i]);
 
-    build(S, lits, rhs);
+    build(S, SC, lits, rhs);
     if (blocking != lit_Undef)
       assumptions.push(~blocking);
 
     for (int i = rhs; i < cardinality_outlits.size(); i++)
-      addUnitClause(S, ~cardinality_outlits[i]);
+      addUnitClause(S, SC, ~cardinality_outlits[i]);
     break;
 
   case _INCREMENTAL_WEAKENING_:
@@ -224,7 +224,7 @@ void Totalizer::update(Solver *S, int64_t rhs, vec<Lit> &lits,
     break;
 
   case _INCREMENTAL_ITERATIVE_:
-    incremental(S, rhs);
+    incremental(S, SC, rhs);
     assumptions.clear();
     for (int i = rhs; i < cardinality_outlits.size(); i++)
       assumptions.push(~cardinality_outlits[i]);
@@ -237,7 +237,7 @@ void Totalizer::update(Solver *S, int64_t rhs, vec<Lit> &lits,
   }
 }
 
-void Totalizer::add(Solver *S, Totalizer &tot, int64_t rhs) {
+void Totalizer::add(Solver *S, CaDiCaL::Solver * SC, Totalizer &tot, int64_t rhs) {
   assert(incremental_strategy == _INCREMENTAL_ITERATIVE_ &&
          tot.incremental_strategy == _INCREMENTAL_ITERATIVE_);
   int left_idx = totalizerIterative_rhs.size() - 1;
@@ -268,7 +268,7 @@ void Totalizer::add(Solver *S, Totalizer &tot, int64_t rhs) {
     cardinality_outlits.push(p);
   }
   current_cardinality_rhs = rhs;
-  adder(S, left, right, cardinality_outlits);
+  adder(S, SC, left, right, cardinality_outlits);
 }
 
 /*_________________________________________________________________________________________________
@@ -295,14 +295,14 @@ void Totalizer::add(Solver *S, Totalizer &tot, int64_t rhs) {
   |    * hasEncoding is set to 'true'.
   |
   |________________________________________________________________________________________________@*/
-void Totalizer::build(Solver *S, vec<Lit> &lits, int64_t rhs) {
+void Totalizer::build(Solver *S, CaDiCaL::Solver * SC, vec<Lit> &lits, int64_t rhs) {
 
   cardinality_outlits.clear();
   hasEncoding = false;
 
   if (rhs == 0) {
     for (int i = 0; i < lits.size(); i++)
-      addUnitClause(S, ~lits[i]);
+      addUnitClause(S, SC, ~lits[i]);
     return;
   }
 
@@ -335,7 +335,7 @@ void Totalizer::build(Solver *S, vec<Lit> &lits, int64_t rhs) {
     blocking = p;
   }
 
-  toCNF(S, cardinality_outlits);
+  toCNF(S, SC, cardinality_outlits);
   assert(cardinality_inlits.size() == 0);
 
   if (!joinMode)
