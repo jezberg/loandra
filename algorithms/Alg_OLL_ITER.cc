@@ -419,8 +419,8 @@ void OLL_ITER::reformulateCore(const vec<Lit> &core, const uint64_t min_core, ve
 
     Encoder *e = new Encoder();
     e->setIncremental(_INCREMENTAL_ITERATIVE_);
-    //Terrible hack 
-    e->buildCardinality(solver, NULL, newCore, 1);
+    //Terrible hack need to integrate cadical to make it work
+    e->buildCardinality( NULL, newCore, 1);
 
     soft_cardinality.push(e);
     assert(e->outputs().size() > 1);
@@ -458,7 +458,7 @@ void OLL_ITER::extendCardEnc(Lit p, vec<Encoder *> & soft_cardinality) {
   joinObjFunction.clear();
   encodingAssumptions.clear();
 
-  cur->incUpdateCardinality( solver, NULL, joinObjFunction, cur->lits(), newBound, encodingAssumptions);
+  cur->incUpdateCardinality(  NULL, joinObjFunction, cur->lits(), newBound, encodingAssumptions);
 
 } 
 

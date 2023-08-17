@@ -73,9 +73,9 @@ public:
   ~GTE() {}
 
   // Encode constraint.
-  void encode(Solver *S, CaDiCaL::Solver * SC, vec<Lit> &lits, vec<uint64_t> &coeffs, uint64_t rhs);
+  void encode( CaDiCaL::Solver * SC, vec<Lit> &lits, vec<uint64_t> &coeffs, uint64_t rhs);
   // Update constraint.
-  void update(Solver *S,CaDiCaL::Solver * SC, uint64_t rhs);
+  void update(CaDiCaL::Solver * SC, uint64_t rhs);
 
   // Returns true if the encoding was built, otherwise returns false;
   bool hasCreatedEncoding() { return hasEncoding; }
@@ -86,10 +86,10 @@ public:
 protected:
   void printLit(Lit l) { printf("%s%d\n", sign(l) ? "-" : "", var(l) + 1); }
 
-  bool encodeLeq(uint64_t k, Solver *S, CaDiCaL::Solver * SC, const weightedlitst &iliterals,
+  bool encodeLeq(uint64_t k, CaDiCaL::Solver * SC, const weightedlitst &iliterals,
                  wlit_mapt &oliterals);
-  Lit getNewLit(Solver *S);
-  Lit get_var(Solver *S, wlit_mapt &oliterals, uint64_t weight);
+  Lit getNewLit(CaDiCaL::Solver * SC);
+  Lit get_var(CaDiCaL::Solver * SC, wlit_mapt &oliterals, uint64_t weight);
   bool predictEncodeLeq(uint64_t k, Solver *S, const weightedlitst &iliterals,
                         wlit_mapt &oliterals);
   Lit get_var_predict(Solver *S, wlit_mapt &oliterals, uint64_t weight);

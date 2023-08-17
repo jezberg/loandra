@@ -55,7 +55,6 @@ public:
         int gcLim = -1, bool r2strat = false, 
         bool u = false, bool m = false, int m_strat = 0) {
     
-    solver = NULL;
     solverCad = NULL;
 
     verbosity = verb;
@@ -85,7 +84,7 @@ public:
     wrong_eval_lin = 0;
     init_rhs = 0;
     delete_before_lin = delsol;
-    encoder.setCardEncoding(_CARD_MTOTALIZER_); //TODO JUST UNTIL IT WORKS
+    encoder.setCardEncoding(_CARD_TOTALIZER_); //TODO JUST UNTIL IT WORKS
     encoder.setPBEncoding( _PB_GTE_);
     minimize_sol = m;
     minimize_strat = m_strat;
@@ -93,8 +92,8 @@ public:
 
   ~CBLIN() {
     //Formula is deleted in MaxSAT.cc
-    if (solver != NULL)
-      delete solver;
+    if (solverCad != NULL)
+      delete solverCad;
   }
 
   StatusCode search(); // WBO search.
@@ -103,7 +102,7 @@ protected:
   // Rebuild MaxSAT solver
   //
   // Rebuild MaxSAT solver with weight-based strategy.
-  Solver *updateSolver();
+  void updateSolver();
   int clauses_added;
   int softs_added;
   int vars_added;
@@ -131,8 +130,8 @@ protected:
   void setAssumptions(vec<Lit> &assumps);
   int num_hardened;
 
-  Solver * hardenClauses();
-  Solver * resetSolver();
+  void hardenClauses();
+  void resetSolver();
   uint64_t maxw_nothardened;
 
   uint64_t known_gap;

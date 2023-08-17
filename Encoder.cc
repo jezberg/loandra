@@ -40,16 +40,16 @@ using namespace openwbo;
  ************************************************************************************************/
 //
 // Manages the encoding of cardinality encodings.
-void Encoder::encodeCardinality(Solver *S, CaDiCaL::Solver * SC, vec<Lit> &lits, int64_t rhs) {
+void Encoder::encodeCardinality(CaDiCaL::Solver * SC, vec<Lit> &lits, int64_t rhs) {
 
   vec<Lit> lits_copy;
   lits.copyTo(lits_copy);
 
   switch (cardinality_encoding) {
   case _CARD_TOTALIZER_:
-    totalizer.build(S, SC, lits_copy, rhs);
+    totalizer.build(SC, lits_copy, rhs);
     if (totalizer.hasCreatedEncoding())
-      totalizer.update(S, SC, rhs);
+      totalizer.update(SC, rhs);
     break;
 
   default:
@@ -60,10 +60,10 @@ void Encoder::encodeCardinality(Solver *S, CaDiCaL::Solver * SC, vec<Lit> &lits,
 }
 
 
-void Encoder::addCardinality(Solver *S, CaDiCaL::Solver * SC, Encoder &enc, int64_t rhs) {
+void Encoder::addCardinality(CaDiCaL::Solver * SC, Encoder &enc, int64_t rhs) {
   if (cardinality_encoding == _CARD_TOTALIZER_ &&
       enc.cardinality_encoding == _CARD_TOTALIZER_) {
-    totalizer.add(S, SC, enc.totalizer, rhs);
+    totalizer.add(SC, enc.totalizer, rhs);
   } else {
     printf("c Error: Cardinality encoding does not support incrementality.\n");
     printf("s UNKNOWN\n");
@@ -72,11 +72,11 @@ void Encoder::addCardinality(Solver *S, CaDiCaL::Solver * SC, Encoder &enc, int6
 }
 
 // Manages the update of cardinality constraints.
-void Encoder::updateCardinality(Solver *S, CaDiCaL::Solver * SC, int64_t rhs) {
+void Encoder::updateCardinality(CaDiCaL::Solver * SC, int64_t rhs) {
 
   switch (cardinality_encoding) {
   case _CARD_TOTALIZER_:
-    totalizer.update(S, SC, rhs);
+    totalizer.update(SC, rhs);
     break;
 
 
@@ -92,7 +92,7 @@ void Encoder::updateCardinality(Solver *S, CaDiCaL::Solver * SC, int64_t rhs) {
 //
 // Manages the building of cardinality encodings.
 // Currently is only used for incremental solving.
-void Encoder::buildCardinality(Solver *S, CaDiCaL::Solver * SC, vec<Lit> &lits, int64_t rhs) {
+void Encoder::buildCardinality(CaDiCaL::Solver * SC, vec<Lit> &lits, int64_t rhs) {
   assert(incremental_strategy != _INCREMENTAL_NONE_);
 
   vec<Lit> lits_copy;
@@ -100,7 +100,7 @@ void Encoder::buildCardinality(Solver *S, CaDiCaL::Solver * SC, vec<Lit> &lits, 
 
   switch (cardinality_encoding) {
   case _CARD_TOTALIZER_:
-    totalizer.build(S, SC, lits_copy, rhs);
+    totalizer.build(SC, lits_copy, rhs);
     break;
 
   default:
@@ -111,7 +111,7 @@ void Encoder::buildCardinality(Solver *S, CaDiCaL::Solver * SC, vec<Lit> &lits, 
 }
 
 // Manages the incremental update of cardinality constraints.
-void Encoder::incUpdateCardinality(Solver *S, CaDiCaL::Solver * SC, vec<Lit> &join, vec<Lit> &lits,
+void Encoder::incUpdateCardinality(CaDiCaL::Solver * SC, vec<Lit> &join, vec<Lit> &lits,
                                    int64_t rhs, vec<Lit> &assumptions) {
   assert(incremental_strategy == _INCREMENTAL_ITERATIVE_ ||
          incremental_strategy == _INCREMENTAL_WEAKENING_);
@@ -125,10 +125,10 @@ void Encoder::incUpdateCardinality(Solver *S, CaDiCaL::Solver * SC, vec<Lit> &jo
   switch (cardinality_encoding) {
   case _CARD_TOTALIZER_:
     if (join.size() > 0)
-      totalizer.join(S, SC, join_copy, rhs);
+      totalizer.join(SC, join_copy, rhs);
 
     assert(lits.size() > 0);
-    totalizer.update(S, SC, rhs, lits_copy, assumptions);
+    totalizer.update(SC, rhs, lits_copy, assumptions);
     break;
 
   default:
@@ -138,11 +138,11 @@ void Encoder::incUpdateCardinality(Solver *S, CaDiCaL::Solver * SC, vec<Lit> &jo
   }
 }
 
-void Encoder::joinEncoding(Solver *S, CaDiCaL::Solver * SC, vec<Lit> &lits, int64_t rhs) {
+void Encoder::joinEncoding(CaDiCaL::Solver * SC, vec<Lit> &lits, int64_t rhs) {
 
   switch (cardinality_encoding) {
   case _CARD_TOTALIZER_:
-    totalizer.join(S, SC, lits, rhs);
+    totalizer.join(SC, lits, rhs);
     break;
 
   default:
@@ -159,7 +159,7 @@ void Encoder::joinEncoding(Solver *S, CaDiCaL::Solver * SC, vec<Lit> &lits, int6
  ************************************************************************************************/
 //
 // Manages the encoding of PB encodings.
-void Encoder::encodePB(Solver *S,  CaDiCaL::Solver * SC, vec<Lit> &lits, vec<uint64_t> &coeffs,
+void Encoder::encodePB(CaDiCaL::Solver * SC, vec<Lit> &lits, vec<uint64_t> &coeffs,
                        uint64_t rhs) {
 
   vec<Lit> lits_copy;
@@ -170,11 +170,11 @@ void Encoder::encodePB(Solver *S,  CaDiCaL::Solver * SC, vec<Lit> &lits, vec<uin
   switch (pb_encoding) {
 
   case _PB_GTE_:
-    gte.encode(S, SC, lits_copy, coeffs_copy, rhs);
+    gte.encode(SC, lits_copy, coeffs_copy, rhs);
     break;
 
   case _PB_ADDER_:
-    adder.encode(S, SC, lits_copy, coeffs_copy, rhs);
+    adder.encode(SC, lits_copy, coeffs_copy, rhs);
     break;
 
   default:
@@ -214,16 +214,16 @@ int Encoder::predictPB(Solver *S, vec<Lit> &lits, vec<uint64_t> &coeffs,
 
 
 // Manages the update of PB encodings.
-void Encoder::updatePB(Solver *S, CaDiCaL::Solver * SC, uint64_t rhs) {
+void Encoder::updatePB(CaDiCaL::Solver * SC, uint64_t rhs) {
 
   switch (pb_encoding) {
 
   case _PB_GTE_:
-    gte.update(S, SC, rhs);
+    gte.update(SC, rhs);
     break;
 
   case _PB_ADDER_:
-    adder.update(S, SC, rhs);
+    adder.update(SC, rhs);
     break;
 
   default:

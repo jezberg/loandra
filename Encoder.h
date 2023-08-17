@@ -83,10 +83,10 @@ public:
   // Cardinality encodings:
   //
   // Encode cardinality constraint into CNF.
-  void encodeCardinality(Solver *S, CaDiCaL::Solver* SC, vec<Lit> &lits, int64_t rhs);
+  void encodeCardinality(CaDiCaL::Solver* SC, vec<Lit> &lits, int64_t rhs);
 
   // Update the rhs of an already existent cardinality constraint
-  void updateCardinality(Solver *S, CaDiCaL::Solver* SC,  int64_t rhs);
+  void updateCardinality(CaDiCaL::Solver* SC,  int64_t rhs);
   
 
   // Incremental cardinality encodings:
@@ -95,27 +95,27 @@ public:
   // No restriction is made on the value of 'rhs'.
   // buildCardinality + updateCardinality is equivalent to encodeCardinality.
   // Useful for incremental encodings.
-  void buildCardinality(Solver *S, CaDiCaL::Solver * SC, vec<Lit> &lits, int64_t rhs);
+  void buildCardinality(CaDiCaL::Solver * SC, vec<Lit> &lits, int64_t rhs);
 
   // Incremental update for cardinality constraints;
-  void incUpdateCardinality(Solver *S, CaDiCaL::Solver * SC, vec<Lit> &join, vec<Lit> &lits,
+  void incUpdateCardinality(CaDiCaL::Solver * SC, vec<Lit> &join, vec<Lit> &lits,
                             int64_t rhs, vec<Lit> &assumptions);
-  void incUpdateCardinality(Solver *S, CaDiCaL::Solver * SC, vec<Lit> &lits, int64_t rhs,
+  void incUpdateCardinality(CaDiCaL::Solver * SC, vec<Lit> &lits, int64_t rhs,
                             vec<Lit> &assumptions) {
 
     vec<Lit> empty;
-    incUpdateCardinality(S, SC,  empty, lits, rhs, assumptions);
+    incUpdateCardinality(SC,  empty, lits, rhs, assumptions);
   }
 
   // Add two disjoint cardinality constraints
-  void addCardinality(Solver *S, CaDiCaL::Solver * SC, Encoder &enc, int64_t rhs);
+  void addCardinality(CaDiCaL::Solver * SC, Encoder &enc, int64_t rhs);
 
   // PB encodings:
   //
   // Encode pseudo-Boolean constraint into CNF.
-  void encodePB(Solver *S, CaDiCaL::Solver * SC,  vec<Lit> &lits, vec<uint64_t> &coeffs, uint64_t rhs);
+  void encodePB(CaDiCaL::Solver * SC,  vec<Lit> &lits, vec<uint64_t> &coeffs, uint64_t rhs);
   // Update the rhs of an already existent pseudo-Boolean constraint.
-  void updatePB(Solver *S, CaDiCaL::Solver * SC, uint64_t rhs);
+  void updatePB(CaDiCaL::Solver * SC, uint64_t rhs);
   // Predicts the number of clauses needed for the encoding
   int predictPB(Solver *S, vec<Lit> &lits, vec<uint64_t> &coeffs, uint64_t rhs);
 
@@ -124,7 +124,7 @@ public:
   // Joins a set of new literals, x_1 + ... + x_i, to an existing encoding of
   // the type
   // y_1 + ... + y_j <= k. It also updates 'k' to 'rhs'.
-  void joinEncoding(Solver *S, CaDiCaL::Solver * SC, vec<Lit> &lits, int64_t rhs);
+  void joinEncoding(CaDiCaL::Solver * SC, vec<Lit> &lits, int64_t rhs);
 
   // Other:
   //

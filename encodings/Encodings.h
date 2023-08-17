@@ -58,24 +58,18 @@ public:
   // Auxiliary methods for creating clauses
   //
   // Add a unit clause to a SAT solver
-  void addUnitClause(Solver *S, CaDiCaL::Solver *SCad,  Lit a, Lit blocking = lit_Undef);
+  void addUnitClause( CaDiCaL::Solver *SCad,  Lit a, Lit blocking = lit_Undef);
   // Add a binary clause to a SAT solver
-  void addBinaryClause(Solver *S, CaDiCaL::Solver *SCad, Lit a, Lit b, Lit blocking = lit_Undef);
+  void addBinaryClause( CaDiCaL::Solver *SCad, Lit a, Lit b, Lit blocking = lit_Undef);
   // Add a ternary clause to a SAT solver
-  void addTernaryClause(Solver *S, CaDiCaL::Solver *SCad, Lit a, Lit b, Lit c,
+  void addTernaryClause( CaDiCaL::Solver *SCad, Lit a, Lit b, Lit c,
                         Lit blocking = lit_Undef);
   // Add a quaternary clause to a SAT solver
-  void addQuaternaryClause(Solver *S, CaDiCaL::Solver *SCad, Lit a, Lit b, Lit c, Lit d,
+  void addQuaternaryClause(CaDiCaL::Solver *SCad, Lit a, Lit b, Lit c, Lit d,
                            Lit blocking = lit_Undef);
 
   // Creates a new variable in the SAT solver
-  void newSATVariable(Solver *S) {
-#ifdef SIMP
-    ((NSPACE::SimpSolver *)S)->newVar();
-#else
-    S->newVar();
-#endif
-  }
+
 
 protected:
   vec<Lit> clause; // Temporary clause to be used while building the encodings.

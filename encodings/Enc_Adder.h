@@ -52,16 +52,16 @@ public:
   ~Adder() {}
 
   // Encode constraint.
-  void encode(Solver *S, CaDiCaL::Solver * SC, vec<Lit> &lits, vec<uint64_t> &coeffs, uint64_t rhs);
+  void encode(CaDiCaL::Solver * SC, vec<Lit> &lits, vec<uint64_t> &coeffs, uint64_t rhs);
 
   // Update constraint.
-  void update(Solver *S, CaDiCaL::Solver * SC, uint64_t rhs);
+  void update( CaDiCaL::Solver * SC, uint64_t rhs);
 
   // Returns true if the encoding was built, otherwise returns false;
   bool hasCreatedEncoding() { return hasEncoding; }
 
-  void encodeInc(Solver *S, CaDiCaL::Solver * SC, vec<Lit> &lits, vec<uint64_t> &coeffs, uint64_t rhs, vec<Lit> &assumptions);
-  void updateInc(Solver *S, CaDiCaL::Solver * SC, uint64_t rhs, vec<Lit>& assumptions);
+  void encodeInc(CaDiCaL::Solver * SC, vec<Lit> &lits, vec<uint64_t> &coeffs, uint64_t rhs, vec<Lit> &assumptions);
+  void updateInc(CaDiCaL::Solver * SC, uint64_t rhs, vec<Lit>& assumptions);
 
 
 protected:
@@ -70,17 +70,17 @@ protected:
   vec<Lit> clause;
   std::vector<std::queue<Lit> > _buckets;
 
-  void FA_extra ( Solver *S, CaDiCaL::Solver * SC, Lit xc, Lit xs, Lit a, Lit b, Lit c );
-  Lit FA_carry ( Solver *S, CaDiCaL::Solver * SC, Lit a, Lit b, Lit c );
-  Lit FA_sum ( Solver *S, CaDiCaL::Solver * SC, Lit a, Lit b, Lit c );
-  Lit HA_carry ( Solver *S, CaDiCaL::Solver * SC, Lit a, Lit b);
-  Lit HA_sum ( Solver *S, CaDiCaL::Solver * SC, Lit a, Lit b );
-  void adderTree (Solver *S,CaDiCaL::Solver * SC, std::vector< std::queue< Lit > > & buckets, vec< Lit >& result );
-  void lessThanOrEqual (Solver *S, CaDiCaL::Solver * SC, vec< Lit > & xs, std::vector< uint64_t > & ys);
+  void FA_extra (  CaDiCaL::Solver * SC, Lit xc, Lit xs, Lit a, Lit b, Lit c );
+  Lit FA_carry (  CaDiCaL::Solver * SC, Lit a, Lit b, Lit c );
+  Lit FA_sum (  CaDiCaL::Solver * SC, Lit a, Lit b, Lit c );
+  Lit HA_carry (  CaDiCaL::Solver * SC, Lit a, Lit b);
+  Lit HA_sum ( CaDiCaL::Solver * SC, Lit a, Lit b );
+  void adderTree (CaDiCaL::Solver * SC, std::vector< std::queue< Lit > > & buckets, vec< Lit >& result );
+  void lessThanOrEqual (CaDiCaL::Solver * SC, vec< Lit > & xs, std::vector< uint64_t > & ys);
   void numToBits ( std::vector<uint64_t> & bits, uint64_t n, uint64_t number );
   uint64_t ld64(const uint64_t x);
 
-  void lessThanOrEqualInc (Solver *S, CaDiCaL::Solver * SC, vec< Lit > & xs, std::vector< uint64_t > & ys, vec<Lit>& assumptions);
+  void lessThanOrEqualInc ( CaDiCaL::Solver * SC, vec< Lit > & xs, std::vector< uint64_t > & ys, vec<Lit>& assumptions);
 
 
 	#define wbsplit(half,wL,wR, ws,bs, wsL,bsL, wsR,bsR) \
@@ -99,10 +99,10 @@ protected:
   }
 
 	void genWarnersFull(Lit& a, Lit& b, Lit& c, Lit& carry, Lit& sum, int comp,
-		       Solver* S, CaDiCaL::Solver * SC, vec<Lit>& lits);
+		       CaDiCaL::Solver * SC, vec<Lit>& lits);
 
 	void genWarnersHalf(Lit& a, Lit& b, Lit& carry, Lit& sum, int comp,
-		       Solver* S, CaDiCaL::Solver * SC, vec<Lit>& lits);
+		       CaDiCaL::Solver * SC, vec<Lit>& lits);
 
 	void genWarners(vec<uint64_t>& weights, vec<Lit>& blockings,
 		uint64_t max, int k,
@@ -128,7 +128,7 @@ protected:
 }
 
 // koshi 20140121
-void wbFilter(uint64_t UB, Solver* S, CaDiCaL::Solver * SC, vec<Lit>& lits,
+void wbFilter(uint64_t UB, CaDiCaL::Solver * SC, vec<Lit>& lits,
 	      vec<uint64_t>& weights, vec<Lit>& blockings,
 	      vec<uint64_t>& sweights, vec<Lit>& sblockings) {
   sweights.clear(); sblockings.clear();
@@ -140,7 +140,6 @@ void wbFilter(uint64_t UB, Solver* S, CaDiCaL::Solver * SC, vec<Lit>& lits,
     } else {
       lits.clear();
       lits.push(~blockings[i]);
-      S->addClause(lits);
       ICadical::addClause(SC, lits);
     }
   }

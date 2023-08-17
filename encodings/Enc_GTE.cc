@@ -36,23 +36,22 @@ struct less_than_wlitt {
   }
 };
 
-Lit GTE::getNewLit(Solver *S) {
-  Lit p = mkLit(S->nVars(), false);
-  newSATVariable(S);
+Lit GTE::getNewLit(CaDiCaL::Solver * SC) {
+  Lit p = mkLit(SC->vars() +1, false);
   nb_variables++;
   return p;
 }
 
-Lit GTE::get_var(Solver *S, wlit_mapt &oliterals, uint64_t weight) {
+Lit GTE::get_var(CaDiCaL::Solver * SC, wlit_mapt &oliterals, uint64_t weight) {
   wlit_mapt::iterator it = oliterals.find(weight);
   if (it == oliterals.end()) {
-    Lit v = getNewLit(S);
+    Lit v = getNewLit(SC);
     oliterals[weight] = v;
   }
   return oliterals[weight];
 }
 
-bool GTE::encodeLeq(uint64_t k, Solver *S, CaDiCaL::Solver * SC, const weightedlitst &iliterals,
+bool GTE::encodeLeq(uint64_t k, CaDiCaL::Solver * SC, const weightedlitst &iliterals,
                     wlit_mapt &oliterals) {
 
   if (iliterals.size() == 0 || k == 0)
@@ -90,10 +89,10 @@ bool GTE::encodeLeq(uint64_t k, Solver *S, CaDiCaL::Solver * SC, const weightedl
   lk = k >= lk ? lk : k;
   rk = k >= rk ? rk : k;
 
-  bool result = encodeLeq(lk, S,SC, linputs, loutputs);
+  bool result = encodeLeq(lk, SC, linputs, loutputs);
   if (!result)
     return result;
-  result = result && encodeLeq(rk, S, SC, rinputs, routputs);
+  result = result && encodeLeq(rk,  SC, rinputs, routputs);
   if (!result)
     return result;
 
@@ -104,10 +103,10 @@ bool GTE::encodeLeq(uint64_t k, Solver *S, CaDiCaL::Solver * SC, const weightedl
          mit++) {
 
       if (mit->first > k) {
-        addBinaryClause(S, SC, ~mit->second, get_var(S, oliterals, k));
-        nb_clauses++;
+        addBinaryClause(SC, ~mit->second, get_var(SC, oliterals, k));
+        nb_clauses++; 
       } else {
-        addBinaryClause(S, SC, ~mit->second, get_var(S, oliterals, mit->first));
+        addBinaryClause(SC, ~mit->second, get_var(SC, oliterals, mit->first));
         nb_clauses++;
         // clause.push_back(get_var(auxvars,oliterals,l.first));
       }
@@ -122,11 +121,11 @@ bool GTE::encodeLeq(uint64_t k, Solver *S, CaDiCaL::Solver * SC, const weightedl
          mit++) {
 
       if (mit->first > k) {
-        addBinaryClause(S, SC, ~mit->second, get_var(S, oliterals, k));
+        addBinaryClause(SC, ~mit->second, get_var(SC, oliterals, k));
         nb_clauses++;
         // clause.push_back(get_var(auxvars,oliterals,k));
       } else {
-        addBinaryClause(S, SC, ~mit->second, get_var(S, oliterals, mit->first));
+        addBinaryClause(SC, ~mit->second, get_var(SC, oliterals, mit->first));
         nb_clauses++;
         // clause.push_back(get_var(auxvars,oliterals,r.first));
       }
@@ -146,13 +145,13 @@ bool GTE::encodeLeq(uint64_t k, Solver *S, CaDiCaL::Solver * SC, const weightedl
         clause.push_back(-r.second);*/
         uint64_t tw = lit->first + rit->first;
         if (tw > k) {
-          addTernaryClause(S, SC, ~lit->second, ~rit->second,
-                           get_var(S, oliterals, k));
+          addTernaryClause(SC, ~lit->second, ~rit->second,
+                           get_var(SC, oliterals, k));
           nb_clauses++;
           // clause.push_back(get_var(auxvars,oliterals,k));
         } else {
-          addTernaryClause(S, SC, ~lit->second, ~rit->second,
-                           get_var(S, oliterals, tw));
+          addTernaryClause(SC, ~lit->second, ~rit->second,
+                           get_var(SC, oliterals, tw));
           nb_clauses++;
           // clause.push_back(get_var(auxvars,oliterals,tw));
         }
@@ -165,7 +164,7 @@ bool GTE::encodeLeq(uint64_t k, Solver *S, CaDiCaL::Solver * SC, const weightedl
   return true;
 }
 
-void GTE::encode(Solver *S, CaDiCaL::Solver * SC, vec<Lit> &lits, vec<uint64_t> &coeffs,
+void GTE::encode(CaDiCaL::Solver * SC, vec<Lit> &lits, vec<uint64_t> &coeffs,
                  uint64_t rhs) {
   // FIXME: do not change coeffs in this method. Make coeffs const.
 
@@ -204,7 +203,7 @@ void GTE::encode(Solver *S, CaDiCaL::Solver * SC, vec<Lit> &lits, vec<uint64_t> 
       lits.push(simp_lits[i]);
       coeffs.push(simp_coeffs[i]);
     } else
-      addUnitClause(S, SC, ~simp_lits[i]);
+      addUnitClause(SC, ~simp_lits[i]);
   }
 
   if (lits.size() == 1) {
@@ -224,12 +223,12 @@ void GTE::encode(Solver *S, CaDiCaL::Solver * SC, vec<Lit> &lits, vec<uint64_t> 
   }
   less_than_wlitt lt_wlit;
   std::sort(iliterals.begin(), iliterals.end(), lt_wlit);
-  encodeLeq(rhs + 1, S, SC, iliterals, pb_oliterals);
+  encodeLeq(rhs + 1, SC, iliterals, pb_oliterals);
 
   for (wlit_mapt::reverse_iterator rit = pb_oliterals.rbegin();
        rit != pb_oliterals.rend(); rit++) {
     if (rit->first > rhs) {
-      addUnitClause(S, SC, ~rit->second);
+      addUnitClause(SC, ~rit->second);
     } else {
       break;
     }
@@ -240,7 +239,7 @@ void GTE::encode(Solver *S, CaDiCaL::Solver * SC, vec<Lit> &lits, vec<uint64_t> 
   hasEncoding = true;
 }
 
-void GTE::update(Solver *S, CaDiCaL::Solver * SC, uint64_t rhs) {
+void GTE::update(CaDiCaL::Solver * SC, uint64_t rhs) {
 
   assert(hasEncoding);
   for (wlit_mapt::reverse_iterator rit = pb_oliterals.rbegin();
@@ -248,13 +247,11 @@ void GTE::update(Solver *S, CaDiCaL::Solver * SC, uint64_t rhs) {
     if (rit->first > current_pb_rhs)
       continue;
     if (rit->first > rhs) {
-      addUnitClause(S, SC, ~rit->second);
+      addUnitClause(SC, ~rit->second);
     } else {
       break;
     }
   }
-  /* ... PUT CODE HERE TO UPDATE THE RHS OF AN ALREADY EXISTING ENCODING ... */
-
   current_pb_rhs = rhs;
 }
 
