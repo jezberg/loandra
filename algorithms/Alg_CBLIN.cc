@@ -1555,14 +1555,27 @@ bool CBLIN::shouldUpdate() {
 
 //TODO parametrize on the model... 
  bool CBLIN::checkModel() {
-   
+
+   uint64_t flips = 0;
+   uint64_t failed_flips = 0;
+   for (int i = 0; i < original_labels->nSoft(); i++) {
+    Lit l = original_labels->getSoftClause(i).clause[0];
+    if(solverCad->val(lit2Int(l)) < 0) {
+        if (solverCad->flip(lit2Int(l))) {
+          flips++;
+        }
+        else {
+          failed_flips++;
+        }
+    }
+  } 
+  logPrint("Flipped " + std::to_string(flips) + " failed flips " + std::to_string(failed_flips));
 
    vec<lbool> cadModel; 
    ICadical::getModel(solverCad, cadModel);
    logPrint("Checking model of size " + std::to_string(cadModel.size()));
 
-   uint64_t modelCost = computeCostOfModel(cadModel);
-
+    uint64_t modelCost = computeCostOfModel(cadModel);
 
    bool isBetter = modelCost < ubCost;
    if (isBetter) {
