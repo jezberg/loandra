@@ -113,6 +113,7 @@ protected:
   bool relaxBeforeStrat;
 
   void softsSatisfied();
+  void clearFixingsonSoft();
   void updateCurrentWeight(int strategy); // Updates 'currentWeight'.
   uint64_t
   findNextWeight(uint64_t weight); // Finds the next weight for 'currentWeight'.

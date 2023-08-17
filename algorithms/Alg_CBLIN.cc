@@ -598,8 +598,8 @@ StatusCode CBLIN::unsatSearch() {
   //Cadical extra
   lbool resCad = ICadical::searchSATSolver(solverCad, assumptions);
   assert(res == resCad);
-
-  solver->resetFixes();
+  clearFixingsonSoft();
+  
 
   if (res == l_False) {
     nbCores++;
@@ -675,14 +675,14 @@ StatusCode CBLIN::unsatSearch() {
         ICadical::getCore(solverCad, assumptions, cad_core);
         logPrint("Core from cadical: " + core_2_string(cad_core));
 
-        uint64_t coreCost = computeCostCore(solver->conflict);
+        uint64_t coreCost = computeCostCore(cad_core);
         lbCost += coreCost;
         checkGap();
         if (verbosity > 0) {
          printf("c LB : %-12" PRIu64 " CS : %-12d W  : %-12" PRIu64 "\n", lbCost,
-                solver->conflict.size(), coreCost);
+                cad_core.size(), coreCost);
         }
-        relaxCore(solver->conflict, coreCost);
+        relaxCore(cad_core, coreCost);
       }
 
       if (res == l_True) {
@@ -1594,7 +1594,13 @@ bool CBLIN::shouldUpdate() {
  void CBLIN::savePhase() {
     solver->_user_phase_saving.clear();
 		for (int i = 0; i < bestModel.size(); i++){
-			solver->_user_phase_saving.push(bestModel[i]);		
+			solver->_user_phase_saving.push(bestModel[i]);	
+      if (bestModel[i] == l_True)	{
+        solverCad->phase(i+1);
+      }
+      else if (bestModel[i] == l_False) {
+        solverCad->phase((-1)*(i+1));
+      }
 		}
  }
 
@@ -1602,8 +1608,21 @@ bool CBLIN::shouldUpdate() {
      for (int i = 0; i < maxsat_formula->nSoft(); i++) {
         assert(maxsat_formula->getSoftClause(i).clause.size() == 1 );
         Lit l =  maxsat_formula->getSoftClause(i).clause[0];
+
+        solverCad->phase(lit2Int(l));
+
         solver->setPolarity(var(l), sign(l) ? true : false);
     }
+ }
+
+ void CBLIN::clearFixingsonSoft() {
+    solver->resetFixes();
+    for (int i = 0; i < maxsat_formula->nSoft(); i++) {
+        assert(maxsat_formula->getSoftClause(i).clause.size() == 1 );
+        Lit l =  maxsat_formula->getSoftClause(i).clause[0];
+        solverCad->unphase(lit2Int(l));
+    }
+
  }
 
 //TODO parametrize on the model... 
