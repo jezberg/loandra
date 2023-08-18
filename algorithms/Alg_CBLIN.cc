@@ -219,6 +219,18 @@ uint64_t CBLIN::findNextWeightDiversity(uint64_t weight) {
      int num_hardened_round = 0;
 
      extendBestModel();
+
+     logPrint("DEBUG");
+     for (int i = 0; i < bestModel.size(); i ++) {
+      Lit l = mkLit(i, false);
+      if (literalTrueInModel(l, bestModel)) {
+        assert(solverCad->val(lit2Int(l)) > 0);
+      }
+      else {
+        assert(solverCad->val(lit2Int(~l)) > 0);
+      }
+     }
+    logPrint("DEBUG DONE");
      assert(solverCad->status() == 10);
 	   maxw_nothardened = 0;
      vec<Lit> toAdd;
@@ -228,7 +240,14 @@ uint64_t CBLIN::findNextWeightDiversity(uint64_t weight) {
       Lit l =  maxsat_formula->getSoftClause(i).clause[0];
       satisfied = (solverCad->val(lit2Int(l)) > 0);
 			if (maxsat_formula->getSoftClause(i).weight > bound || (maxsat_formula->getSoftClause(i).weight == bound && satisfied) ) {  // 
-        assert(satisfied);
+        if (!satisfied) {
+          logPrint("weight " + std::to_string(maxsat_formula->getSoftClause(i).weight));
+          logPrint("cost " + std::to_string(computeCostOfModel()));
+          logPrint("fixed " + std::to_string(solverCad->fixed(lit2Int(l))));
+          logPrint("Val " + std::to_string(solverCad->val(lit2Int(l))));
+          logPrint("LIT " + std::to_string(literalTrueInModel(l, bestModel)));
+          assert(satisfied);
+        }
         assert(literalTrueInModel(l, bestModel)); 
 				toAdd.push(l);
 				maxsat_formula->getSoftClause(i).weight = 0;
@@ -1197,7 +1216,7 @@ void CBLIN::extendBestModel() {
     }
 
     lbool res =  ICadical::searchSATSolver(solverCad, modelAssumps);
-    flipLiterals();
+   // flipLiterals();
     assert(res == l_True);
     checkModel();
     assert(solverCad->status() == 10);
