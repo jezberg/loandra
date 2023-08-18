@@ -217,44 +217,39 @@ uint64_t CBLIN::findNextWeightDiversity(uint64_t weight) {
 	   uint64_t bound = ubCost - lbCost;
      logPrint("Hardening with gap: " + std::to_string(bound));
      int num_hardened_round = 0;
-	   vec<lbool> &currentModel = bestModel; 
+
+     extendBestModel();
+     assert(computeCostOfModel() <= ubCost);
+     assert(solverCad->status() == 10);
 	   maxw_nothardened = 0;
+     vec<Lit> toAdd;
 	   for (int i = 0; i < softs_added; i++)
 		  {
 			bool satisfied = false;
-			if (maxsat_formula->getSoftClause(i).weight == bound) {
-				  assert(maxsat_formula->getSoftClause(i).clause.size() == 1 );
-          Lit l =  maxsat_formula->getSoftClause(i).clause[0];
-          assert(var(l) < currentModel.size());
-          satisfied = literalTrueInModel(l, currentModel);
-			  }
-			if (maxsat_formula->getSoftClause(i).weight > bound || (maxsat_formula->getSoftClause(i).weight == bound && satisfied) ) {  // 
- 
-      	vec<Lit> clause;
-				clause.clear();
-				 
-				Lit l = maxsat_formula->getSoftClause(i).assumption_var;
+      Lit l =  maxsat_formula->getSoftClause(i).clause[0];
+      satisfied = (solverCad->val(lit2Int(l)) > 0);
+			if (maxsat_formula->getSoftClause(i).weight > bound || (maxsat_formula->getSoftClause(i).weight == bound && satisfied) ) {  //  
 				assert(l != lit_Undef);
-				clause.push(~l);
-        ICadical::addClause(solverCad, clause);
-
-        if (!hardenLazily()) {
-          maxsat_formula->addHardClause(clause); 
-        }
-
+				toAdd.push(l);
 				maxsat_formula->getSoftClause(i).weight = 0;
         maxsat_formula->getSoftClause(i).assumption_var = lit_Undef;
-
 				num_hardened++;
 				num_hardened_round++;
         did_harden = true;
 			}
-			else if (maxsat_formula->getSoftClause(i).weight > maxw_nothardened) {
+		else if (maxsat_formula->getSoftClause(i).weight > maxw_nothardened) {
 				maxw_nothardened = maxsat_formula->getSoftClause(i).weight;
-			} 
-
-			
+		} 	
 		}
+    for (int i = 0; i < toAdd.size(); i++) {
+      Lit l = toAdd[i];
+      vec<Lit> clause;
+      clause.push(l);
+      ICadical::addClause(solverCad, clause);
+      if (!hardenLazily()) {
+          maxsat_formula->addHardClause(clause); 
+      }
+    }
 		logPrint("Hardened in total: " + std::to_string(num_hardened_round) + " clauses");
     logPrint("Hardening again at gap " + std::to_string(maxw_nothardened));
    }
@@ -592,6 +587,7 @@ StatusCode CBLIN::unsatSearch() {
     printAnswer(_UNSATISFIABLE_);
     return _UNSATISFIABLE_;
   } else if (res == l_True) {
+    flipLiterals();
     nbSatisfiable++;
     uint64_t beforecheck = ubCost;
 //    logPrint("in unsat");
@@ -949,21 +945,18 @@ StatusCode CBLIN::linearSearch() {
     
     if (res == l_True) {
       nbSatisfiable++;
-      vec<lbool> modelCad;
-      ICadical::getModel(solverCad,modelCad);
-      uint64_t new_reduced_cost = computeCostReducedWeights(modelCad);
+      uint64_t new_reduced_cost = computeCostReducedWeights();
       
       if (minimize_sol && new_reduced_cost > 0 && minimize_iteration && minimize_strat > 0) {
 
         uint64_t t = new_reduced_cost;
-        vec<lbool> temp; 
-        modelCad.copyTo(temp);
-        minimizelinearsolution(temp);
+        minimizelinearsolution();
         if (minimize_strat == 2) {
           minimize_iteration = false;
         }
 
-        new_reduced_cost = computeCostReducedWeights(temp); 
+        assert(solverCad->status() == 10);
+        new_reduced_cost = computeCostReducedWeights(); 
         if ( t != new_reduced_cost )
           logPrint("DIF before minim: " + std::to_string(t) + " after " + std::to_string(new_reduced_cost));
         assert(t >= new_reduced_cost);
@@ -1051,12 +1044,13 @@ void CBLIN::updateBoundLinSearch (uint64_t newBound) {
 // Delete solver as needed 
 void CBLIN::setPBencodings() {
   
-  if (bestModel.size() < maxsat_formula->nVars()) {
+  if (bestModel.size() < maxsat_formula->nVars() || solverCad->status() != 10) {
       logPrint("Extending best model to full formula");
       extendBestModel();
   }
   
-  uint64_t reduced_cost = computeCostReducedWeights(bestModel); 
+  
+  uint64_t reduced_cost = computeCostReducedWeights(); 
   if (reduced_cost == 0 && maxsat_formula->getMaximumWeight() > 1) {
       updateDivisionFactorLinear();
       setPBencodings(); 
@@ -1074,8 +1068,11 @@ void CBLIN::initializePBConstraint(uint64_t rhs) {
   if (minimize_sol) {
       if (rhs <= red_gap) {
         logPrint("Minimizing in PB initialisation");
-        minimizelinearsolution(bestModel);
-        uint64_t minCost = computeCostReducedWeights(bestModel);       
+
+        //call to extend model to ensure that cadical is in satisfiable and a solution that is not worse than the best known one
+        extendBestModel();
+        minimizelinearsolution();
+        uint64_t minCost = computeCostReducedWeights();       
         if (rhs != minCost) {
           logPrint("DIF before minim: " + std::to_string(rhs) + " after " + std::to_string(minCost));
         }
@@ -1187,7 +1184,7 @@ void CBLIN::setCardVars(bool prepro_bound) {
 void CBLIN::extendBestModel() {
     vec<Lit> modelAssumps;
 
-    for (int i = 0; i < isSoft.size(); i++ ) {
+    for (int i = 0; i < bestModel.size(); i++ ) {
       Lit l = mkLit(i, true); 
       if (literalTrueInModel(l, bestModel)) {
         modelAssumps.push(l);
@@ -1201,28 +1198,29 @@ void CBLIN::extendBestModel() {
 
     lbool res =  ICadical::searchSATSolver(solverCad, modelAssumps);
     assert(res == l_True);
+    flipLiterals();
     checkModel();
-    
+    assert(solverCad->status() == 10);
 }
 
-void CBLIN::minimizelinearsolution(vec<lbool> & sol) {
+void CBLIN::minimizelinearsolution() {
   if (objFunction.size() == 0) {
     return;
   }
+  assert(solverCad->status() == 10);
 
-  //TODO, check the model..... 
   vec<Lit> minimizable; 
   vec<bool> skip; 
   vec<Lit> fixed_assumptions; 
-  time_t rec = time(NULL);
 
   for (int i = 0; i < isSoft.size(); i ++) {
     if (isSoft[i]) continue; 
     Lit l = mkLit(i, true); 
-    if (literalTrueInModel(l, sol)) {
+    if (solverCad->val(lit2Int(l)) > 0) {
       fixed_assumptions.push(l);
     }
-    else {
+    else  {
+      assert(solverCad->val(lit2Int(l)) < 0);
       fixed_assumptions.push(~l);
     }
   }
@@ -1230,20 +1228,19 @@ void CBLIN::minimizelinearsolution(vec<lbool> & sol) {
   for (int i = 0; i < objFunction.size(); i++) {
     Lit l = objFunction[i]; 
     assert(var(l) >= isSoft.size() || isSoft[var(l)] );
-    if (literalTrueInModel(l, sol)) {
+    if (solverCad->val(lit2Int(l)) > 0) {
       // induces cost
       minimizable.push(l);
       skip.push(false);
     }
     else {
+      assert(solverCad->val(lit2Int(~l) ) > 0);
       fixed_assumptions.push(~l);
     }
   }
 
   vec<Lit> assumps; 
   lbool res; 
-
-  int skipped = 0;
 
   for (int i = 0; i < minimizable.size() ; i ++) {
     if (skip[i]) continue;
@@ -1254,16 +1251,12 @@ void CBLIN::minimizelinearsolution(vec<lbool> & sol) {
     res =  ICadical::searchSATSolver(solverCad, assumps);
     if (res == l_True) {
       fixed_assumptions.push(~l);
-      
-      vec<lbool> model;
-      ICadical::getModel(solverCad, model);
       for (int j = i+1; j < minimizable.size(); j++) {
         if (skip[j]) continue;
         Lit n = minimizable[j];
-        if (literalTrueInModel(~n, model)) {
+        if (solverCad->val(lit2Int(~n))) {
           skip[j] = true; 
           fixed_assumptions.push(~n);
-          skipped++;
         }
       }
     } else if (res == l_False) {
@@ -1279,32 +1272,23 @@ void CBLIN::minimizelinearsolution(vec<lbool> & sol) {
     assert(res == l_True);
   }
   checkModel();
-  time_t done = time(NULL);
-  logPrint("Minimization time " +std::to_string(done - rec) + " init minsize " + std::to_string(minimizable.size()) + " skipped " + std::to_string(skipped));
-
 } 
 
  
 
-uint64_t CBLIN::computeCostReducedWeights(vec<lbool> &fullModel) {
-  assert(fullModel.size() != 0);
+uint64_t CBLIN::computeCostReducedWeights() {
   assert( maxsat_formula->getSoftClause(maxsat_formula->nSoft() - 1).clause.size() == 1);
-  assert(var(maxsat_formula->getSoftClause(maxsat_formula->nSoft() - 1).clause[0]) < fullModel.size());
+  assert(solverCad->status() == 10);
 
   uint64_t tot_reducedCost = 0;
 
   for (int i = 0; i < maxsat_formula->nSoft(); i++) {
-    bool unsatisfied = true;
     assert(maxsat_formula->getSoftClause(i).clause.size() == 1);
-    assert(var(maxsat_formula->getSoftClause(i).clause[0]) < fullModel.size());
     Lit l = maxsat_formula->getSoftClause(i).clause[0];
-    if (literalTrueInModel(l, fullModel)) {
-      unsatisfied = false;
-    }
-
-    if (unsatisfied) {
+    if (solverCad->val(lit2Int(l)) < 0) {
       tot_reducedCost += (maxsat_formula->getSoftClause(i).weight / maxsat_formula->getMaximumWeight());
     }
+
   }
   uint64_t red_gap = known_gap / maxsat_formula->getMaximumWeight();
 
@@ -1527,11 +1511,12 @@ bool CBLIN::shouldUpdate() {
 // save polarity from last model 
  void CBLIN::savePhase() {
 		for (int i = 0; i < bestModel.size(); i++){
-      if (bestModel[i] == l_True)	{
-        solverCad->phase(i+1);
+      Lit l = mkLit(i, false);
+      if (literalTrueInModel(l, bestModel)) {
+        solverCad->phase(lit2Int(l));
       }
-      else if (bestModel[i] == l_False) {
-        solverCad->phase((-1)*(i+1));
+      else {
+        solverCad->phase(lit2Int(~l));
       }
 		}
  }
@@ -1553,23 +1538,27 @@ bool CBLIN::shouldUpdate() {
 
  }
 
-//TODO parametrize on the model... 
- bool CBLIN::checkModel() {
-
-   uint64_t flips = 0;
-   uint64_t failed_flips = 0;
-   for (int i = 0; i < original_labels->nSoft(); i++) {
-    Lit l = original_labels->getSoftClause(i).clause[0];
-    if(solverCad->val(lit2Int(l)) < 0) {
+  bool CBLIN::flipLiterals() {
+    assert(solverCad->status() == 10 );
+    uint64_t flips = 0;
+    uint64_t failed_flips = 0;
+    for (int i = 0; i < original_labels->nSoft(); i++) {
+      Lit l = original_labels->getSoftClause(i).clause[0];
+      if(solverCad->val(lit2Int(l)) < 0) {
         if (solverCad->flip(lit2Int(l))) {
           flips++;
         }
         else {
           failed_flips++;
         }
-    }
-  } 
-  logPrint("Flipped " + std::to_string(flips) + " failed flips " + std::to_string(failed_flips));
+      }
+    } 
+    logPrint("Flipped " + std::to_string(flips) + " failed flips " + std::to_string(failed_flips));
+    return (flips > 0);
+  }
+
+//TODO parametrize on the model... 
+ bool CBLIN::checkModel() {
 
   uint64_t modelCost = computeCostOfModel();
 

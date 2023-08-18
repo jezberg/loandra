@@ -155,7 +155,7 @@ protected:
   void updateBoundLinSearch (uint64_t newBound);
 
   bool checkModel();
-  uint64_t computeCostReducedWeights(vec<lbool> &currentModel);
+  uint64_t computeCostReducedWeights();
 
   void setPBencodings();
   Encoder * enc;
@@ -242,7 +242,8 @@ protected:
  bool reconstruct_iter;
  bool minimize_sol;
  int  minimize_strat;
- void minimizelinearsolution( vec<lbool> & sol);
+ void minimizelinearsolution();
+ bool flipLiterals();
  
  //Cadical Related
  CaDiCaL:: Solver* solverCad;
