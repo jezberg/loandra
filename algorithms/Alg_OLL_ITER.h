@@ -95,7 +95,7 @@ public:
 protected:
   // Rebuild MaxSAT solver
   //
-  Solver *rebuildSolver(); // Rebuild MaxSAT solver.
+  CaDiCaL::Solver *rebuildSolver(); // Rebuild MaxSAT solver.
 
   // Other
   void initAssumptions(); // Relaxes soft clauses.
@@ -103,7 +103,7 @@ protected:
   StatusCode unweighted();
   StatusCode weighted();
 
-  Solver *solver;  // SAT Solver used as a black box.
+  CaDiCaL::Solver *solver;  // SAT Solver used as a black box.
 
   // Controls the incremental strategy used by OLL algorithms.
   int incremental_strategy;
@@ -165,12 +165,11 @@ protected:
   vec<lbool>  hardeningModel; 
   
   int num_hardened_me;
-  Solver* hardenClauses(vec<Encoder *> & soft_cardinality);
+  CaDiCaL::Solver* hardenClauses(vec<Encoder *> & soft_cardinality);
 
   void findCardinality(Lit p, int64_t & cur_bound_out, uint64_t & bound_w_out, Encoder * & bound_enc_out, int & soft_card_id, vec<Encoder *> & soft_cardinality); 
   void extendCardEnc(Lit p, vec<Encoder *> & soft_cardinality); 
 
-  void resetActivities(); 
 
   MaxSATFormula* cost_formula;
   void extendModel();

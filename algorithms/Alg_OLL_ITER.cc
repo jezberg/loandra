@@ -106,7 +106,7 @@ StatusCode OLL_ITER::weighted() {
   vec<Encoder *> soft_cardinality;
 
   assert(nbSatisfiable == 1);
-  assert(solver->nVars() == maxsat_formula->nVars());
+  assert(solver->vars() == maxsat_formula->nVars());
   assert(maxsat_formula->getFormat() != _FORMAT_PB_);
 
   min_weight = findNextWeightDiversity(min_weight);
@@ -120,7 +120,7 @@ StatusCode OLL_ITER::weighted() {
 
     int not_considered = setAssumptions(assumptions);
     logPrint("Doing a SAT call at " + print_timeSinceStart());
-    res = searchSATSolver(solver, assumptions);
+    res = ICadical::searchSATSolver(solver, assumptions);
 
     if (res == l_True) {
       nbSatisfiable++;
@@ -170,7 +170,9 @@ StatusCode OLL_ITER::weighted() {
     else  {
       assert(res == l_False);
       vec<Lit> core;
-      processCore(solver->conflict, core);
+      vec<Lit> conflict;
+      ICadical::getCore(solver, conflict, assumptions);
+      processCore(conflict, core);
 
       uint64_t min_core = computeCostCore(core);
 
@@ -212,9 +214,6 @@ StatusCode OLL_ITER::weighted() {
 
 
 StatusCode OLL_ITER::search() {
-  printf("Error: development branch, OLL not supported atm");
-  exit(1);
-
 
   if (encoding != _CARD_TOTALIZER_) {
     if(print) {
@@ -264,7 +263,7 @@ StatusCode OLL_ITER::search() {
     initAssumptions();
     solver = rebuildSolver();
 
-    nOrigVars = solver->nVars(); 
+    nOrigVars = solver->vars(); 
 
     min_weight = maxsat_formula->getMaximumWeight();
     maxw_nothardened = maxsat_formula->getMaximumWeight();
@@ -274,7 +273,7 @@ StatusCode OLL_ITER::search() {
     lbool res; 
     
 
-    res = searchSATSolver(solver, dummy);
+    res = ICadical::searchSATSolver(solver, dummy);
     if (res != l_True) {
       return _UNSATISFIABLE_;
     }
@@ -420,7 +419,7 @@ void OLL_ITER::reformulateCore(const vec<Lit> &core, const uint64_t min_core, ve
     Encoder *e = new Encoder();
     e->setIncremental(_INCREMENTAL_ITERATIVE_);
     //Terrible hack need to integrate cadical to make it work
-    e->buildCardinality( NULL, newCore, 1);
+    e->buildCardinality( solver, newCore, 1);
 
     soft_cardinality.push(e);
     assert(e->outputs().size() > 1);
@@ -458,7 +457,7 @@ void OLL_ITER::extendCardEnc(Lit p, vec<Encoder *> & soft_cardinality) {
   joinObjFunction.clear();
   encodingAssumptions.clear();
 
-  cur->incUpdateCardinality(  NULL, joinObjFunction, cur->lits(), newBound, encodingAssumptions);
+  cur->incUpdateCardinality(  solver, joinObjFunction, cur->lits(), newBound, encodingAssumptions);
 
 } 
 
@@ -497,14 +496,8 @@ void OLL_ITER::increaseBound(Lit p, const uint64_t min_core,  vec<Encoder *> & s
       
   }          
 }
-  void OLL_ITER::resetActivities() {
-    logPrint("Reseting after hardening");
-    for (int i = 0; i < solver->nVars() ; i++) {
-      solver->resetActivity(i);
-    }
-  }
 
- Solver *OLL_ITER::hardenClauses(vec<Encoder *> & soft_cardinality) { 
+ CaDiCaL::Solver *OLL_ITER::hardenClauses(vec<Encoder *> & soft_cardinality) { 
     uint64_t bound;
 
     bool use_new = false && do_preprocess && use_reconstruct;
@@ -565,7 +558,7 @@ void OLL_ITER::increaseBound(Lit p, const uint64_t min_core,  vec<Encoder *> & s
 				  clause.clear();
 
           clause.push(~card);
-				  solver->addClause(clause);
+				  ICadical::addClause(solver, clause);
           
           if (isSoft) {
             int i = coreMapping[card];
@@ -592,113 +585,10 @@ void OLL_ITER::increaseBound(Lit p, const uint64_t min_core,  vec<Encoder *> & s
       
 			  
     }
-    /*
-    if (num_hardened_round > 0) {
-      vec<Lit> dummy;
-      logPrint("Propagating");
-      searchSATSolver(solver, dummy);
-      logPrint("Propagating done"); 
-    }
-    */
 
     logPrint("Hardened in total: " + std::to_string(num_hardened_round) + " clauses");
-    // if (num_hardened_round > 0) resetActivities();
     logPrint("Hardening again at gap " + std::to_string(maxw_nothardened));
-		return solver;
-    
-
-
-    /*
-
-     uint64_t bound = ubCost - lbCost;
-     logPrint("Hardening with gap: " + std::to_string(bound));
-     vec<lbool> & curModel = bestModel; 
-
-     int num_hardened_round = 0;
-	   maxw_nothardened = 0;
-     bool sat; 
-
-
-	   for (int i = 0; i < maxsat_formula->nSoft(); i++) {
-      if (maxsat_formula->getSoftClause(i).weight == 0) {
-        continue;
-      }
-
-
-      Lit l = maxsat_formula->getSoftClause(i).assumption_var;
-
-      if (var(l) >= curModel.size()) {
-        sat = false; 
-      }
-      else {
-        sat = literalTrueInModel(~l, curModel);
-      }
-
-      
-
-      uint64_t cur_w = maxsat_formula->getSoftClause(i).weight;
-
-			if (cur_w > bound  || ( (cur_w == bound) && sat)  ) {  // 
-				vec<Lit> clause;
-				clause.clear();
-				assert(l != lit_Undef);
-				clause.push(~l);
-				solver->addClause(clause);
-				maxsat_formula->getSoftClause(i).weight = 0;
-        maxsat_formula->getSoftClause(i).assumption_var = lit_Undef;
-				num_hardened++;
-        num_hardened_me++;
-				num_hardened_round++;
-			}
-			else if (cur_w > maxw_nothardened) {
-				maxw_nothardened = cur_w;
-			} 
-		}
-    
-    for (std::set<Lit>::iterator it = cardinality_assumptions.begin(); it != cardinality_assumptions.end(); ++it) {
-        Lit card = *it;
-        Encoder * cur; 
-        int soft_card_id = 0;
-        uint64_t weight_card = 0; 
-        int64_t cur_bound;
-
-        findCardinality(card, cur_bound, weight_card, cur, soft_card_id, soft_cardinality);
-        if (weight_card == 0) {
-          continue;
-        }
-
-        if (var(card) >= bestModel.size()) {
-          sat = false; 
-        }
-        else {
-          sat = literalTrueInModel(~card, curModel);
-        }
-
-	      if (weight_card > bound   || ( (weight_card == bound)  && sat )  ) {  
-          assert( cur->outputs()[cur_bound]  == card );
-
-          for (int j = cur_bound; j < cur->outputs().size(); j++) {
-            Lit t = cur->outputs()[j];
-            bool alreadyExist = cardinality_assumptions.find(t) != cardinality_assumptions.end();
-            vec<Lit> clause;
-				    clause.clear();
-				    clause.push(~t);
-				    solver->addClause(clause);
-
-            if (alreadyExist) {
-              boundMapping[t] = std::make_pair(std::make_pair(soft_card_id, j), 0);
-				      num_card_dropped++;
-			  	    num_hardened_round++;
-            }
-          }
-			  }
-			  else if (weight_card > maxw_nothardened) {
-			  	maxw_nothardened = weight_card;
-			  } 
-      }
-      */
-
-		
+		return solver;		
    }
 
 
@@ -717,17 +607,13 @@ void OLL_ITER::increaseBound(Lit p, const uint64_t min_core,  vec<Encoder *> & s
   |    Rebuilds a SAT solver with the current MaxSAT formula.
   |
   |________________________________________________________________________________________________@*/
-Solver *OLL_ITER::rebuildSolver() {
+CaDiCaL::Solver *OLL_ITER::rebuildSolver() {
 
-  Solver *S = newSATSolver();
-
-  reserveSATVariables(S, maxsat_formula->nVars());
-
-  for (int i = 0; i < maxsat_formula->nVars(); i++)
-    newSATVariable(S);
+  CaDiCaL::Solver *S = ICadical::newSATSolver();
+  S->reserve(maxsat_formula->nVars());
 
   for (int i = 0; i < maxsat_formula->nHard(); i++)
-    S->addClause(maxsat_formula->getHardClause(i).clause);
+    ICadical::addClause(S, maxsat_formula->getHardClause(i).clause);
 
   assert(maxsat_formula->nPB() == 0);
   assert(maxsat_formula->nCard() == 0);
@@ -815,15 +701,17 @@ bool OLL_ITER::checkModel() {
    uint64_t clausecost;
    uint64_t labelCost;
   
-   
-   labelCost = computeCostObjective(solver->model);
+   vec<lbool> model;
+   ICadical::getModel(solver, model);
+
+   labelCost = computeCostObjective_legacy(model);
    if (do_preprocess && use_reconstruct) {
       vec<lbool> reconstruct; 
-      reconstruct_model_prepro(solver->model, reconstruct);
-      clausecost = computeCostOriginalClauses(reconstruct);
+      reconstruct_model_prepro(model, reconstruct);
+      clausecost = computeCostOriginalClauses_legacy(reconstruct);
    } 
    else {
-      if (!do_preprocess) clausecost = computeCostOriginalClauses(solver->model);
+      if (!do_preprocess) clausecost = computeCostOriginalClauses_legacy(model);
       else clausecost = labelCost;
    }
 
@@ -842,7 +730,7 @@ bool OLL_ITER::checkModel() {
         logPrint("New hardening model");
         ubLabelCost = labelCost;
         hardeningModel.clear();
-        solver->model.copyTo(hardeningModel);
+        model.copyTo(hardeningModel);
      }
    }
 
@@ -850,16 +738,16 @@ bool OLL_ITER::checkModel() {
    if (isBetter) {
         ubCost = modelCost;
         time_best_solution = time(NULL);
-        saveModel(solver->model);
+        saveModel(model);
         bestModel.clear();
-        solver->model.copyTo(bestModel);
+        model.copyTo(bestModel);
         printBound(ubCost);
         printProgress();
     }
     if (modelCost == ubCost && bestModel.size() == 0) {
       bestModel.clear();
-      solver->model.copyTo(bestModel);
-      saveModel(solver->model);
+      model.copyTo(bestModel);
+      saveModel(model);
     }
     /*
     if (bestModel.size() < solver->nVars()) {
@@ -881,12 +769,14 @@ bool OLL_ITER::checkModel() {
       dummy.push(mkLit(i, bestModel[i] == l_False));
     }
 
-    res = searchSATSolver(solver, dummy);
+    res = ICadical::searchSATSolver(solver, dummy);
 
     assert( res == l_True);
    
     bestModel.clear();
-    solver->model.copyTo(bestModel);
+    vec<lbool> model;
+    ICadical::getModel(solver, model);
+    model.copyTo(bestModel);
     
  }  
 

@@ -47,69 +47,7 @@ void MaxSAT::setInitialTime(double initial) {
   initialTime = initial;
 } // Sets the initial time.
 
-/************************************************************************************************
- //
- // SAT solver interface
- //
- ************************************************************************************************/
 
-// Creates an empty SAT Solver.
-Solver *MaxSAT::newSATSolver() {
-
-#ifdef SIMP
-  NSPACE::SimpSolver *S = new NSPACE::SimpSolver();
-#else
-  Solver *S = new Solver();
-#endif
-
-  return (Solver *)S;
-}
-
-// Creates a new variable in the SAT solver.
-void MaxSAT::newSATVariable(Solver *S) {
-
-#ifdef SIMP
-  ((NSPACE::SimpSolver *)S)->newVar();
-#else
-  S->newVar();
-#endif
-}
-
-// Makes sure the underlying SAT solver has the given amount of variables
-// reserved.
-void MaxSAT::reserveSATVariables(Solver *S, unsigned maxVariable) {
-#ifdef SAT_HAS_RESERVATION
-#ifdef SIMP
-  ((NSPACE::SimpSolver *)S)->reserveVars(maxVariable);
-#else
-  S->reserveVars(maxVariable);
-#endif
-#endif
-}
-
-// Solve the formula that is currently loaded in the SAT solver with a set of
-// assumptions and with the option to use preprocessing for 'simp'.
-lbool MaxSAT::searchSATSolver(Solver *S, vec<Lit> &assumptions, bool pre) {
-
-// Currently preprocessing is disabled by default.
-// Variable elimination cannot be done on relaxation variables nor on variables
-// that belong to soft clauses. To preprocessing to be used those variables
-// should be frozen.
-
-#ifdef SIMP
-  lbool res = ((NSPACE::SimpSolver *)S)->solveLimited(assumptions, pre);
-#else
-  lbool res = S->solveLimited(assumptions);
-#endif
-
-  return res;
-}
-
-// Solve the formula without assumptions.
-lbool MaxSAT::searchSATSolver(Solver *S, bool pre) {
-  vec<Lit> dummy; // Empty set of assumptions.
-  return searchSATSolver(S, dummy, pre);
-}
 
 /************************************************************************************************
  //
@@ -159,7 +97,7 @@ void MaxSAT::saveModel(vec<lbool> &currentModel) {
   |    * Assumes that 'currentModel' is not empty.
   |
   |________________________________________________________________________________________________@*/
-uint64_t MaxSAT::computeCostOriginalClauses(vec<lbool> &reconstructed_model) {
+uint64_t MaxSAT::computeCostOriginalClauses_legacy(vec<lbool> &reconstructed_model) {
   assert(reconstructed_model.size() != 0 || full_original_scla->nSoft() == 0);
   uint64_t currentCost = 0;
 
@@ -182,7 +120,49 @@ uint64_t MaxSAT::computeCostOriginalClauses(vec<lbool> &reconstructed_model) {
   return currentCost;
 }
 
-uint64_t MaxSAT::computeCostObjective(vec<lbool> &model) {
+uint64_t MaxSAT::computeCostOriginalClauses(CaDiCaL::Solver* solver) {
+  uint64_t currentCost = 0;
+  assert(solver->vars() >= full_original_scla->nVars());
+
+  for (int i = 0; i < full_original_scla->nSoft(); i++) {
+    bool unsatisfied = true;
+    for (int j = 0; j < full_original_scla->getSoftClause(i).clause.size(); j++) {
+      Lit l = full_original_scla->getSoftClause(i).clause[j]; 
+      int sat = solver->val(lit2Int(l));
+      if (sat > 0) {
+        unsatisfied = false;
+        break;
+      }
+    }
+
+    if (unsatisfied) {
+      currentCost += full_original_scla->getSoftClause(i).weight;
+    }
+  }
+  return currentCost;
+}
+
+uint64_t MaxSAT::computeCostObjective(CaDiCaL::Solver* solver) {
+  uint64_t currentCost = standardization_removed; //this is 0 if preprocessing
+
+  for (int i = 0; i < original_labels->nSoft(); i++) {
+    assert(original_labels->getSoftClause(i).clause.size() == 1); 
+    Lit l = original_labels->getSoftClause(i).clause[0];
+    int res = solver->val(lit2Int(l));
+
+    //// satisfied soft
+    if (res > 0) {
+      continue;
+    }
+    currentCost += original_labels->getSoftClause(i).weight;  
+  } 
+  if (do_preprocess) {
+    currentCost += cost_removed_preprocessing;
+  }
+  return currentCost;
+}
+
+uint64_t MaxSAT::computeCostObjective_legacy(vec<lbool> &model) {
   assert(model.size() != 0);
   uint64_t currentCost = standardization_removed; //this is 0 if no preprocessing
 
@@ -490,7 +470,7 @@ void MaxSAT::printAnswer(int type) {
     model_of_original.clear(); 
 
     reconstruct_model_prepro(model, model_of_original);
-    uint64_t newCost = computeCostOriginalClauses(model_of_original);
+    uint64_t newCost = computeCostOriginalClauses_legacy(model_of_original);
 
     if (newCost < ubCost) {
       logPrint("cost improved after reconstruction");

@@ -27,15 +27,41 @@
 #ifndef ICadical_h
 #define ICadical_h
 
-
+#ifdef SIMP
+#include "simp/SimpSolver.h"
+#else
 #include "core/Solver.h"
-#include "cadical/src/cadical.hpp"
-#include "utils/System.h"
+#endif
 
+
+#include "MaxTypes.h"
+#include "utils/System.h"
+#include "cadical/src/cadical.hpp"
+
+using NSPACE::vec;
+using NSPACE::Lit;
+using NSPACE::lit_Undef;
+using NSPACE::mkLit;
+using NSPACE::lbool;
+
+// TODO: refactor this class to maintain the cadical solver.... 
 
 namespace openwbo {
 
 class ICadical {
+    public:
+        static lbool searchSATSolver(CaDiCaL::Solver * solver, vec<Lit> & assumptions);
+        static void addClause(CaDiCaL::Solver * solver, vec<Lit> & clause);
+        static void getCore(CaDiCaL::Solver * solver, vec<Lit> & assumptions, vec<Lit> & core_out);
+        static void getModel(CaDiCaL::Solver * solver, vec<lbool> & model_out);
+        static CaDiCaL::Solver * newSATSolver();
+          
+
+    protected:
+        static int lit2Int(Lit l);
+        static Lit int2Lit(int l);
+
+
 };
 } // namespace openwbo
 

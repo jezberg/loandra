@@ -1466,21 +1466,21 @@ int CBLIN::nRealSoft() {
 
 
 
-uint64_t CBLIN::computeCostOfModel(vec<lbool> &currentModel) {
+uint64_t CBLIN::computeCostOfModel() {
   
-  assert(currentModel.size() != 0 || maxsat_formula->nHard() == 0);
-
   if (!do_preprocess) {
-    return computeCostOriginalClauses(currentModel);
+    return computeCostOriginalClauses(solverCad);
   }
 
 
   uint64_t formula_cost = 0;
-  uint64_t label_cost = computeCostObjective(currentModel);
+  uint64_t label_cost = computeCostObjective(solverCad);
   if (reconstruct_sol && reconstruct_iter) {
+    vec<lbool> currentModel;
+    ICadical::getModel(solverCad, currentModel);
     vec<lbool> reconstructed;
     reconstruct_model_prepro(currentModel, reconstructed);
-    formula_cost = computeCostOriginalClauses(reconstructed);
+    formula_cost = computeCostOriginalClauses_legacy(reconstructed);
   }
   /*
   if (minimize_sol && !inLinSearch) {
@@ -1571,14 +1571,12 @@ bool CBLIN::shouldUpdate() {
   } 
   logPrint("Flipped " + std::to_string(flips) + " failed flips " + std::to_string(failed_flips));
 
-   vec<lbool> cadModel; 
-   ICadical::getModel(solverCad, cadModel);
-   logPrint("Checking model of size " + std::to_string(cadModel.size()));
+  uint64_t modelCost = computeCostOfModel();
 
-    uint64_t modelCost = computeCostOfModel(cadModel);
-
-   bool isBetter = modelCost < ubCost;
-   if (isBetter) {
+  bool isBetter = modelCost < ubCost;
+  if (isBetter) {
+        vec<lbool> cadModel; 
+        ICadical::getModel(solverCad, cadModel);
         ubCost = modelCost;
         time_best_solution = time(NULL);
         printProgress();
@@ -1588,7 +1586,9 @@ bool CBLIN::shouldUpdate() {
         printBound(ubCost);
         checkGap();
     }
-    if ( (modelCost == ubCost) && cadModel.size() > bestModel.size()) {
+    if ( (modelCost == ubCost) && solverCad->vars() > bestModel.size()) {
+      vec<lbool> cadModel; 
+      ICadical::getModel(solverCad, cadModel);
       logPrint("Found same cost model covering more variables");
       saveModel(cadModel);
       bestModel.clear();

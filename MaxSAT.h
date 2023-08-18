@@ -271,21 +271,6 @@ public:
   void ppClause2SolClause(vec<Lit>  & solClause_out, const std::vector<int> & ppClause);
   void solClause2ppClause(const vec<Lit>  & solClause,  std::vector<int> & ppClause_out);
 
-  
-
-
-
-  // Interface with the SAT solver
-  //
-  Solver *newSATSolver(); // Creates a SAT solver.
-  // Solves the formula that is currently loaded in the SAT solver.
-  lbool searchSATSolver(Solver *S, vec<Lit> &assumptions, bool pre = false);
-  lbool searchSATSolver(Solver *S, bool pre = false);
-
-  void newSATVariable(Solver *S); // Creates a new variable in the SAT solver.
-
-  void reserveSATVariables(Solver *S, unsigned maxVariable); // Reserve space for multiple variables in the SAT solver.
-
   // Properties of the MaxSAT formula
   //
   vec<lbool> model; // Stores the best satisfying model.
@@ -327,8 +312,12 @@ public:
   bool literalTrueInModel(Lit l, vec<lbool> &model);
   void saveModel(vec<lbool> &currentModel); // Saves a Model.
   // Compute the cost of a model.
-  uint64_t computeCostOriginalClauses(vec<lbool> &reconstructed_model); // checks the soft clauses of the input formula reconstructing solutions if needed
-  uint64_t computeCostObjective(vec<lbool> &premodel); // computes cost from the standardized formula or preprocessed formuals objective funciton.
+  uint64_t computeCostOriginalClauses_legacy(vec<lbool> &reconstructed_model); // checks the soft clauses of the input formula reconstructing solutions if needed
+  uint64_t computeCostObjective_legacy(vec<lbool> &premodel); // computes cost from the standardized formula or preprocessed formuals objective funciton.
+
+  uint64_t computeCostOriginalClauses(CaDiCaL::Solver* solver); // checks the soft clauses of the input formula reconstructing solutions if needed
+  uint64_t computeCostObjective(CaDiCaL::Solver* solver);
+
 
   // Utils for printing
   //

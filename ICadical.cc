@@ -28,3 +28,69 @@
 #include "ICadical.h"
 
 using namespace openwbo;
+
+lbool ICadical::searchSATSolver(CaDiCaL::Solver * solver, vec<Lit> & assumptions) {
+    for (int i = 0; i < assumptions.size(); i++) {
+        Lit l = assumptions[i];
+        solver->assume(lit2Int(l));
+    }
+    int res = solver->solve();
+    if (res == 20) {
+        return l_False;
+    }
+    else if (res == 10) {
+        return l_True;
+    }
+    else {
+        assert(res == 0);
+        return l_Undef;
+    }
+}
+
+void ICadical::addClause(CaDiCaL::Solver * solver, vec<Lit> & clause) {
+    for (int i = 0; i < clause.size(); i++) {
+        Lit l = clause[i];
+        solver->add(lit2Int(l));
+    }
+    solver->add(0);
+}
+
+void ICadical::getCore(CaDiCaL::Solver * solver, vec<Lit> & assumptions, vec<Lit>  & core_out) {
+    assert(core_out.size() == 0);
+    for (int i = 0; i < assumptions.size(); i ++) {
+        Lit l = assumptions[i];
+        if (solver->failed(lit2Int(l))) {
+            core_out.push(~l);
+        }
+    }
+}
+
+void ICadical::getModel(CaDiCaL::Solver * solver, vec<lbool> & model_out) {
+    assert(model_out.size() == 0);
+    for (int i = 1; i <= solver->vars(); i++) {
+        int v = solver->val(i);
+        if (v > 0) model_out.push(l_True);
+        else if (v < 0) model_out.push(l_False);
+        else model_out.push(l_Undef);
+    }
+}
+
+CaDiCaL::Solver* ICadical::newSATSolver() {
+    return new CaDiCaL::Solver;
+}
+
+
+int ICadical::lit2Int(Lit l) {
+	if (sign(l)) {
+		return  -(var(l) + 1);
+	}
+	else {
+		return var(l) + 1; 
+	}
+}
+
+Lit ICadical::int2Lit(int l) {
+	int var = abs(l) - 1;
+	bool sign = l > 0;
+	return sign ? mkLit(var) : ~mkLit(var);
+}

@@ -211,14 +211,13 @@ protected:
 
   
   void addSoftClauseAndAssumptionVar(uint64_t weight, vec<Lit> &clause);
-  uint64_t computeCostOfModel(vec<lbool> &currentModel);
+  uint64_t computeCostOfModel();
 
   int nRealSoft();
   bool shouldUpdate();
   bool did_harden;
 
   // SAT solver
-  Solver *solver;  // SAT solver used as a black box.
   Encoder encoder; // Interface for the encoder of constraints to CNF.
 
   // Variables used  in 'weightSearch'
