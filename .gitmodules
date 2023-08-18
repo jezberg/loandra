@@ -4,3 +4,4 @@
 [submodule "cadical"]
 	path = cadical
 	url = git@github.com:arminbiere/cadical.git
+	branch = cadical-integration
