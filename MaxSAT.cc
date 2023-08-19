@@ -128,8 +128,7 @@ uint64_t MaxSAT::computeCostOriginalClauses(CaDiCaL::Solver* solver) {
     bool unsatisfied = true;
     for (int j = 0; j < full_original_scla->getSoftClause(i).clause.size(); j++) {
       Lit l = full_original_scla->getSoftClause(i).clause[j]; 
-      int sat = solver->val(lit2Int(l));
-      if (sat > 0) {
+      if (solver->val(lit2Int(l)) > 0) {
         unsatisfied = false;
         break;
       }
@@ -164,7 +163,7 @@ uint64_t MaxSAT::computeCostObjective(CaDiCaL::Solver* solver) {
 
 uint64_t MaxSAT::computeCostObjective_legacy(vec<lbool> &model) {
   assert(model.size() != 0);
-  uint64_t currentCost = standardization_removed; //this is 0 if no preprocessing
+  uint64_t currentCost = standardization_removed; //this is 0 if preprocessing
 
   for (int i = 0; i < original_labels->nSoft(); i++) {
     assert(original_labels->getSoftClause(i).clause.size() == 1); 
@@ -562,8 +561,10 @@ MaxSATFormula* MaxSAT::standardized_formula() {
   for (int i = 0; i < maxsat_formula->nVars(); i++)
     copymx->newVar();
 
-  for (int i = 0; i < maxsat_formula->nHard(); i++)
+  for (int i = 0; i < maxsat_formula->nHard(); i++) {
+  //  logPrint("Pushing " + core_2_string(maxsat_formula->getHardClause(i).clause));
     copymx->addHardClause(maxsat_formula->getHardClause(i).clause);
+  }
 
   vec<Lit> clause; 
   std::map<int, uint64_t> existing_units;
@@ -574,10 +575,13 @@ MaxSATFormula* MaxSAT::standardized_formula() {
       Lit l = copymx->newLiteral();
       clause.push(l);
       copymx->addHardClause(clause);
+   //   logPrint("Pushing " + core_2_string(clause));;
     
       clause.clear();
       clause.push(~l);
       copymx->addSoftClause(maxsat_formula->getSoftClause(i).weight, clause);
+    //  logPrint("Pushing " + core_2_string(clause) + " weight " + std::to_string(maxsat_formula->getSoftClause(i).weight));
+
     }  
     else {
       Lit l = clause[0];

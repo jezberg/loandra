@@ -220,17 +220,6 @@ uint64_t CBLIN::findNextWeightDiversity(uint64_t weight) {
 
      extendBestModel();
 
-     logPrint("DEBUG");
-     for (int i = 0; i < bestModel.size(); i ++) {
-      Lit l = mkLit(i, false);
-      if (literalTrueInModel(l, bestModel)) {
-        assert(solverCad->val(lit2Int(l)) > 0);
-      }
-      else {
-        assert(solverCad->val(lit2Int(~l)) > 0);
-      }
-     }
-    logPrint("DEBUG DONE");
      assert(solverCad->status() == 10);
 	   maxw_nothardened = 0;
      vec<Lit> toAdd;
@@ -241,14 +230,27 @@ uint64_t CBLIN::findNextWeightDiversity(uint64_t weight) {
       satisfied = (solverCad->val(lit2Int(l)) > 0);
 			if (maxsat_formula->getSoftClause(i).weight > bound || (maxsat_formula->getSoftClause(i).weight == bound && satisfied) ) {  // 
         if (!satisfied) {
+          /*         
+          logPrint("Hardening literal " + std::to_string(lit2Int(l)));
           logPrint("weight " + std::to_string(maxsat_formula->getSoftClause(i).weight));
           logPrint("cost " + std::to_string(computeCostOfModel()));
           logPrint("fixed " + std::to_string(solverCad->fixed(lit2Int(l))));
+          logPrint("flip " + std::to_string(solverCad->flippable(lit2Int(l))));
           logPrint("Val " + std::to_string(solverCad->val(lit2Int(l))));
           logPrint("LIT " + std::to_string(literalTrueInModel(l, bestModel)));
-          assert(satisfied);
+
+          Lit la = maxsat_formula->getSoftClause(i).assumption_var;
+           logPrint("fixed " + std::to_string(solverCad->fixed(lit2Int(la))));
+          logPrint("Val " + std::to_string(solverCad->val(lit2Int(la))));
+          logPrint("LIT " + std::to_string(literalTrueInModel(la, bestModel)));
+          */
+          assert(solverCad->flippable(lit2Int(l)));
+
         }
-        assert(literalTrueInModel(l, bestModel)); 
+        if (!literalTrueInModel(l, bestModel)) {
+          flipValueinBestModel(l);
+        }
+
 				toAdd.push(l);
 				maxsat_formula->getSoftClause(i).weight = 0;
         maxsat_formula->getSoftClause(i).assumption_var = lit_Undef;
@@ -665,6 +667,9 @@ StatusCode CBLIN::unsatSearch() {
         vec<Lit> cad_core;
         ICadical::getCore(solverCad, assumptions, cad_core);
         assert(cad_core.size() > 0);
+
+        //logPrint("Core " + core_2_string(cad_core));
+
         uint64_t coreCost = computeCostCore(cad_core);
         lbCost += coreCost;
         checkGap();
@@ -1216,11 +1221,18 @@ void CBLIN::extendBestModel() {
     }
 
     lbool res =  ICadical::searchSATSolver(solverCad, modelAssumps);
-   // flipLiterals();
+    flipLiterals();
     assert(res == l_True);
     checkModel();
     assert(solverCad->status() == 10);
 }
+
+void CBLIN::flipValueinBestModel(Lit l) {
+  assert(var(l) < bestModel.size());
+  if (bestModel[var(l)] == l_True) bestModel[var(l)] = l_False;
+  else if (bestModel[var(l)] == l_False) bestModel[var(l)] = l_True;
+}
+
 
 void CBLIN::minimizelinearsolution() {
   if (objFunction.size() == 0) {

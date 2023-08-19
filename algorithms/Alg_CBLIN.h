@@ -214,6 +214,7 @@ protected:
 
   int nRealSoft();
   bool shouldUpdate();
+  void flipValueinBestModel(Lit l);
 
   // SAT solver
   Encoder encoder; // Interface for the encoder of constraints to CNF.
