@@ -83,7 +83,7 @@ public:
     wrong_eval_lin = 0;
     init_rhs = 0;
     delete_before_lin = delsol;
-    encoder.setCardEncoding(_CARD_TOTALIZER_); //TODO JUST UNTIL IT WORKS
+    encoder.setCardEncoding(_CARD_TOTALIZER_);
     encoder.setPBEncoding( _PB_GTE_);
     minimize_sol = m;
     minimize_strat = m_strat;

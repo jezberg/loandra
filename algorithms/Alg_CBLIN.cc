@@ -653,9 +653,6 @@ StatusCode CBLIN::unsatSearch() {
      
      lbool res = ICadical::searchSATSolver(solverCad, assumptions);
 
-
-      
-
       if (res == l_Undef) {
         //Interrupted
         return _UNKNOWN_;
