@@ -80,6 +80,7 @@ CaDiCaL::Solver* ICadical::newSATSolver() {
 }
 
 
+
 int ICadical::lit2Int(Lit l) {
 	if (sign(l)) {
 		return  -(var(l) + 1);

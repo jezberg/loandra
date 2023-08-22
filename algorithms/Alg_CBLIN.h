@@ -57,7 +57,7 @@ public:
     
     solverCad = NULL;
     timer = new Timer(gcLim);
-
+    has_flipped = false;
     verbosity = verb;
 
     nbCurrentSoft = 0;
@@ -241,6 +241,9 @@ protected:
  bool minimize_sol;
  int  minimize_strat;
  void minimizelinearsolution();
+ 
+ //TODO refactor these into some other class. 
+ bool has_flipped;
  bool flipLiterals();
  
  //Cadical Related

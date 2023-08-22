@@ -599,7 +599,8 @@ StatusCode CBLIN::unsatSearch() {
   softsSatisfied();
   //logPrint("In Unsat in solver " + std::to_string(solver->nVars()) + " vars amd " + std::to_string(solver->nClauses()) + " clauses" );
   lbool res = ICadical::searchSATSolver(solverCad, assumptions);
-  
+  has_flipped = false;
+
   clearFixingsonSoft();
   
 
@@ -649,6 +650,7 @@ StatusCode CBLIN::unsatSearch() {
       setAssumptions(assumptions);
      
      lbool res = ICadical::searchSATSolver(solverCad, assumptions);
+     has_flipped = false;
 
       if (res == l_Undef) {
         //Interrupted
@@ -922,6 +924,8 @@ StatusCode CBLIN::getModelAfterCG() {
   updateSolver();
   setAssumptions(assumptions);
   lbool res = ICadical::searchSATSolver(solverCad, assumptions); 
+  has_flipped = false;
+
   assert(res == l_True);
   checkModel();
   assert(ubCost == lbCost);
@@ -962,6 +966,7 @@ StatusCode CBLIN::linearSearch() {
     logPrint("SAT Call at " + print_timeSinceStart());
     assumptions.clear();
     res = ICadical::searchSATSolver(solverCad, assumptions);  
+    has_flipped = false;
     
     if (res == l_True) {
       nbSatisfiable++;
@@ -1188,6 +1193,7 @@ void CBLIN::setCardVars(bool prepro_bound) {
       }
     }
     lbool res = ICadical::searchSATSolver(solverCad, cardAssumps);
+    has_flipped = false;
 
     if (res == l_False) {
       logPrint("Warning: UNSAT in card setting");
@@ -1217,6 +1223,7 @@ void CBLIN::extendBestModel() {
     }
 
     lbool res =  ICadical::searchSATSolver(solverCad, modelAssumps);
+    has_flipped = false;
    // flipLiterals();
     assert(res == l_True);
     checkModel();
@@ -1276,6 +1283,7 @@ void CBLIN::minimizelinearsolution() {
     fixed_assumptions.copyTo(assumps);
     assumps.push(~l);
     res =  ICadical::searchSATSolver(solverCad, assumps);
+    has_flipped = false;
     if (res == l_True) {
       fixed_assumptions.push(~l);
       for (int j = i+1; j < minimizable.size(); j++) {
@@ -1296,6 +1304,7 @@ void CBLIN::minimizelinearsolution() {
   
   if (res == l_False) {
     res = ICadical::searchSATSolver(solverCad, fixed_assumptions);
+    has_flipped = false;
     assert(res == l_True);
   }
   checkModel();
@@ -1306,6 +1315,7 @@ void CBLIN::minimizelinearsolution() {
 uint64_t CBLIN::computeCostReducedWeights() {
   assert( maxsat_formula->getSoftClause(maxsat_formula->nSoft() - 1).clause.size() == 1);
   assert(solverCad->status() == 10);
+  flipLiterals();
 
   uint64_t tot_reducedCost = 0;
 
@@ -1320,6 +1330,9 @@ uint64_t CBLIN::computeCostReducedWeights() {
   uint64_t red_gap = known_gap / maxsat_formula->getMaximumWeight();
 
   logPrint("Reduced cost " + std::to_string(tot_reducedCost) + " gap " + std::to_string(red_gap));
+  if (red_gap < tot_reducedCost) {
+    tot_reducedCost = red_gap;
+  }
   return tot_reducedCost;
 }
 
@@ -1564,6 +1577,9 @@ bool CBLIN::shouldUpdate() {
 
   bool CBLIN::flipLiterals() {
     assert(solverCad->status() == 10 );
+    if (has_flipped) {
+      return false;
+    }
     uint64_t flips = 0;
     uint64_t failed_flips = 0;
     for (int i = 0; i < original_labels->nSoft(); i++) {
@@ -1578,6 +1594,7 @@ bool CBLIN::shouldUpdate() {
       }
     } 
     logPrint("Flipped " + std::to_string(flips) + " failed flips " + std::to_string(failed_flips));
+    has_flipped = true;
     return (flips > 0);
   }
 
