@@ -42,6 +42,7 @@
 #include "maxpre2/src/preprocessorinterface.hpp"
 
 #include "ICadical.h"
+#include "Timer.h"
 
 #include <algorithm>
 #include <map>

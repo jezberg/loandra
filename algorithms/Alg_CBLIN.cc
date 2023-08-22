@@ -643,11 +643,8 @@ StatusCode CBLIN::unsatSearch() {
   StatusCode CBLIN::weightDisjointCores() {
     
     for (;;) {
-      if(timeLimitCores > 0 && (time_t)timeLimitCores- timeSinceStart() <= 0 ) {
+      if(timer->terminate()) {
         return _UNKNOWN_;
-      }
-      if(timeLimitCores > 0) {
-        logPrint("Core budget remaining " + std::to_string((time_t)timeLimitCores - timeSinceStart()));
       }
       setAssumptions(assumptions);
      
@@ -655,6 +652,7 @@ StatusCode CBLIN::unsatSearch() {
 
       if (res == l_Undef) {
         //Interrupted
+        solverCad->disconnect_terminator();
         return _UNKNOWN_;
       }
 
@@ -772,7 +770,6 @@ StatusCode CBLIN::weightSearch() {
   assert(weightStrategy == _WEIGHT_NORMAL_ ||
          weightStrategy == _WEIGHT_DIVERSIFY_);
   inLinSearch = false;
-  assert(timeLimitCores < 0);
   
   for (;;) {
     StatusCode us = weightDisjointCores(); 
@@ -828,6 +825,8 @@ StatusCode CBLIN::weightSearch() {
   |________________________________________________________________________________________________@*/
 StatusCode CBLIN::coreGuidedLinearSearch() {
   inLinSearch = false;
+  timer->start_timer();
+  solverCad->connect_terminator(timer);
   for (;;) {
     StatusCode us = weightDisjointCores(); 
     if (us == _OPTIMUM_) {
@@ -1359,7 +1358,6 @@ StatusCode CBLIN::search() {
   logPrint("linear_strat=" + std::to_string(lins));
   logPrint("varying_res=" + std::to_string(varyingres));
   logPrint("varying_resCG=" + std::to_string(varyingresCG));
-  logPrint("time limit on cg-phase (s)=" + std::to_string(timeLimitCores));
   logPrint("relax prior to strat =" + std::to_string(relaxBeforeStrat));
   logPrint("minimize the solution =" + std::to_string(minimize_sol));
   logPrint("minimizing strat =" + std::to_string(minimize_strat));
@@ -1382,11 +1380,9 @@ StatusCode CBLIN::search() {
     printAnswer(_OPTIMUM_);
     return _OPTIMUM_;
   }
-  timeLimitCores += (time(NULL) - time_start);
 
   switch (lins) {
     case 0:
-      timeLimitCores = -1;
       return weightSearch();
       break;
     

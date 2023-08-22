@@ -56,6 +56,7 @@ public:
         bool u = false, bool m = false, int m_strat = 0) {
     
     solverCad = NULL;
+    timer = new Timer(gcLim);
 
     verbosity = verb;
 
@@ -73,7 +74,6 @@ public:
     varresFactor = 10; 
     varyingresCG = varRCG; 
     known_gap = UINT64_MAX;
-    timeLimitCores = gcLim;
     relaxBeforeStrat = r2strat;
     reconstruct_sol = u;
     reconstruct_iter = false;
@@ -106,8 +106,7 @@ protected:
   int softs_added;
   int vars_added;
   int lins;
-  bool delete_before_lin;
-  int timeLimitCores; //-1 = noBudget;
+  bool delete_before_lin; //-1 = noBudget;
   bool relaxBeforeStrat;
 
   void softsSatisfied();
@@ -247,6 +246,8 @@ protected:
  //Cadical Related
  CaDiCaL:: Solver* solverCad;
  
+ // Timer
+ Timer* timer;
 
 
 };
