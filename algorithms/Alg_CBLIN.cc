@@ -608,7 +608,7 @@ StatusCode CBLIN::unsatSearch() {
     printAnswer(_UNSATISFIABLE_);
     return _UNSATISFIABLE_;
   } else if (res == l_True) {
-    flipLiterals();
+    //flipLiterals();
     nbSatisfiable++;
     uint64_t beforecheck = ubCost;
 //    logPrint("in unsat");
@@ -1217,7 +1217,7 @@ void CBLIN::extendBestModel() {
     }
 
     lbool res =  ICadical::searchSATSolver(solverCad, modelAssumps);
-    flipLiterals();
+   // flipLiterals();
     assert(res == l_True);
     checkModel();
     assert(solverCad->status() == 10);
@@ -1585,6 +1585,13 @@ bool CBLIN::shouldUpdate() {
  bool CBLIN::checkModel() {
 
   uint64_t modelCost = computeCostOfModel();
+
+  if (flipLiterals()) {
+     uint64_t modelCost_fliped = computeCostOfModel();
+     logPrint("Cost_Before_Flip " + std::to_string(modelCost) + " cost after " + std::to_string(modelCost_fliped));
+     assert(modelCost_fliped <= modelCost);
+     modelCost = modelCost_fliped;
+  }
 
   bool isBetter = modelCost < ubCost;
   if (isBetter) {
