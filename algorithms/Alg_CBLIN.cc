@@ -727,7 +727,7 @@ StatusCode CBLIN::unsatSearch() {
           return _OPTIMUM_; //Solved by preprocessing
       }  
 
-      maxw_nothardened = maxsat_formula->getSumWeights();
+      maxw_nothardened = maxsat_formula->getSumWeights(); //TODO --- should be max of weights... 
       
       if(varyingresCG) {
         initializeDivisionFactor(varyingresCG);
@@ -849,7 +849,7 @@ StatusCode CBLIN::coreGuidedLinearSearch() {
     //At this point solver returned true and as such has a model
     assert(us == _SATISFIABLE_ );
 
-    logPrint("SAT-During core guided phase at " + print_timeSinceStart());
+    logPrint("SAT during core guided phase at " + print_timeSinceStart());
     nbSatisfiable++;
     checkModel();
 
@@ -1221,13 +1221,14 @@ void CBLIN::extendBestModel() {
       //if (isSoft[i]) continue;
       //modelAssumps.push(mkLit(i,  bestModel[i] == l_False));
     }
-
+    
+    assert(solverCad->status() == 10);
     lbool res =  ICadical::searchSATSolver(solverCad, modelAssumps);
     has_flipped = false;
-   // flipLiterals();
+    assert(solverCad->status() == 10);
     assert(res == l_True);
     checkModel();
-    assert(solverCad->status() == 10);
+    
 }
 
 void CBLIN::flipValueinBestModel(Lit l) {
