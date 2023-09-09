@@ -1621,6 +1621,10 @@ bool CBLIN::shouldUpdate() {
         saveModel(cadModel);
         bestModel.clear();
         cadModel.copyTo(bestModel);
+
+        logPrint("Debug: extending");
+        extendBestModel();
+
         printBound(ubCost);
         checkGap();
     }
