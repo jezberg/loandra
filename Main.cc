@@ -167,9 +167,10 @@ int main(int argc, char **argv) {
    IntOption pmreslin_cgLim("CBLIN", "cb-cglim", "Time limit for core guided phase (s): "
                                             "(-1=unlimited) .\n", 30,
                   IntRange(-1, INT_MAX));
+  BoolOption opt_phase_save("CBLIN", "opt-phase-save", "SAve the phase optimistically (prefering soft clauses to be satisfied).\n", true);
     
   BoolOption prepro_rec("PREPROCESS", "pr-rec", "Reconstruct solutions before computing their costs (only applicable when preprocessing).\n", false);
-  BoolOption prepro_min("PREPROCESS", "pr-min", "Minimize solutions locally after preprocessing.\n", true);
+  BoolOption prepro_min("PREPROCESS", "pr-min", "Minimize solutions locally after preprocessing.\n", false);
   IntOption prepro_min_strat("PREPROCESS", "pr-min-strat", "Strategy for solution minimization: 1=agressive (all solutions), 2=only the two first in each resolution: "
                                             "(0=only the best after each resolution) .\n", 0,
                   IntRange(0, 2));
@@ -188,7 +189,7 @@ int main(int argc, char **argv) {
     case _ALGORITHM_CBLIN_:
       S = new CBLIN(verbosity, weight, pmreslin, pmreslin_delsol, pmreslin_varres, pmreslin_varresCG, 
                     pmreslin_cgLim, pmreslin_relax2strat, prepro_rec, 
-                    prepro_min,prepro_min_strat);
+                    prepro_min,prepro_min_strat, opt_phase_save);
       break;
     
     case _ALGORITHM_OLLITER_:

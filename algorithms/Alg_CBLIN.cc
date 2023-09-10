@@ -218,7 +218,7 @@ uint64_t CBLIN::findNextWeightDiversity(uint64_t weight) {
      logPrint("Hardening with gap: " + std::to_string(bound));
      int num_hardened_round = 0;
 
-     extendBestModel();
+     //extendBestModel();
 
      assert(solverCad->status() == 10);
 	   maxw_nothardened = 0;
@@ -227,30 +227,8 @@ uint64_t CBLIN::findNextWeightDiversity(uint64_t weight) {
 		  {
 			bool satisfied = false;
       Lit l =  maxsat_formula->getSoftClause(i).clause[0];
-      satisfied = (solverCad->val(lit2Int(l)) > 0);
+      satisfied = literalTrueInModel(l, bestModel);  //(solverCad->val(lit2Int(l)) > 0);
 			if (maxsat_formula->getSoftClause(i).weight > bound || (maxsat_formula->getSoftClause(i).weight == bound && satisfied) ) {  // 
-        if (!satisfied) {
-          /*         
-          logPrint("Hardening literal " + std::to_string(lit2Int(l)));
-          logPrint("weight " + std::to_string(maxsat_formula->getSoftClause(i).weight));
-          logPrint("cost " + std::to_string(computeCostOfModel()));
-          logPrint("fixed " + std::to_string(solverCad->fixed(lit2Int(l))));
-          logPrint("flip " + std::to_string(solverCad->flippable(lit2Int(l))));
-          logPrint("Val " + std::to_string(solverCad->val(lit2Int(l))));
-          logPrint("LIT " + std::to_string(literalTrueInModel(l, bestModel)));
-
-          Lit la = maxsat_formula->getSoftClause(i).assumption_var;
-           logPrint("fixed " + std::to_string(solverCad->fixed(lit2Int(la))));
-          logPrint("Val " + std::to_string(solverCad->val(lit2Int(la))));
-          logPrint("LIT " + std::to_string(literalTrueInModel(la, bestModel)));
-          */
-          assert(solverCad->flippable(lit2Int(l)));
-
-        }
-        if (!literalTrueInModel(l, bestModel)) {
-          flipValueinBestModel(l);
-        }
-
 				toAdd.push(l);
 				maxsat_formula->getSoftClause(i).weight = 0;
         maxsat_formula->getSoftClause(i).assumption_var = lit_Undef;
@@ -267,18 +245,13 @@ uint64_t CBLIN::findNextWeightDiversity(uint64_t weight) {
       vec<Lit> clause;
       clause.push(l);
       ICadical::addClause(solverCad, clause);
-      if (!hardenLazily()) {
-          maxsat_formula->addHardClause(clause); 
-      }
+      maxsat_formula->addHardClause(clause); 
     }
 		logPrint("Hardened in total: " + std::to_string(num_hardened_round) + " clauses");
     logPrint("Hardening again at gap " + std::to_string(maxw_nothardened));
    }
 
-   bool CBLIN::hardenLazily() {
-    return !delete_before_lin && !varyingres;
-   }
-   
+
 
 /************************************************************************************************
  //
@@ -601,7 +574,7 @@ StatusCode CBLIN::unsatSearch() {
   lbool res = ICadical::searchSATSolver(solverCad, assumptions);
   has_flipped = false;
 
-  clearFixingsonSoft();
+  if (!optimistic) clearFixingsonSoft();
   
 
   if (res == l_False) {
@@ -709,9 +682,13 @@ StatusCode CBLIN::unsatSearch() {
       }
 
       while (isSoft.size() < maxsat_formula->nVars()) isSoft.push(false);
+      maxw_nothardened = 1; 
       for (int i = 0; i < maxsat_formula->nSoft(); i++)  {
           assert( maxsat_formula->getSoftClause(i).clause.size() == 1);
           Lit l = maxsat_formula->getSoftClause(i).clause[0];
+          if (maxsat_formula->getSoftClause(i).weight > maxw_nothardened) {
+            maxw_nothardened = maxsat_formula->getSoftClause(i).weight;
+          }
           assert(var(l) < isSoft.size());
           isSoft[var(l)] = true; 
       }
@@ -727,7 +704,6 @@ StatusCode CBLIN::unsatSearch() {
           return _OPTIMUM_; //Solved by preprocessing
       }  
 
-      maxw_nothardened = maxsat_formula->getSumWeights(); //TODO --- should be max of weights... 
       
       if(varyingresCG) {
         initializeDivisionFactor(varyingresCG);
@@ -1108,6 +1084,12 @@ void CBLIN::initializePBConstraint(uint64_t rhs) {
         rhs = red_gap;
       }
   }
+  else {
+    if (red_gap < rhs) {
+        logPrint("Setting rhs to reduced gap " + std::to_string(red_gap));
+        rhs = red_gap;
+    }
+  }
   
   // if the bound is obtained from preprocessing, we can not set variables in encoding according to a model. 
   bool bound_set_by_prepro = false;
@@ -1141,7 +1123,7 @@ void CBLIN::initializePBConstraint(uint64_t rhs) {
  
 
   logPrint("Encoding Done");        
-  setCardVars(bound_set_by_prepro);
+ // setCardVars(bound_set_by_prepro); /DEBUG
 }
 
 
@@ -1208,6 +1190,10 @@ void CBLIN::setCardVars(bool prepro_bound) {
 }
 
 void CBLIN::extendBestModel() {
+
+ //  logPrint("Debug: extending, current UB: " + std::to_string(ubCost) + " size of best model " + std::to_string(bestModel.size()));
+ //   logPrint("Debug: Variables in formula: " + std::to_string(maxsat_formula->nVars()) + " variables in cadical " + std::to_string(solverCad->vars()));
+      
     vec<Lit> modelAssumps;
 
     for (int i = 0; i < bestModel.size(); i++ ) {
@@ -1222,13 +1208,12 @@ void CBLIN::extendBestModel() {
       //modelAssumps.push(mkLit(i,  bestModel[i] == l_False));
     }
     
-    assert(solverCad->status() == 10);
     lbool res =  ICadical::searchSATSolver(solverCad, modelAssumps);
     has_flipped = false;
     assert(solverCad->status() == 10);
     assert(res == l_True);
     checkModel();
-    
+  //  logPrint("Debug: after extending, current UB: " + std::to_string(ubCost) + " size of best model " + std::to_string(bestModel.size()));
 }
 
 void CBLIN::flipValueinBestModel(Lit l) {
@@ -1239,6 +1224,7 @@ void CBLIN::flipValueinBestModel(Lit l) {
 
 
 void CBLIN::minimizelinearsolution() {
+
   if (objFunction.size() == 0) {
     return;
   }
@@ -1368,13 +1354,14 @@ StatusCode CBLIN::search() {
   }
 
 
-  logPrint("core-boosted linear search parameters");
+  logPrint("Core-boosted linear search parameters");
   logPrint("linear_strat=" + std::to_string(lins));
   logPrint("varying_res=" + std::to_string(varyingres));
   logPrint("varying_resCG=" + std::to_string(varyingresCG));
   logPrint("relax prior to strat =" + std::to_string(relaxBeforeStrat));
   logPrint("minimize the solution =" + std::to_string(minimize_sol));
   logPrint("minimizing strat =" + std::to_string(minimize_strat));
+  logPrint("optimistic phase save =" + std::to_string(optimistic));
   
 
   time_start = time(NULL);
@@ -1548,8 +1535,11 @@ bool CBLIN::shouldUpdate() {
 
 // save polarity from last model 
  void CBLIN::savePhase() {
+   
 		for (int i = 0; i < bestModel.size(); i++){
       Lit l = mkLit(i, false);
+      if (isSoft[var(l)] && optimistic) continue;
+
       if (literalTrueInModel(l, bestModel)) {
         solverCad->phase(lit2Int(l));
       }
@@ -1557,6 +1547,9 @@ bool CBLIN::shouldUpdate() {
         solverCad->phase(lit2Int(~l));
       }
 		}
+    if (optimistic) {
+      softsSatisfied();
+    }
  }
 
  void CBLIN::softsSatisfied() {
@@ -1564,6 +1557,7 @@ bool CBLIN::shouldUpdate() {
         assert(maxsat_formula->getSoftClause(i).clause.size() == 1 );
         Lit l =  maxsat_formula->getSoftClause(i).clause[0];
         solverCad->phase(lit2Int(l));
+        
     }
  }
 
@@ -1615,6 +1609,7 @@ bool CBLIN::shouldUpdate() {
   if (isBetter) {
         vec<lbool> cadModel; 
         ICadical::getModel(solverCad, cadModel);
+
         ubCost = modelCost;
         time_best_solution = time(NULL);
         printProgress();
@@ -1622,8 +1617,9 @@ bool CBLIN::shouldUpdate() {
         bestModel.clear();
         cadModel.copyTo(bestModel);
 
-        logPrint("Debug: extending");
-        extendBestModel();
+        //DEBUGG
+        // extendBestModel();
+
 
         printBound(ubCost);
         checkGap();

@@ -53,7 +53,7 @@ public:
   CBLIN(int verb = _VERBOSITY_MINIMAL_, int weight = _WEIGHT_NORMAL_, 
         int linear = 0, bool delsol = false, bool varR = false, bool varRCG = false,
         int gcLim = -1, bool r2strat = false, 
-        bool u = false, bool m = false, int m_strat = 0) {
+        bool u = false, bool m = false, int m_strat = 0, bool opt_phase_save = false) {
     
     solverCad = NULL;
     timer = new Timer(gcLim);
@@ -87,6 +87,8 @@ public:
     encoder.setPBEncoding( _PB_GTE_);
     minimize_sol = m;
     minimize_strat = m_strat;
+
+    optimistic = opt_phase_save;
   }
 
   ~CBLIN() {
@@ -182,7 +184,6 @@ protected:
 
 
   bool enoughSoftAboveWeight(uint64_t weightCand);
-  bool hardenLazily();
   //These are subroutines in other searches and should not be 
   StatusCode linearSearch();
   StatusCode weightDisjointCores(); // LB phase
@@ -195,7 +196,7 @@ protected:
  
 
   vec<Lit> minimisable_lits;
- 
+  bool optimistic;
   void savePhase();
   time_t time_start;
   time_t time_prepro;
