@@ -167,7 +167,7 @@ int main(int argc, char **argv) {
    IntOption pmreslin_cgLim("CBLIN", "cb-cglim", "Time limit for core guided phase (s): "
                                             "(-1=unlimited) .\n", 30,
                   IntRange(-1, INT_MAX));
-  BoolOption opt_phase_save("CBLIN", "opt-phase-save", "SAve the phase optimistically (prefering soft clauses to be satisfied).\n", true);
+  BoolOption opt_phase_save("CBLIN", "opt-phase-save", "Save the phase optimistically (prefering soft clauses to be satisfied).\n", true);
     
   BoolOption prepro_rec("PREPROCESS", "pr-rec", "Reconstruct solutions before computing their costs (only applicable when preprocessing).\n", false);
   BoolOption prepro_min("PREPROCESS", "pr-min", "Minimize solutions locally after preprocessing.\n", false);
