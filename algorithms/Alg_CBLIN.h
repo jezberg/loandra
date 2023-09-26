@@ -38,6 +38,7 @@
 #include "../Encoder.h"
 #include "../MaxSAT.h"
 #include "../MaxTypes.h"
+#include "../DPW/rustsat.h"
 #include "utils/System.h"
 #include <map>
 #include <set>
@@ -84,8 +85,6 @@ public:
     wrong_eval_lin = 0;
     init_rhs = 0;
     delete_before_lin = delsol;
-    encoder.setCardEncoding(_CARD_MTOTALIZER_); //TODO JUST UNTIL IT WORKS
-    encoder.setPBEncoding( _PB_GTE_);
     minimize_sol = m;
     minimize_strat = m_strat;
   }
@@ -159,6 +158,13 @@ protected:
 
   void setPBencodings();
   Encoder * enc;
+  
+  ///DPW
+  RustSAT::DynamicPolyWatchdog *dpw;
+
+  ///DPW
+  
+  
   vec<lbool> bestModel;
 
   void extendBestModel();
@@ -226,7 +232,6 @@ protected:
 
   // SAT solver
   Solver *solver;  // SAT solver used as a black box.
-  Encoder encoder; // Interface for the encoder of constraints to CNF.
 
   // Variables used  in 'weightSearch'
   //
