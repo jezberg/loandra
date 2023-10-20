@@ -1,3 +1,6 @@
 [submodule "maxpre2"]
 	path = maxpre2
 	url = git@bitbucket.org:coreo-group/maxpre2.git
+[submodule "rustsat"]
+	path = rustsat
+	url = https://github.com/chrjabs/rustsat.git

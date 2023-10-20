@@ -1168,13 +1168,14 @@ void CBLIN::initializePBConstraint(uint64_t rhs) {
     delete enc;
   if (dpw != NULL) {
     RustSAT::dpw_drop(dpw);
-    dpw == NULL;
+    dpw = NULL;
   }
 
   enc = new Encoder(_INCREMENTAL_NONE_, _CARD_MTOTALIZER_,
                                _AMO_LADDER_, _PB_GTE_);
 
   dpw = RustSAT::dpw_new();;
+
   
   assert(!enc->hasPBEncoding());
   logPrint("Encoding PB with UB: " + std::to_string(rhs) + " obj size " + std::to_string(objFunction.size()));

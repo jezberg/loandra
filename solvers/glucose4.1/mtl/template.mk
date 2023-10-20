@@ -13,7 +13,7 @@ DSRCS      = $(foreach dir, $(DEPDIR), $(filter-out $(MROOT)/$(dir)/Main.cc, $(w
 CHDRS      = $(wildcard $(PWD)/*.h)
 COBJS      = $(CSRCS:.cc=.o) $(DSRCS:.cc=.o)
 PREOBJ	   = $(wildcard $(PREPRO_DIR)/src/lib/*.a) 
-
+DPWOBJ	   = $(wildcard $(DPW_DIR)/*.a) 
 
 PCOBJS     = $(addsuffix p,  $(COBJS))
 DCOBJS     = $(addsuffix d,  $(COBJS))
@@ -75,7 +75,8 @@ lib$(LIB)_release.a:	$(filter-out */Main.or, $(RCOBJS))
 ## Linking rules (standard/profile/debug/release)
 $(EXEC) $(EXEC)_profile $(EXEC)_debug $(EXEC)_release $(EXEC)_static:
 	@echo Linking: "$@ ( $(foreach f,$^,$(subst $(MROOT)/,,$f)) )"
-	@$(CXX) $^ $(PREOBJ) $(LFLAGS) -o $@
+	@echo PRE and DPW: $(DPWOBJ)  $(PREOBJ)
+	@$(CXX) $^ $(DPWOBJ) $(PREOBJ) $(LFLAGS) -o $@
 
 ## Library rules (standard/profile/debug/release)
 lib$(LIB)_standard.a lib$(LIB)_profile.a lib$(LIB)_release.a lib$(LIB)_debug.a:
