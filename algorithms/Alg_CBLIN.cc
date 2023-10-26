@@ -1470,7 +1470,9 @@ StatusCode CBLIN::search() {
   logPrint("do varying resolution incrementally =" + std::to_string(incrementalVarres));
   logPrint("minimize the solution =" + std::to_string(minimize_sol));
   logPrint("minimizing strat =" + std::to_string(minimize_strat));
-  
+  logPrint("LB before search = " + std::to_string(lbCost));
+  logPrint("Preprocessing before search = " + std::to_string(cost_removed_preprocessing));
+
 
   time_start = time(NULL);
 	time_best_solution = time_start;
@@ -1482,9 +1484,16 @@ StatusCode CBLIN::search() {
          return _UNSATISFIABLE_;
   }
   if (r == _OPTIMUM_) {
-    assert(maxsat_formula->nSoft() == 0);
-    logPrint("Solved by preprocessing");
-    ubCost = cost_removed_preprocessing;
+    if (do_preprocess) {
+      assert(maxsat_formula->nSoft() == 0);
+      logPrint("Solved by preprocessing");
+      assert(lbCost == cost_removed_preprocessing);
+    }
+    else {
+      assert(maxsat_formula->nHard() == 0);
+      assert(standardization_removed == lbCost);
+    }
+    ubCost = lbCost;
     printBound(ubCost);
     printAnswer(_OPTIMUM_);
     return _OPTIMUM_;

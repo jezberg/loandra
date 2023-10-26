@@ -38,7 +38,7 @@
 #include "../Encoder.h"
 #include "../MaxSAT.h"
 #include "../MaxTypes.h"
-#include "../dpwenc/rustsat.h"
+#include "../rustsat/rustsat/rustsat.h"
 #include "utils/System.h"
 #include <map>
 #include <set>

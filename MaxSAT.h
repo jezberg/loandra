@@ -249,7 +249,8 @@ public:
   uint64_t standardization_removed;
   MaxSATFormula* standardized_formula();
 
-
+  uint64_t hashClause(const vec<Lit>& clause);  
+  bool are_duplicates(const vec<Lit>& clause1, const vec<Lit>& clause2);
   void reconstruct_model_prepro(vec<lbool> &currentModel, vec<lbool> &reconstructed_out);
   
   maxPreprocessor::PreprocessorInterface * pif;

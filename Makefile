@@ -13,7 +13,7 @@ include $(PWD)/solvers/$(SOLVER).mk
 # THE REMAINING OF THE MAKEFILE SHOULD BE LEFT UNCHANGED
 EXEC       = loandra
 PREPRO_DIR = maxpre2
-DPW_DIR = dpwenc
+DPW_DIR = rustsat/target/release
 DEPDIR     += mtl utils core
 #LIBD 	   = -L $(PWD)/maxpre/lib -l preprocessor
 ##INCLUDES   = $(PWD)/maxpre2/

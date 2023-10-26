@@ -75,7 +75,7 @@ lib$(LIB)_release.a:	$(filter-out */Main.or, $(RCOBJS))
 ## Linking rules (standard/profile/debug/release)
 $(EXEC) $(EXEC)_profile $(EXEC)_debug $(EXEC)_release $(EXEC)_static:
 	@echo Linking: "$@ ( $(foreach f,$^,$(subst $(MROOT)/,,$f)) )"
-	@echo PRE and DPW: $(DPWOBJ)  $(PREOBJ)
+	@echo preprocessor and DPW library: $(DPWOBJ)  $(PREOBJ)
 	@$(CXX) $^ $(DPWOBJ) $(PREOBJ) $(LFLAGS) -o $@
 
 ## Library rules (standard/profile/debug/release)

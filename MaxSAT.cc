@@ -575,6 +575,143 @@ void MaxSAT::setup_formula() {
 
 }
 
+uint64_t MaxSAT::hashClause(const vec<Lit>& clause) {
+	uint64_t hash = 0;
+	for (int i = 0; i < clause.size() ; i++) {
+    uint64_t l = (uint64_t)lit2Int(clause[i]);
+		hash |= ((uint64_t)1 << (l&(uint64_t)63));
+	}
+  return hash;
+}
+
+bool MaxSAT::are_duplicates(const vec<Lit> & clause1, const vec<Lit> & clause2 ) {
+	if (clause1.size() != clause2.size()) {
+    return false;
+  }
+  std::vector<int> clause_one;
+  for (int i = 0; i < clause1.size(); i++) clause_one.push_back(lit2Int(clause1[i]));
+  std::vector<int> clause_two;
+  for (int i = 0; i < clause2.size(); i++) clause_two.push_back(lit2Int(clause2[i]));
+
+  assert(clause_one.size() == clause1.size());
+  assert(clause_two.size() == clause2.size());
+
+  std::sort(clause_one.begin(), clause_one.end());
+  std::sort(clause_two.begin(), clause_two.end());
+
+  return clause_one == clause_two;
+}
+
+MaxSATFormula* MaxSAT::standardized_formula() {
+  MaxSATFormula *copymx = new MaxSATFormula();
+  copymx->setInitialVars(maxsat_formula->nVars());
+
+  for (int i = 0; i < maxsat_formula->nVars(); i++)
+    copymx->newVar();
+
+  for (int i = 0; i < maxsat_formula->nHard(); i++)
+    copymx->addHardClause(maxsat_formula->getHardClause(i).clause);
+
+  
+  std::map<uint64_t, std::set< size_t >> hash_to_pos;
+  std::vector<uint64_t> weights;
+
+  for (int i = 0; i < maxsat_formula->nSoft(); i++) {
+      uint64_t hash = hashClause(maxsat_formula->getSoftClause(i).clause);
+      if (hash_to_pos.find(hash) != hash_to_pos.end()) {
+        bool dublicate = false;
+        for (int ind : hash_to_pos[hash]) {
+          assert (ind < i);
+          if (are_duplicates(maxsat_formula->getSoftClause(i).clause, maxsat_formula->getSoftClause(ind).clause)) {
+            weights[ind] += maxsat_formula->getSoftClause(i).weight;
+            weights.push_back(0);
+            dublicate = true;
+            break;
+          }
+        }
+        if (!dublicate) {
+          hash_to_pos[hash].insert(i);
+          weights.push_back(maxsat_formula->getSoftClause(i).weight);
+        }
+      }
+      else {
+        hash_to_pos[hash].insert(i);
+        weights.push_back(maxsat_formula->getSoftClause(i).weight);
+      }
+  }
+  assert(weights.size() == maxsat_formula->nSoft());
+
+  vec<Lit> clause; 
+  std::map<int, uint64_t> existing_units;
+  for (int i = 0; i < maxsat_formula->nSoft(); i++) {
+    if (weights[i] == 0) continue;
+    clause.clear();
+    maxsat_formula->getSoftClause(i).clause.copyTo(clause);
+    if (clause.size() != 1){
+      Lit l = copymx->newLiteral();
+      clause.push(l);
+      copymx->addHardClause(clause);
+    
+      clause.clear();
+      clause.push(~l);
+      copymx->addSoftClause(weights[i], clause);
+    }  
+    else {
+      Lit l = clause[0];
+      existing_units[lit2Int(l)] = weights[i];
+    }
+  }
+
+
+  std::set<int> to_be_removed;
+  for (auto iter = existing_units.begin(); iter != existing_units.end(); iter++ ) {
+    int lit = iter->first;
+    int negation = lit * (-1);
+    uint64_t weight = iter->second;
+    if (to_be_removed.find(lit) != to_be_removed.end() ) {
+      continue;
+    }
+
+    bool contradicting_literal = existing_units.find(negation) != existing_units.end();
+    
+    clause.clear();
+    if (contradicting_literal) {
+      to_be_removed.insert(negation);
+      uint64_t contr_w = existing_units[negation];
+      if (contr_w > weight) {
+        clause.push(int2Lit(negation));
+        copymx->addSoftClause(contr_w - weight, clause);
+        lbCost += weight; 
+        standardization_removed += weight;
+      }
+      else if (contr_w < weight) {
+        clause.push(int2Lit(lit));
+        copymx->addSoftClause(weight - contr_w, clause);
+        lbCost += contr_w;
+        standardization_removed += contr_w;
+      }
+      else { // contradicting labels have equal weight
+        lbCost += contr_w;
+        standardization_removed += contr_w;
+        continue;
+      }
+    }
+    else{
+      clause.push(int2Lit(lit));
+      copymx->addSoftClause(weight, clause);
+    }
+
+  }
+
+
+  copymx->setProblemType(maxsat_formula->getProblemType());
+  copymx->updateSumWeights(maxsat_formula->getSumWeights());
+  copymx->setMaximumWeight(maxsat_formula->getMaximumWeight());
+  copymx->setHardWeight(maxsat_formula->getHardWeight());
+  return copymx;
+}
+
+/*
 MaxSATFormula* MaxSAT::standardized_formula() {
   MaxSATFormula *copymx = new MaxSATFormula();
   copymx->setInitialVars(maxsat_formula->nVars());
@@ -650,7 +787,7 @@ MaxSATFormula* MaxSAT::standardized_formula() {
        
 
 
-  //TODO, add the literals in the map... map is stored "key is hte exact polarity it appears in the soft clause"
+  //TODO, add the literals in the map... map is stored "key is the exact polarity it appears in the soft clause"
 
   copymx->setProblemType(maxsat_formula->getProblemType());
   copymx->updateSumWeights(maxsat_formula->getSumWeights());
@@ -658,6 +795,7 @@ MaxSATFormula* MaxSAT::standardized_formula() {
   copymx->setHardWeight(maxsat_formula->getHardWeight());
   return copymx;
 }
+*/
 
 
 MaxSATFormula* MaxSAT::preprocessed_formula() {
