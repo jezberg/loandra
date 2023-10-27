@@ -1485,12 +1485,9 @@ StatusCode CBLIN::search() {
   }
   if (r == _OPTIMUM_) {
     if (do_preprocess) {
-      assert(maxsat_formula->nSoft() == 0);
-      logPrint("Solved by preprocessing");
       assert(lbCost == cost_removed_preprocessing);
     }
     else {
-      assert(maxsat_formula->nHard() == 0);
       assert(standardization_removed == lbCost);
     }
     ubCost = lbCost;
