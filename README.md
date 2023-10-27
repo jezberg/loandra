@@ -10,8 +10,8 @@ If you use Loandra in your work please cite:
 - Berg, J., Demirović, E. and Stuckey, P.J., 2019. Core-boosted linear search for incomplete MaxSAT. In Integration of Constraint Programming, Artificial Intelligence, and Operations Research: 16th International Conference, CPAIOR 2019, Thessaloniki, Greece, June 4–7, 2019, Proceedings 16 (pp. 39-56). Springer International Publishing.
 
 ### Building
-First ensure the maxpre2 subfolder is updated. Newer versions of git do this automatically after cloning, with older versions you need 
-to run git submodule init and git submodule update in the maxpre2 subfolder. 
+Clone this repo with submodules. This can be done using `git clone --recurse-submodules git@github.com:jezberg/loandra.git`.
+Alternatively, make sure to go to the `maxpre2` folder, and run the `git submodule init` and `git submodule update`.
 
 Afterwards, run make in the base folder.
 
