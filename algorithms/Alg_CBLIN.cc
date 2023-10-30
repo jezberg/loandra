@@ -1374,6 +1374,7 @@ void CBLIN::extendBestModel() {
     vec<Lit> modelAssumps;
 
     for (int i = 0; i < isSoft.size(); i++ ) {
+      if (!isSoft[i]) continue;
       Lit l = mkLit(i, true); 
       if (literalTrueInModel(l, bestModel)) {
         modelAssumps.push(l);
