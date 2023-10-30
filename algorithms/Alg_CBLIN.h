@@ -54,7 +54,7 @@ public:
   CBLIN(int verb = _VERBOSITY_MINIMAL_, int weight = _WEIGHT_NORMAL_, 
         int linear = 0, bool delsol = false, bool varR = false, bool varRCG = false,
         int gcLim = -1, bool r2strat = false, bool incrementalV = false, 
-        bool u = false, bool m = false, int m_strat = 0) {
+        bool u = false, bool m = false, int m_strat = 0, bool use_dpw = false, bool dpw_coarse_ = false) {
     
     solver = NULL;
     verbosity = verb;
@@ -87,6 +87,12 @@ public:
     delete_before_lin = delsol;
     minimize_sol = m;
     minimize_strat = m_strat;
+
+    dpw = NULL;
+    use_DPW = use_dpw;
+    dpw_coarse = dpw_coarse_;
+    dpw_fine_convergence_after = false;
+
   }
 
   ~CBLIN() {
@@ -160,12 +166,23 @@ protected:
   Encoder * enc;
   
   ///DPW
-  RustSAT::DynamicPolyWatchdog *dpw;
+  struct SolverWithBuffer {
+    Solver *solver_b;
+    vec<Lit> buffer;
+};
 
+  RustSAT::DynamicPolyWatchdog *dpw;
+  bool use_DPW;
+  bool dpw_coarse;
+  bool dpw_fine_convergence_after;
+  uint64_t fine_bound;
+  static void dpw_assumps(int lit, void *assumps);
+  static void dpw_clause_collector(int lit, void *ptr);
   ///DPW
   
   
   vec<lbool> bestModel;
+  void flipValueinBest(Lit l);
 
   void extendBestModel();
   void setCardVars(bool prepro);
@@ -191,7 +208,6 @@ protected:
 
 
   bool enoughSoftAboveWeight(uint64_t weightCand);
-  bool hardenLazily();
   //These are subroutines in other searches and should not be 
   StatusCode linearSearch();
   StatusCode weightDisjointCores(); // LB phase

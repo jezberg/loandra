@@ -168,6 +168,9 @@ int main(int argc, char **argv) {
    IntOption pmreslin_cgLim("CBLIN", "cb-cglim", "Time limit for core guided phase (s): "
                                             "(-1=unlimited) .\n", 30,
                   IntRange(-1, INT_MAX));
+   
+   BoolOption pmreslin_dpw("CBLIN", "cb-DPW", "Use the dynanic polynomial watchdog (default=false in which case the generalized totalizer is used).\n", false);
+   BoolOption pmreslin_dpw_coarse("CBLIN", "cb-DPW-coarse", "Only do coarse-convergence with the DPW for resolutions higher than 1.\n", false);
     
   BoolOption prepro_rec("PREPROCESS", "pr-rec", "Reconstruct solutions before computing their costs (only applicable when preprocessing).\n", false);
   BoolOption prepro_min("PREPROCESS", "pr-min", "Minimize solutions locally after preprocessing.\n", true);
@@ -189,7 +192,7 @@ int main(int argc, char **argv) {
     case _ALGORITHM_CBLIN_:
       S = new CBLIN(verbosity, weight, pmreslin, pmreslin_delsol, pmreslin_varres, pmreslin_varresCG, 
                     pmreslin_cgLim, pmreslin_relax2strat, pmreslin_incvarres, prepro_rec, 
-                    prepro_min,prepro_min_strat);
+                    prepro_min,prepro_min_strat, pmreslin_dpw, pmreslin_dpw_coarse);
       break;
     
     case _ALGORITHM_OLLITER_:
