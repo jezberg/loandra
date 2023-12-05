@@ -126,7 +126,7 @@ int main(int argc, char **argv) {
 
   IntOption algorithm("Open-WBO", "algorithm",
                         "MaxSAT algorithm "
-                        "(0=core-boosted linear search (default),2=oll_iter)."
+                        "(0=core-boosted linear search (default),2=oll)."
                         "\n",
                         0, IntRange(0, 1));
 
@@ -145,16 +145,9 @@ int main(int argc, char **argv) {
                       "Type of formula (0=WCNF, 1=OPB).\n", 0, IntRange(0, 1));
 
   IntOption weight(
-        "WBO", "weight-strategy",
+        "CBLIN", "weight-strategy",
         "Weight strategy (0=none, 1=weight-based, 2=diversity-based).\n", 2,
         IntRange(0, 2));
-
-  BoolOption symmetry("WBO", "symmetry", "Symmetry breaking.\n", true);
-    
-  IntOption symmetry_lim(
-        "WBO", "symmetry-limit",
-        "Limit on the number of symmetry breaking clauses.\n", 500000,
-        IntRange(0, INT32_MAX));
 
   IntOption pmreslin("CBLIN", "cb", "Run sat-unsat search in conjunction with core-guided search (i.e. core-boosted search): "
                                             "(0=not at all, 1=first cores then sat-unsat search 2=only sat-unsat) .\n", 1,

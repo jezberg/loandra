@@ -282,7 +282,7 @@ void CBLIN::flipValueinBest(Lit l) {
     std::set<uint64_t> nbWeights;
     nbWeights.clear();
     
-    float alpha = do_preprocess ? 0.9 : 1.25;
+    float alpha = do_preprocess ? 0.75 : 1.25;
 
     for (int i = 0; i < maxsat_formula->nSoft(); i++) {
       if (maxsat_formula->getSoftClause(i).weight >= weightCand) {
@@ -291,7 +291,7 @@ void CBLIN::flipValueinBest(Lit l) {
       }
     }
 
-    return (float)nbClauses / nbWeights.size() > alpha || nbClauses == nRealSoft();
+    return (float)nbClauses / (float)nbWeights.size() > alpha || nbClauses == nRealSoft();
   }
   
   
@@ -936,11 +936,6 @@ StatusCode CBLIN::getModelAfterCG() {
 
 
 
-StatusCode CBLIN::onlyLinearSearch() {
-  return linearSearch();
-  
-}
-
 
 StatusCode CBLIN::linearSearch() {
   logPrint( "Starting lin search with: LB: " + std::to_string(lbCost) + " UB: " + std::to_string(ubCost) + 
@@ -987,11 +982,16 @@ StatusCode CBLIN::linearSearch() {
     if (res == l_True) {
       nbSatisfiable++;
       
-
+ 
+      if (use_DPW && assumptions.size() == 1) {
+        vec<Lit> clause; 
+        clause.push(~assumptions[0]);
+        solver->addClause(clause);
+      }
+ 
       uint64_t new_reduced_cost = computeCostReducedWeights(solver->model);
       
       if (minimize_sol && new_reduced_cost > 0 && minimize_iteration && minimize_strat > 0) {
-
         uint64_t t = new_reduced_cost;
         vec<lbool> temp; 
         solver->model.copyTo(temp);
@@ -999,7 +999,6 @@ StatusCode CBLIN::linearSearch() {
         if (minimize_strat == 2) {
           minimize_iteration = false;
         }
-
         new_reduced_cost = computeCostReducedWeights(temp); 
         if ( t != new_reduced_cost )
           logPrint("DIF before minim: " + std::to_string(t) + " after " + std::to_string(new_reduced_cost));
@@ -1015,8 +1014,7 @@ StatusCode CBLIN::linearSearch() {
       
 
       if (ubCost == lbCost) {
-        if (verbosity > 0)
-        printf("c LB = UB\n");
+        logPrint("c LB = UB\n");
         printAnswer(_OPTIMUM_);
         return _OPTIMUM_;
       }
@@ -1026,6 +1024,7 @@ StatusCode CBLIN::linearSearch() {
       }
       else {
         if (maxsat_formula->getMaximumWeight() == 1) {
+            logPrint("New reduced cost " + std::to_string(new_reduced_cost) + " factor 1, quiting.");
             // No need to check for fine convergence because her we have a model whose cost matches the lb proven by core-guided search
             printAnswer(_OPTIMUM_);
             return _OPTIMUM_;
@@ -1043,7 +1042,7 @@ StatusCode CBLIN::linearSearch() {
       }
 
     } 
-    else {
+    else { //res = false
        if (maxsat_formula->getMaximumWeight() == 1) {
           if (dpw_fine_convergence_after) {
             logPrint("Stopping coarse convergence");
@@ -1053,6 +1052,7 @@ StatusCode CBLIN::linearSearch() {
             res = l_True;
           }
           else {
+            logPrint("UNSAT, stopping");
             printAnswer(_OPTIMUM_);
             return _OPTIMUM_;
           }
@@ -1093,14 +1093,9 @@ void CBLIN::dpw_clause_collector(int lit, void *ptr) {
 
 
 void CBLIN::updateBoundLinSearch (uint64_t newBound) {  
-  logPrint("BOUND UPDATE RHS: " + std::to_string(newBound) + " at " + print_timeSinceStart());
+  logPrint("New bound to enforce: " + std::to_string(newBound) + " at " + print_timeSinceStart());
   
   if (use_DPW) {
-    SolverWithBuffer solver_with_buffer{.solver_b = solver};
-    int num_vars = solver->nVars();
-    //logPrint("solver clauses before " + std::to_string(solver->nClauses()) + " num_vars " + std::to_string(num_vars));
-    RustSAT::dpw_encode_ub(dpw, newBound, newBound, &num_vars, &dpw_clause_collector, &solver_with_buffer);
-
     assumptions.clear();
     if (dpw_coarse) {
       uint64_t coarse_b = RustSAT::dpw_coarse_ub(dpw, newBound);
@@ -1109,7 +1104,16 @@ void CBLIN::updateBoundLinSearch (uint64_t newBound) {
       newBound = coarse_b;
       logPrint("Coarse convergence to: " + std::to_string(coarse_b));
     }
+
+    SolverWithBuffer solver_with_buffer{.solver_b = solver};
+    int num_vars = solver->nVars();
+    //logPrint("solver clauses before " + std::to_string(solver->nClauses()) + " num_vars " + std::to_string(num_vars));
+    RustSAT::dpw_encode_ub(dpw, newBound, newBound, &num_vars, &dpw_clause_collector, &solver_with_buffer);
+
+
+  //  logPrint("Enforcing " + std::to_string(newBound));
     RustSAT::MaybeError ret = RustSAT::dpw_enforce_ub(dpw, newBound, &dpw_assumps, &assumptions);
+  //  logPrint("Length of assumptions " + std::to_string(assumptions.size()));
     assert(ret == RustSAT::MaybeError::Ok);
   }
   else{
@@ -1546,7 +1550,8 @@ StatusCode CBLIN::search() {
   logPrint("LB before search = " + std::to_string(lbCost));
   logPrint("offset before search = " + std::to_string(off_set));
   logPrint("standardization removed before search = " + std::to_string(standardization_removed));
-  logPrint("preprocessing before search = " + std::to_string(cost_removed_preprocessing));
+  logPrint("preprocessing removed before search = " + std::to_string(cost_removed_preprocessing));
+
 
 
   time_start = time(NULL);
@@ -1577,7 +1582,7 @@ StatusCode CBLIN::search() {
       break;
 
     case 2: 
-      return onlyLinearSearch();
+      return linearSearch();
       break;
 
     default:
@@ -1718,6 +1723,7 @@ bool CBLIN::shouldUpdate() {
 
 // save polarity from last model 
  void CBLIN::savePhase() {
+    //TODO: think about how to do this better with the DPW, new variables are mostl ikely 1. 
     solver->_user_phase_saving.clear();
 		for (int i = 0; i < bestModel.size(); i++){
 			solver->_user_phase_saving.push(bestModel[i]);		

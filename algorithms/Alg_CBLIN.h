@@ -85,11 +85,13 @@ public:
     wrong_eval_lin = 0;
     init_rhs = 0;
     delete_before_lin = delsol;
+
     minimize_sol = m;
     minimize_strat = m_strat;
 
     dpw = NULL;
     use_DPW = use_dpw;
+    
     dpw_coarse = dpw_coarse_;
     dpw_fine_convergence_after = false;
 
@@ -204,7 +206,6 @@ protected:
   StatusCode setup(); // unsat search and other setups
   StatusCode coreGuidedLinearSearch();
   StatusCode weightDivisionSearch();
-  StatusCode onlyLinearSearch();
 
 
   bool enoughSoftAboveWeight(uint64_t weightCand);
