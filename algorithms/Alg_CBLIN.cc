@@ -985,7 +985,7 @@ StatusCode CBLIN::linearSearch() {
  
       if (use_DPW && assumptions.size() == 1) {
         vec<Lit> clause; 
-        clause.push(~assumptions[0]);
+        clause.push(assumptions[0]);
         solver->addClause(clause);
       }
  
