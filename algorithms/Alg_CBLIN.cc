@@ -1107,13 +1107,13 @@ void CBLIN::updateBoundLinSearch (uint64_t newBound) {
 
     SolverWithBuffer solver_with_buffer{.solver_b = solver};
     int num_vars = solver->nVars();
-    //logPrint("solver clauses before " + std::to_string(solver->nClauses()) + " num_vars " + std::to_string(num_vars));
+    logPrint("solver clauses before " + std::to_string(solver->nClauses()) + " num_vars " + std::to_string(num_vars));
     RustSAT::dpw_encode_ub(dpw, newBound, newBound, &num_vars, &dpw_clause_collector, &solver_with_buffer);
 
 
-  //  logPrint("Enforcing " + std::to_string(newBound));
+    logPrint("Enforcing " + std::to_string(newBound));
     RustSAT::MaybeError ret = RustSAT::dpw_enforce_ub(dpw, newBound, &dpw_assumps, &assumptions);
-  //  logPrint("Length of assumptions " + std::to_string(assumptions.size()));
+    logPrint("Length of assumptions " + std::to_string(assumptions.size()));
     assert(ret == RustSAT::MaybeError::Ok);
   }
   else{
@@ -1242,13 +1242,13 @@ void CBLIN::initializePBConstraint(uint64_t rhs) {
   ///////////
   */
 
- 
+ /*
   std::string print = "";
   for (int i = 0; i < objFunction.size() ; i ++) {
     print += (" (" + std::to_string(lit2Int(objFunction[i])) + "/" + std::to_string(coeffs[i]) +")");
   }
   logPrint(print);
-  
+  */
 
   
   if (use_DPW) {
@@ -1257,9 +1257,9 @@ void CBLIN::initializePBConstraint(uint64_t rhs) {
     }
     SolverWithBuffer solver_with_buffer{.solver_b = solver};
     int num_vars = solver->nVars();
-    //logPrint("solver clauses before " + std::to_string(solver->nClauses()) + " num_vars " + std::to_string(num_vars));
+    logPrint("solver clauses before " + std::to_string(solver->nClauses()) + " num_vars " + std::to_string(num_vars));
     RustSAT::dpw_encode_ub(dpw, rhs, rhs, &num_vars, &dpw_clause_collector, &solver_with_buffer);
-    //logPrint("solver clauses after " + std::to_string(solver->nClauses()) + " num_vars " + std::to_string(num_vars));
+    logPrint("solver clauses after " + std::to_string(solver->nClauses()) + " num_vars " + std::to_string(num_vars));
     assumptions.clear();
     RustSAT::MaybeError ret = RustSAT::dpw_enforce_ub(dpw, rhs, &dpw_assumps, &assumptions);
     assert(ret == RustSAT::MaybeError::Ok);

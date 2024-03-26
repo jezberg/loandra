@@ -611,9 +611,16 @@ MaxSATFormula* MaxSAT::standardized_formula() {
   for (int i = 0; i < maxsat_formula->nVars(); i++)
     copymx->newVar();
 
-  for (int i = 0; i < maxsat_formula->nHard(); i++)
-    copymx->addHardClause(maxsat_formula->getHardClause(i).clause);
 
+  std::set<int> hard_units;
+
+  for (int i = 0; i < maxsat_formula->nHard(); i++)  {
+    copymx->addHardClause(maxsat_formula->getHardClause(i).clause);
+    if (maxsat_formula->getHardClause(i).clause.size() == 1) {
+      Lit l = maxsat_formula->getHardClause(i).clause[0];
+      hard_units.insert(lit2Int(l));
+    }
+  }
   
   std::map<uint64_t, std::set< size_t >> hash_to_pos;
   std::vector<uint64_t> weights;
@@ -626,17 +633,17 @@ MaxSATFormula* MaxSAT::standardized_formula() {
       }
       uint64_t hash = hashClause(maxsat_formula->getSoftClause(i).clause);
       if (hash_to_pos.find(hash) != hash_to_pos.end()) {
-        bool dublicate = false;
+        bool duplicate = false;
         for (int ind : hash_to_pos[hash]) {
           assert (ind < i);
           if (are_duplicates(maxsat_formula->getSoftClause(i).clause, maxsat_formula->getSoftClause(ind).clause)) {
             weights[ind] += maxsat_formula->getSoftClause(i).weight;
             weights.push_back(0);
-            dublicate = true;
+            duplicate = true;
             break;
           }
         }
-        if (!dublicate) {
+        if (!duplicate) {
           hash_to_pos[hash].insert(i);
           weights.push_back(maxsat_formula->getSoftClause(i).weight);
         }
@@ -664,7 +671,18 @@ MaxSATFormula* MaxSAT::standardized_formula() {
     }  
     else {
       Lit l = clause[0];
-      existing_units[lit2Int(l)] = weights[i];
+      //value is force to true by the hard clauses
+      if (hard_units.find(lit2Int(l)) != hard_units.end()) {
+        continue;
+      }
+      else if (hard_units.find(lit2Int(~l)) != hard_units.end()) {
+        lbCost += weights[i]; 
+        standardization_removed += weights[i];
+        continue;
+      }
+      else {
+        existing_units[lit2Int(l)] = weights[i];
+      } 
     }
   }
 
