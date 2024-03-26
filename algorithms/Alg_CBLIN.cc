@@ -709,7 +709,7 @@ StatusCode CBLIN::unsatSearch() {
       if (rs == _UNSATISFIABLE_) return rs;
       
       //Here we know that the formula is SAT
-      if (maxsat_formula->nSoft() == 0) {
+      if (maxsat_formula->nSoft() == 0 || ubCost == lbCost) {
           return _OPTIMUM_; //Solved by preprocessing
       }  
 
@@ -1242,13 +1242,13 @@ void CBLIN::initializePBConstraint(uint64_t rhs) {
   ///////////
   */
 
- /*
+ 
   std::string print = "";
   for (int i = 0; i < objFunction.size() ; i ++) {
     print += (" (" + std::to_string(lit2Int(objFunction[i])) + "/" + std::to_string(coeffs[i]) +")");
   }
   logPrint(print);
-  */
+  
 
   
   if (use_DPW) {
