@@ -30,11 +30,11 @@ LFLAGS    += -lz
 
 .PHONY : s p d r rs clean 
 
-s:	$(EXEC)
-p:	$(EXEC)_profile
-d:	$(EXEC)_debug
-r:	$(EXEC)_release
-rs:	$(EXEC)_static
+s:	builddeps $(EXEC) 
+p:	builddeps $(EXEC)_profile
+d:	builddeps $(EXEC)_debug
+r:	builddeps $(EXEC)_release
+rs:	builddeps $(EXEC)_static
 
 libs:	lib$(LIB)_standard.a
 libp:	lib$(LIB)_profile.a
@@ -73,7 +73,7 @@ lib$(LIB)_release.a:	$(filter-out */Main.or, $(RCOBJS))
 	@$(CXX) $(CFLAGS) -c -o $@ $<
 
 ## Linking rules (standard/profile/debug/release)
-$(EXEC) $(EXEC)_profile $(EXEC)_debug $(EXEC)_release $(EXEC)_static:
+$(EXEC) $(EXEC)_profile $(EXEC)_debug $(EXEC)_release $(EXEC)_static: 
 	@echo Linking: "$@ ( $(foreach f,$^,$(subst $(MROOT)/,,$f)) )"
 	@echo preprocessor and DPW library: $(DPWOBJ)  $(PREOBJ)
 	@$(CXX) $^ $(DPWOBJ) $(PREOBJ) $(LFLAGS) -o $@
@@ -94,16 +94,18 @@ allclean: clean
 	@rm -f ../simp/*.o ../simp/*.or ../simp/*.od  ../core/*.o ../core/*.or ../core/*.od
 clean:
 	rm -f $(EXEC) $(EXEC)_profile $(EXEC)_debug $(EXEC)_release $(EXEC)_static \
-	  $(COBJS) $(PCOBJS) $(DCOBJS) $(RCOBJS) *.core depend.mk 
+	  $(COBJS) $(PCOBJS) $(DCOBJS) $(RCOBJS) *.core depend.mk
 	$(MAKE) -C $(PREPRO_DIR) clean
 	cd $(DPW_DIR) && cargo clean
 
-## Make dependencies
-depend.mk: $(CSRCS) $(CHDRS)
+builddeps:
 	@echo Making MaxPre
 	$(MAKE) -C $(PREPRO_DIR) lib
 	@echo Making RustSAT
-	cd $(DPW_DIR) && cargo build --release
+	cd $(DPW_DIR)/rustsat && cargo build --release
+
+## Make dependencies
+depend.mk: $(CSRCS) $(CHDRS)
 	@echo Making dependencies
 	@$(CXX) $(CFLAGS) -I$(MROOT) \
 	   $(CSRCS) -MM | sed 's|\(.*\):|$(PWD)/\1 $(PWD)/\1r $(PWD)/\1d $(PWD)/\1p:|' > depend.mk
