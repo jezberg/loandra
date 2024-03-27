@@ -983,7 +983,7 @@ StatusCode CBLIN::linearSearch() {
       nbSatisfiable++;
       
  
-      if (use_DPW && assumptions.size() == 1) {
+      if (use_DPW && assumptions.size() > 0) {
         vec<Lit> clause; 
         clause.push(assumptions[0]);
         solver->addClause(clause);
@@ -1311,6 +1311,9 @@ void CBLIN::initRelaxation() {
 }
 
 void CBLIN::setCardVars(bool prepro_bound) {
+    if (!extend_models) {
+      return;
+    }
     logPrint("Setting Card Vars currently: " + std::to_string(solver->nVars()) + " / orig " + std::to_string(isSoft.size()));
     solver->setSolutionBasedPhaseSaving(false);
     vec<Lit> cardAssumps;

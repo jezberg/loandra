@@ -54,7 +54,8 @@ public:
   CBLIN(int verb = _VERBOSITY_MINIMAL_, int weight = _WEIGHT_NORMAL_, 
         int linear = 0, bool delsol = false, bool varR = false, bool varRCG = false,
         int gcLim = -1, bool r2strat = false, bool incrementalV = false, 
-        bool u = false, bool m = false, int m_strat = 0, bool use_dpw = false, bool dpw_coarse_ = false) {
+        bool reconstruct_sol_ = false, bool minimize_sol_ = false, int m_strat = 0, bool use_dpw = false, 
+        bool dpw_coarse_ = false, bool extend_models_ = true ) {
     
     solver = NULL;
     verbosity = verb;
@@ -76,7 +77,7 @@ public:
     known_gap = UINT64_MAX;
     timeLimitCores = gcLim;
     relaxBeforeStrat = r2strat;
-    reconstruct_sol = u;
+    reconstruct_sol = reconstruct_sol_;
     reconstruct_iter = false;
     incrementalVarres = incrementalV;
 
@@ -86,8 +87,10 @@ public:
     init_rhs = 0;
     delete_before_lin = delsol;
 
-    minimize_sol = m;
+    minimize_sol = minimize_sol_;
     minimize_strat = m_strat;
+
+    extend_models = extend_models_;
 
     dpw = NULL;
     use_DPW = use_dpw;
@@ -274,6 +277,7 @@ protected:
  int  minimize_strat;
  void minimizelinearsolution( vec<lbool> & sol);
 
+  bool extend_models;
 
  void test_pb_enc();
 

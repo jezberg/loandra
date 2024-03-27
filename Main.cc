@@ -164,6 +164,7 @@ int main(int argc, char **argv) {
    
    BoolOption pmreslin_dpw("CBLIN", "cb-DPW", "Use the dynanic polynomial watchdog (default=false in which case the generalized totalizer is used).\n", false);
    BoolOption pmreslin_dpw_coarse("CBLIN", "cb-DPW-coarse", "Only do coarse-convergence with the DPW for resolutions higher than 1.\n", false);
+   BoolOption extend("CBLIN", "extend-models", "Extend models to the variables in cardinality constraints.\n", true);
     
   BoolOption prepro_rec("PREPROCESS", "pr-rec", "Reconstruct solutions before computing their costs (only applicable when preprocessing).\n", false);
   BoolOption prepro_min("PREPROCESS", "pr-min", "Minimize solutions locally after preprocessing.\n", true);
@@ -173,6 +174,8 @@ int main(int argc, char **argv) {
   StringOption prT("PREPROCESS", "pr-tech", "Preprcess techniques used (see MaxPRE documentation).\n", "[u]#[uvsrgVGc]");
 
   BoolOption preprocess("PREPROCESS", "preprocess", "Preprocess the instance prior to search.\n", true);
+
+  
 
     parseOptions(argc, argv, true);
     std::string preTechs(prT);
@@ -185,7 +188,7 @@ int main(int argc, char **argv) {
     case _ALGORITHM_CBLIN_:
       S = new CBLIN(verbosity, weight, pmreslin, pmreslin_delsol, pmreslin_varres, pmreslin_varresCG, 
                     pmreslin_cgLim, pmreslin_relax2strat, pmreslin_incvarres, prepro_rec, 
-                    prepro_min,prepro_min_strat, pmreslin_dpw, pmreslin_dpw_coarse);
+                    prepro_min,prepro_min_strat, pmreslin_dpw, pmreslin_dpw_coarse, extend);
       break;
     
     case _ALGORITHM_OLLITER_:
