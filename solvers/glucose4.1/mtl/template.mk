@@ -13,7 +13,7 @@ DSRCS      = $(foreach dir, $(DEPDIR), $(filter-out $(MROOT)/$(dir)/Main.cc, $(w
 CHDRS      = $(wildcard $(PWD)/*.h)
 COBJS      = $(CSRCS:.cc=.o) $(DSRCS:.cc=.o)
 PREOBJ	   = $(wildcard $(PREPRO_DIR)/src/lib/*.a) 
-DPWOBJ	   = $(wildcard $(DPW_DIR)/*.a) 
+DPWOBJ	   = $(wildcard $(DPW_DIR)/target/release/*.a) 
 
 PCOBJS     = $(addsuffix p,  $(COBJS))
 DCOBJS     = $(addsuffix d,  $(COBJS))
@@ -96,11 +96,14 @@ clean:
 	rm -f $(EXEC) $(EXEC)_profile $(EXEC)_debug $(EXEC)_release $(EXEC)_static \
 	  $(COBJS) $(PCOBJS) $(DCOBJS) $(RCOBJS) *.core depend.mk 
 	$(MAKE) -C $(PREPRO_DIR) clean
+	cd $(DPW_DIR) && cargo clean
 
 ## Make dependencies
 depend.mk: $(CSRCS) $(CHDRS)
-	@echo Making preprocessor
+	@echo Making MaxPre
 	$(MAKE) -C $(PREPRO_DIR) lib
+	@echo Making RustSAT
+	cd $(DPW_DIR) && cargo build --release
 	@echo Making dependencies
 	@$(CXX) $(CFLAGS) -I$(MROOT) \
 	   $(CSRCS) -MM | sed 's|\(.*\):|$(PWD)/\1 $(PWD)/\1r $(PWD)/\1d $(PWD)/\1p:|' > depend.mk

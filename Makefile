@@ -11,12 +11,10 @@ SOLVER     ?= glucose4.1
 include $(PWD)/solvers/$(SOLVER).mk
 
 # THE REMAINING OF THE MAKEFILE SHOULD BE LEFT UNCHANGED
-EXEC       = loandra
-PREPRO_DIR = maxpre2
-DPW_DIR = rustsat/target/release
-DEPDIR     += mtl utils core
-#LIBD 	   = -L $(PWD)/maxpre/lib -l preprocessor
-##INCLUDES   = $(PWD)/maxpre2/
+EXEC       	= loandra
+PREPRO_DIR 	= maxpre2
+DPW_DIR 	= rustsat
+DEPDIR     	+= mtl utils core
 DEPDIR     +=  ../../encodings ../../algorithms ../../graph ../../classifier
 MROOT      ?= $(PWD)/solvers/$(SOLVERDIR)
 LFLAGS     += -lgmpxx -lgmp
