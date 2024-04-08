@@ -370,9 +370,6 @@ void MaxSAT::printBound(uint64_t bound)
 // Prints the best satisfying model if it found one.
 void MaxSAT::printModel() {
   
-  if (model.size() == 0)
-      return;
-
   assert(maxsat_formula->getFormat() != _FORMAT_PB_); //disabled for now
 
   std::stringstream s;
