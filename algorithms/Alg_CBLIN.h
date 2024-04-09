@@ -38,6 +38,7 @@
 #include "../Encoder.h"
 #include "../MaxSAT.h"
 #include "../MaxTypes.h"
+#include "Alg_NUWLS.h"
 #include "../rustsat/rustsat/rustsat.h"
 #include "utils/System.h"
 #include <map>
@@ -55,7 +56,7 @@ public:
         int linear = 0, bool delsol = false, bool varR = false, bool varRCG = false,
         int gcLim = -1, bool r2strat = false, bool incrementalV = false, 
         bool reconstruct_sol_ = false, bool minimize_sol_ = false, int m_strat = 0, bool use_dpw = false, 
-        bool dpw_coarse_ = false, bool extend_models_ = true ) {
+        bool dpw_coarse_ = false, bool extend_models_ = true, bool local_s = false ) {
     
     solver = NULL;
     verbosity = verb;
@@ -97,6 +98,9 @@ public:
     
     dpw_coarse = dpw_coarse_;
     dpw_fine_convergence_after = false;
+
+    use_local_search = local_s;
+    skip_local_search = false;
 
   }
 
@@ -164,7 +168,7 @@ protected:
 
   void updateBoundLinSearch (uint64_t newBound);
 
-  bool checkModel();
+  bool checkModel(bool from_local_search = false);
   uint64_t computeCostReducedWeights(vec<lbool> &currentModel);
 
   void setPBencodings();
@@ -276,6 +280,9 @@ protected:
  bool minimize_sol;
  int  minimize_strat;
  void minimizelinearsolution( vec<lbool> & sol);
+ bool use_local_search;
+ bool skip_local_search;
+ void localsearch(vec<lbool> & sol);
 
   bool extend_models;
 
