@@ -1427,24 +1427,26 @@ void CBLIN::localsearch(vec<lbool> & sol) {
         else {
           local_search_best.push(l_False);
         }
-      } 
-      logPrint("Local search found solution of size " + std::to_string(local_search_best.size() ) + " and cost " + std::to_string(computeCostOfModel(local_search_best)) );
-      vec<Lit> local_search_model;
-      for (int i = 0; i < maxsat_formula->nVars(); i++ ) {
-        Lit l = mkLit(i, true); 
-        if (literalTrueInModel(l, local_search_best)) {
-          local_search_model.push(l);
-        }     
-        else {
-          local_search_model.push(~l);
-        }
       }
+      uint64_t local_search_cost =  computeCostOfModel(local_search_best);
+      if (local_search_cost <= ubCost) {
+        vec<Lit> local_search_model;
+        for (int i = 0; i < maxsat_formula->nVars(); i++ ) {
+          Lit l = mkLit(i, true); 
+          if (literalTrueInModel(l, local_search_best)) {
+            local_search_model.push(l);
+          }     
+          else {
+            local_search_model.push(~l);
+          }
+        }
 
-    solver->setSolutionBasedPhaseSaving(false);
-    lbool res = searchSATSolver(solver, local_search_model);
-    assert(res == l_True);
-    solver->setSolutionBasedPhaseSaving(true);
-    checkModel(true);
+      solver->setSolutionBasedPhaseSaving(false);
+      lbool res = searchSATSolver(solver, local_search_model);
+      assert(res == l_True);
+      solver->setSolutionBasedPhaseSaving(true);
+      checkModel(true);
+      }
     }
     else {
       logPrint("Local search found no solution");
@@ -1603,6 +1605,7 @@ StatusCode CBLIN::search() {
 
   logPrint("core-boosted linear search parameters");
   logPrint("linear_strat=" + std::to_string(lins));
+  logPrint("Use Local search: " + std::to_string(use_local_search));
   logPrint("varying_res=" + std::to_string(varyingres));
   logPrint("varying_resCG=" + std::to_string(varyingresCG));
   logPrint("time limit on cg-phase (s)=" + std::to_string(timeLimitCores));
@@ -1621,7 +1624,7 @@ StatusCode CBLIN::search() {
 
   time_start = time(NULL);
 	time_best_solution = time_start;
-  
+
   StatusCode r = setup(); 
 
   if (r == _UNSATISFIABLE_) {

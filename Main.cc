@@ -6,7 +6,8 @@
  * MiniSat,  Copyright (c) 2003-2006, Niklas Een, Niklas Sorensson
  *           Copyright (c) 2007-2010, Niklas Sorensson
  * Open-WBO, Copyright (c) 2013-2017, Ruben Martins, Vasco Manquinho, Ines Lynce
- * Loandra    Copyright (c) 2018-2019, Jeremias Berg, Emir Demirovic, Peter Stuckey
+ * NuWLS -- Copyright (c) 2021-2022, Yi Chu, Xiang He
+ * Loandra    Copyright (c) 2018-2024, Jeremias Berg, Emir Demirovic, Peter Stuckey
  * 
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -89,18 +90,17 @@ static void SIGINT_exit(int signum) {
 
 int main(int argc, char **argv) {
   printf("c\nc LOANDRA:\t an extension of Open-WBO to core-boosted linear search.\n");
-  printf("c Version:\t July 2019 2018 -- Release: 1.2\n");
-  printf("c Authors:\t Jeremias Berg, Emir Demirovic, Peter Stuckey\n");
-  printf("c We thank the developers of Open-WBO for their work\n");
+  printf("c Version:\t July 2019 2018 -- Release: 1.3\n");
+  printf("c Authors:\t Jeremias Berg\n");
+  printf("c Contributors:\t Emir Demirovic, Peter Stuckey, Christoph Jabs, Marcus Leivo, Matti Järvisalo\n");
+  printf("c We thank the developers of Open-WBO and NuWLS for their work\n");
   printf(
       "c\nc Open-WBO:\t a Modular MaxSAT Solver -- based on %s (%s version)\n",
       SATVER, VER);
   printf("c Version:\t September 2018 -- Release: 2.1\n");
   printf("c Authors:\t Ruben Martins, Vasco Manquinho, Ines Lynce\n");
   printf("c Contributors:\t Miguel Neves, Saurabh Joshi, Norbert Manthey, Mikolas Janota\n");
-  printf("c Contact:\t open-wbo@sat.inesc-id.pt -- "
-         "http://sat.inesc-id.pt/open-wbo/\nc\n");
-  
+  printf("c Author of NuWLS:\t Yi Chu, Xiang He\n");
   char* _emergencyMemory = new char[16384];
   try {
     NSPACE::setUsageHelp("c USAGE: %s [options] <input-file>\n\n");
@@ -135,12 +135,6 @@ int main(int argc, char **argv) {
                           "1=totalizer, 2=modulo totalizer).\n",
                           1, IntRange(0, 2));
 
-  IntOption amo("Encodings", "amo", "AMO encoding (0=Ladder).\n", 0,
-                  IntRange(0, 0));
-
-  IntOption pb("Encodings", "pb", "PB encoding (0=SWC,1=GTE,2=Adder).\n", 1,
-                 IntRange(0, 2));
-
   IntOption formula("Open-WBO", "formula",
                       "Type of formula (0=WCNF, 1=OPB).\n", 0, IntRange(0, 1));
 
@@ -162,18 +156,19 @@ int main(int argc, char **argv) {
                                             "(-1=unlimited) .\n", 30,
                   IntRange(-1, INT_MAX));
    
-   BoolOption pmreslin_dpw("CBLIN", "cb-DPW", "Use the dynamic polynomial watchdog (default=false in which case the generalized totalizer is used).\n", false);
-   BoolOption pmreslin_dpw_coarse("CBLIN", "cb-DPW-coarse", "Only do coarse-convergence with the DPW for resolutions higher than 1.\n", false);
-   BoolOption pmreslin_local_search("CBLIN", "cb-local-search", "Use NuWLS for solution minimization.\n", false);
-   BoolOption extend("CBLIN", "extend-models", "Extend models to the variables in cardinality constraints.\n", true);
-    
+  BoolOption pmreslin_dpw("CBLIN", "cb-DPW", "Use the dynamic polynomial watchdog (default=false in which case the generalized totalizer is used).\n", false);
+  BoolOption pmreslin_dpw_coarse("CBLIN", "cb-DPW-coarse", "Only do coarse-convergence with the DPW for resolutions higher than 1.\n", false);
+  BoolOption pmreslin_local_search("CBLIN", "cb-local-search", "Use NuWLS for solution minimization.\n", false);
+  BoolOption extend("CBLIN", "extend-models", "Extend models to the variables in cardinality constraints.\n", true);
+
+
+
   BoolOption prepro_rec("PREPROCESS", "pr-rec", "Reconstruct solutions before computing their costs (only applicable when preprocessing).\n", false);
   BoolOption prepro_min("PREPROCESS", "pr-min", "Minimize solutions locally after preprocessing.\n", true);
   IntOption prepro_min_strat("PREPROCESS", "pr-min-strat", "Strategy for solution minimization: 1=agressive (all solutions), 2=only the two first in each resolution: "
                                             "(0=only the best after each resolution) .\n", 0,
                   IntRange(0, 2));
-  StringOption prT("PREPROCESS", "pr-tech", "Preprocess techniques used (see MaxPRE documentation).\n", "[u]#[uvsrgVGc]");
-
+  StringOption prT("PREPROCESS", "pr-tech", "Preprocess techniques used (see MaxPRE documentation for more details).\n", "[u]#[uvsrgVGc]");
   BoolOption preprocess("PREPROCESS", "preprocess", "Preprocess the instance prior to search.\n", true);
 
   
