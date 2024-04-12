@@ -764,13 +764,15 @@ MaxSATFormula* MaxSAT::preprocessed_formula() {
     }
 
     pif = new maxPreprocessor::PreprocessorInterface (clauses_out, weights_out, top_orig, false);
-		
     pif->setBVEGateExtraction(gate_extraction);	
 	  pif->setLabelMatching(label_matching);
 	  pif->setSkipTechnique(skip_technique);
     pif->preprocess(prepro_techs, prepro_verb, preprocess_time_limit);
     ub_prepro = pif->getUpperBound();
-    cost_removed_preprocessing += pif->getRemovedWeight()[0];
+    vector<uint64_t> rem_weight = pif->getRemovedWeight();
+    if (rem_weight.size() >= 1) {
+      cost_removed_preprocessing += rem_weight[0];
+    }
     lbCost += cost_removed_preprocessing;
     //COLLECT NEW
     std::vector<std::vector<int> > pre_Clauses; 
@@ -778,7 +780,7 @@ MaxSATFormula* MaxSAT::preprocessed_formula() {
 		std::vector<int> pre_Labels; //will not be used	
 		pif->getInstance(pre_Clauses, pre_Weights, pre_Labels);
 		uint64_t top = pif->getTopWeight();
-
+    logPrint("Made got values");
     MaxSATFormula *copymx = new MaxSATFormula();
     copymx->setProblemType(maxsat_formula->getProblemType());
     copymx->setHardWeight(top);
