@@ -946,15 +946,14 @@ StatusCode CBLIN::linearSearch() {
   solver->budgetOff();
   assumptions.clear();
 
+  if(delete_before_lin) {
+    solver = resetSolver();
+  }
 
   assert(bestModel.size() > 0);
   savePhase();
   solver->setSolutionBasedPhaseSaving(true);
 
-  
-  if(delete_before_lin) {
-    solver = resetSolver();
-  }
 
   initializeDivisionFactor(varyingres);
   setPBencodings();
@@ -1003,11 +1002,6 @@ StatusCode CBLIN::linearSearch() {
         if ( t != new_reduced_cost )
           logPrint("DIF before minim: " + std::to_string(t) + " after " + std::to_string(new_reduced_cost));
         assert(t >= new_reduced_cost);
-      }
-
-
-      if(checkModel()) {
-        savePhase();
       }
 
       if (reconstruct_iter && minimize_strat == 2) reconstruct_iter = false;
@@ -1339,7 +1333,6 @@ void CBLIN::setCardVars(bool prepro_bound) {
     assert(res == l_True);
     checkModel();
     solver->setSolutionBasedPhaseSaving(true);
-    savePhase();
     logPrint("CardVars DONE  ");
     
 
@@ -1828,6 +1821,9 @@ bool CBLIN::shouldUpdate() {
       saveModel(solver->model);
       bestModel.clear();
       solver->model.copyTo(bestModel);
+    }
+    if (isBetter && inLinSearch) {
+      savePhase();
     }
     return isBetter;
  }
