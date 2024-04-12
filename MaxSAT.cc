@@ -771,10 +771,10 @@ MaxSATFormula* MaxSAT::preprocessed_formula() {
 
     pif->preprocess(prepro_techs, prepro_verb, preprocess_time_limit);
     ub_prepro = pif->getUpperBound();
-    uint64_t lb = pif->getRemovedWeight()[0];
-    
-
-    cost_removed_preprocessing += lb;
+    std::vector<uint64_t> rem_weight = pif->getRemovedWeight();
+    if (rem_weight.size() > 0) {
+      cost_removed_preprocessing += rem_weight[0];
+    }
     lbCost += cost_removed_preprocessing;
 
     //COLLECT NEW
@@ -856,7 +856,7 @@ MaxSATFormula* MaxSAT::preprocessed_formula() {
       //logPrint("Preprocess time: " + print_timeSinceStart() + " removed weight: "  + std::to_string(cost_removed_preprocessing)) ;
     logPrint("Preprocessing left " + std::to_string(copymx->nHard()) + " clauses and " + std::to_string(copymx->nSoft()) + " softs");
     logPrint("Preprocessing removed " + std::to_string(cla_before - copymx->nHard()) + " clauses and " + std::to_string(softs_before - copymx->nSoft()) + " softs");
-    logPrint("Preprocessing obtained ub: " + std::to_string(ub_prepro) + " lb " +std::to_string(lb));
+    logPrint("Preprocessing obtained ub: " + std::to_string(ub_prepro) + " lb " +std::to_string(cost_removed_preprocessing));
   return copymx;
 }
 
