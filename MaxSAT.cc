@@ -771,10 +771,10 @@ MaxSATFormula* MaxSAT::preprocessed_formula() {
 
     pif->preprocess(prepro_techs, prepro_verb, preprocess_time_limit);
     ub_prepro = pif->getUpperBound();
-    uint64_t lb = pif->getRemovedWeight();
+    uint64_t lb = pif->getRemovedWeight()[0];
     
 
-    cost_removed_preprocessing += pif->getRemovedWeight();
+    cost_removed_preprocessing += lb;
     lbCost += cost_removed_preprocessing;
 
     //COLLECT NEW
