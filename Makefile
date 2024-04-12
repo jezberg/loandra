@@ -23,7 +23,6 @@ ifeq ($(VERSION),simp)
 DEPDIR     += simp
 CFLAGS     += -DSIMP=1 
 ifeq ($(SOLVERDIR),glucored)
-LFLAGS     += -pthread 
 CFLAGS     += -DGLUCORED
 DEPDIR     += reducer glucored
 endif
