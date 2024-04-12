@@ -21,7 +21,7 @@ RCOBJS     = $(addsuffix r,  $(COBJS))
 
 CXX       ?= g++
 CFLAGS    ?= -Wall -Wno-parentheses -std=c++11
-LFLAGS    ?= -Wall -lpthread 
+LFLAGS    ?= -Wall -pthread 
 
 COPTIMIZE ?= -O3
 
@@ -76,7 +76,8 @@ lib$(LIB)_release.a:	$(filter-out */Main.or, $(RCOBJS))
 $(EXEC) $(EXEC)_profile $(EXEC)_debug $(EXEC)_release $(EXEC)_static: 
 	@echo Linking: "$@ ( $(foreach f,$^,$(subst $(MROOT)/,,$f)) )"
 	@echo preprocessor and DPW library: $(DPWOBJ)  $(PREOBJ)
-	@$(CXX) $^ $(DPWOBJ) $(PREOBJ) $(LFLAGS) -o $@
+	@echo @$(CXX) $^ $(DPWOBJ) $(PREOBJ) $(LFLAGS) -o $@  
+	@$(CXX) $^ $(DPWOBJ) $(PREOBJ) $(LFLAGS) -o $@  
 
 ## Library rules (standard/profile/debug/release)
 lib$(LIB)_standard.a lib$(LIB)_profile.a lib$(LIB)_release.a lib$(LIB)_debug.a:
