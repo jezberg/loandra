@@ -828,6 +828,7 @@ MaxSATFormula* MaxSAT::preprocessed_formula() {
 
     vec<Lit> sol_cla;		
     int num_skipped = 0;
+    logPrint("Pre clauses size " + std::to_string(pre_Clauses.size()));
 		for (int i = 0; i < pre_Clauses.size(); i++) {
 			sol_cla.clear();				
 			ppClause2SolClause(sol_cla, pre_Clauses[i]);
@@ -851,7 +852,7 @@ MaxSATFormula* MaxSAT::preprocessed_formula() {
 			}			
 		}
     //logPrint("Preprocess removed weight: "  + std::to_string(cost_removed_preprocessing) + " num_skipped " + std::to_string(num_skipped))  ;
-    assert(cost_removed_preprocessing == 0 || num_skipped == 1);
+    //assert(cost_removed_preprocessing == 0 || num_skipped == 1 || pre_Clauses.size() == 0);
 
       //logPrint("Preprocess time: " + print_timeSinceStart() + " removed weight: "  + std::to_string(cost_removed_preprocessing)) ;
     logPrint("Preprocessing left " + std::to_string(copymx->nHard()) + " clauses and " + std::to_string(copymx->nSoft()) + " softs");

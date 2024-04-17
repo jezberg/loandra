@@ -104,17 +104,14 @@ Solver *CBLIN::updateSolver() {
 void CBLIN::updateCurrentWeight(int strategy) {
 
   assert(strategy == _WEIGHT_NORMAL_ || strategy == _WEIGHT_DIVERSIFY_);
-  if (!varyingresCG) {
-    if (strategy == _WEIGHT_NORMAL_)
-      maxsat_formula->setMaximumWeight(
-          findNextWeight(maxsat_formula->getMaximumWeight()));
-    else if (strategy == _WEIGHT_DIVERSIFY_) {
-      maxsat_formula->setMaximumWeight(findNextWeightDiversity(maxsat_formula->getMaximumWeight()));
-    }
+
+  if (strategy == _WEIGHT_NORMAL_)
+    maxsat_formula->setMaximumWeight(
+        findNextWeight(maxsat_formula->getMaximumWeight()));
+  else if (strategy == _WEIGHT_DIVERSIFY_) {
+    maxsat_formula->setMaximumWeight(findNextWeightDiversity(maxsat_formula->getMaximumWeight()));
   }
-  else {
-      updateDivisionFactor();
-  }
+  
   logPrint("CG New weight: " + std::to_string(maxsat_formula->getMaximumWeight()) + " at " + print_timeSinceStart());
 }
 
@@ -274,89 +271,93 @@ void CBLIN::flipValueinBest(Lit l) {
  //
  // Varying resolution 
  //
- ************************************************************************************************/
-  bool CBLIN::enoughSoftAboveWeight(uint64_t weightCand) {
-    assert(nbSatisfiable > 0); // Assumes that unsatSearch was done before.
-    int nbClauses = 0;
-    
-    std::set<uint64_t> nbWeights;
-    nbWeights.clear();
-    
-    float alpha = do_preprocess ? 0.75 : 1.25;
-
-    for (int i = 0; i < maxsat_formula->nSoft(); i++) {
-      if (maxsat_formula->getSoftClause(i).weight >= weightCand) {
-        nbClauses++;
-        nbWeights.insert(maxsat_formula->getSoftClause(i).weight);
-      }
-    }
-
-    return (float)nbClauses / (float)nbWeights.size() > alpha || nbClauses == nRealSoft();
-  }
-  
-  
-  void CBLIN::resetMaximumWeight() {
+ ************************************************************************************************/  
+  uint64_t CBLIN::get_Maximum_Weight() {
     uint64_t maxW = 1;
     for (int i = 0; i < maxsat_formula->nSoft(); i++) {
       if (maxsat_formula->getSoftClause(i).weight > maxW) {
         maxW = maxsat_formula->getSoftClause(i).weight;
       }
     }
-    maxsat_formula->setMaximumWeight(maxW);
+    return maxW;
   }
 
-  void CBLIN::updateDivisionFactor() {
-    uint64_t nextFactor = maxsat_formula->getMaximumWeight() / varresFactor; //TODO parametrize
-    while (!enoughSoftAboveWeight(nextFactor))
-      nextFactor /= varresFactor; 
-    maxsat_formula->setMaximumWeight(nextFactor);
-    logPrint("CG Division Factor " + std::to_string(nextFactor));
-  }
-
-  void CBLIN::updateDivisionFactorLinear() {
-    uint64_t nextFactor = maxsat_formula->getMaximumWeight() / varresFactor;
-    while (moreThanWeight(nextFactor) == nbCurrentSoft && nextFactor > 1 ) {
-      nextFactor /= varresFactor; 
+  void CBLIN::init_SIS_precision() {
+    uint64_t weightCand;
+    if (incremental_DPW) {
+      have_encoded_precision = true; 
+      weightCand = dpw_next_precision();
+      logPrint("RustSAT, next precision " + std::to_string(weightCand));
     }
-    maxsat_formula->setMaximumWeight(nextFactor);
-    logPrint("LIN New factor " + std::to_string(nextFactor));
-  }
-
-  int CBLIN::moreThanWeight(uint64_t weightCand) {
-    int test = 0;
-    for (int i = 0; i < maxsat_formula->nSoft(); i++) {
-      if (maxsat_formula->getSoftClause(i).weight >= weightCand) {
-        test++;
-      }
-    }
-    return test;
-
-  }
-
-  //Assumes formula->getMaxWeight() is equal to the maximum weight of the current soft clauses 
-  void CBLIN::initializeDivisionFactor(bool var) {
-      if (!var) {
-        maxsat_formula->setMaximumWeight(1);
-        logPrint("Not doing varrres");
-        logPrint("CG New factor " + std::to_string(1));
-        return;
-      }
-
-      resetMaximumWeight();
-
-      uint64_t maxW =  maxsat_formula->getMaximumWeight();
+    else {      
+      uint64_t varresFactor = 10;
+      uint64_t maxW =  get_Maximum_Weight();
       int counter = 0; //64 bits, isokay  
       while (maxW > 0) {
           counter++;
           maxW = maxW / varresFactor; 
       }
-      uint64_t weightCand = pow(varresFactor, counter - 1);
-      while (!enoughSoftAboveWeight(weightCand))
-        weightCand /= varresFactor; 
-
-      logPrint("CG New factor " + std::to_string(weightCand));
-      maxsat_formula->setMaximumWeight(weightCand);
+      weightCand = pow(varresFactor, counter - 1);   
+    }
+    maxsat_formula->setMaximumWeight(weightCand);
+    max_weight_after_cg = weightCand;
+    logPrint("First precision for SIS " + std::to_string(maxsat_formula->getMaximumWeight()));
   }
+
+  void CBLIN::update_SIS_precision() {
+    uint64_t precision_factor = incremental_DPW ? 2 : 10;
+    uint64_t nextFactor;
+
+    if (incremental_DPW && have_encoded_precision) {
+      nextFactor = dpw_next_precision();
+    }
+    else {
+     nextFactor = maxsat_formula->getMaximumWeight() / precision_factor;
+    }
+     
+    while (moreThanWeight(nextFactor) == nbCurrentSoft && nextFactor > 1 ) {
+      nextFactor /= precision_factor; 
+    }
+    maxsat_formula->setMaximumWeight(nextFactor);
+    logPrint("New precision for SIS " + std::to_string(nextFactor));
+  }
+
+  void CBLIN::set_up_objective_counter(uint64_t init) {
+      logPrint("Building structures");
+      uint64_t precision_factor = incremental_DPW ? 2 : 10;
+      std::vector<uint64_t> all_candidates; 
+      uint64_t first_weight = 1; 
+      for (int i = 0; true; i++) {
+        if (i > 0) {
+          first_weight *= precision_factor;
+        }
+        all_candidates.push_back(first_weight);
+        if (first_weight == init) {
+          break;
+        }
+        assert(first_weight < init);
+      }
+      for (int i = 0; i < maxsat_formula->nSoft(); i++) {
+        uint64_t w = maxsat_formula->getSoftClause(i).weight;
+        for (uint64_t cand : all_candidates) {
+          if (w >= cand)
+            coeff_counter[cand]++;  
+        }  
+      }
+
+      logPrint("Building done");
+      weight_map_setup = true;
+  }
+
+  int CBLIN::moreThanWeight(uint64_t weightCand) {
+    if (!weight_map_setup) {
+          set_up_objective_counter(max_weight_after_cg);
+    }
+    return coeff_counter[weightCand];
+  }
+
+
+
 
 
 
@@ -690,6 +691,18 @@ StatusCode CBLIN::unsatSearch() {
   StatusCode CBLIN::setup() {
 
       if (maxsat_formula->nHard() == 0) {
+        if (!do_preprocess && maxsat_formula->nInitialVars() > 0) {
+          vec<lbool> currentModel;
+          for (int i = 0; i < maxsat_formula->nInitialVars(); i++ ) currentModel.push(l_False);
+          for (int i = 0; i < maxsat_formula->nSoft(); i++) {
+            assert( maxsat_formula->getSoftClause(i).clause.size() == 1);
+            Lit l = maxsat_formula->getSoftClause(i).clause[0];
+            if (!literalTrueInModel(l, currentModel)) {
+              currentModel[var(l)] = l_True;
+            }
+          }
+          saveModel(currentModel);
+        }
         return _OPTIMUM_;
       }
 
@@ -715,12 +728,9 @@ StatusCode CBLIN::unsatSearch() {
 
       maxw_nothardened = maxsat_formula->getSumWeights();
       
-      if(varyingresCG) {
-        initializeDivisionFactor(varyingresCG);
-      }
-      else {
-        updateCurrentWeight(weightStrategy);
-      }
+
+      updateCurrentWeight(weightStrategy);
+      
 
       return rs;
   }
@@ -945,45 +955,56 @@ StatusCode CBLIN::linearSearch() {
   inLinSearch = true;
   solver->budgetOff();
   assumptions.clear();
-
+  
 
   assert(bestModel.size() > 0);
-  savePhase();
-  solver->setSolutionBasedPhaseSaving(true);
-
   
   if(delete_before_lin) {
     solver = resetSolver();
   }
+   
+  if (incremental_DPW) {
+    // add all literals into the encoding, these steps do not yet encode anything. 
+    assert(dpw == NULL); 
+    dpw = RustSAT::dpw_new();
 
-  initializeDivisionFactor(varyingres);
+    for (int i = 0; i < maxsat_formula->nSoft(); i++) {
+      if (maxsat_formula->getSoftClause(i).weight > 0) {
+          Lit l = maxsat_formula->getSoftClause(i).assumption_var; 
+          assert (l != lit_Undef);
+          RustSAT::dpw_add(dpw, lit2Int(l),  maxsat_formula->getSoftClause(i).weight);
+      }
+    }
+  }
+
+  init_SIS_precision();
   setPBencodings();
   
-
-
-
   lbool res = l_True;
-
   bool minimize_iteration = true;
   reconstruct_iter = true;
 
+  // int file_name_counter = 0;
+
   while (res == l_True) {
 
-    
-   
-    if (!incrementalVarres && !use_DPW) {
+    if (!(incrementalVarres || use_DPW)) {
       assumptions.clear();
     }   
-    logPrint("SAT Call at " + print_timeSinceStart() + " # assumptions " + std::to_string(assumptions.size()));  
+    logPrint("SAT Call at " + print_timeSinceStart() + " # assumptions " + std::to_string(assumptions.size()) + " clauses in SAT solver " + std::to_string(solver->nClauses()));  
     res = searchSATSolver(solver, assumptions);
-    
-    
-    
+
+    // std::string file_name = "output_" + std::to_string(file_name_counter) + ".wcnf";
+
+   // solver->toDimacs(file_name.c_str());
+   // file_name_counter++;
+
+
     if (res == l_True) {
       nbSatisfiable++;
       
  
-      if (use_DPW && assumptions.size() > 0) {
+      if (use_DPW && !incremental_DPW && assumptions.size() > 0) {
         vec<Lit> clause; 
         clause.push(assumptions[0]);
         solver->addClause(clause);
@@ -1024,7 +1045,7 @@ StatusCode CBLIN::linearSearch() {
       }
       else {
         if (maxsat_formula->getMaximumWeight() == 1) {
-            logPrint("New reduced cost " + std::to_string(new_reduced_cost) + " factor 1, quiting.");
+            logPrint("New reduced cost " + std::to_string(new_reduced_cost) + " precision 1, quiting.");
             // No need to check for fine convergence because her we have a model whose cost matches the lb proven by core-guided search
             printAnswer(_OPTIMUM_);
             return _OPTIMUM_;
@@ -1033,10 +1054,10 @@ StatusCode CBLIN::linearSearch() {
           logPrint("Rebuilding after SAT");
           minimize_iteration = true;
           reconstruct_iter = true;
-          if (!incrementalVarres) {
+          if (!(incrementalVarres || incremental_DPW)) {
             solver = resetSolver();
           } 
-          updateDivisionFactorLinear();
+          update_SIS_precision();
           setPBencodings();
         }
       }
@@ -1059,12 +1080,12 @@ StatusCode CBLIN::linearSearch() {
         }
         else {
           logPrint("Rebuilding after UNSAT");
-          if (!incrementalVarres) {
+          if (!(incrementalVarres || incremental_DPW)) {
             solver = resetSolver();
           } 
           minimize_iteration = true;
           reconstruct_iter = true;
-          updateDivisionFactorLinear();
+          update_SIS_precision();
           setPBencodings();
           res = l_True;
         }
@@ -1075,18 +1096,38 @@ StatusCode CBLIN::linearSearch() {
   return _ERROR_;
 }
 
+
+uint64_t CBLIN::dpw_next_precision() {
+  assert(have_encoded_precision);
+  uint64_t next_prec = RustSAT::dpw_next_precision(dpw);
+  have_encoded_precision = false; 
+  return next_prec;
+}
+
+void CBLIN::dpw_encode_and_enforce(uint64_t rhs) {
+  SolverWithBuffer solver_with_buffer{.solver_b = solver, .clauses_added = 0, .units_added = 0};
+    int num_vars = solver->nVars();
+    RustSAT::dpw_encode_ub(dpw, rhs, rhs, &num_vars, &dpw_clause_collector, &solver_with_buffer);
+    logPrint("clauses added in rustsat encoding " + std::to_string(solver_with_buffer.clauses_added));
+    assumptions.clear();
+    RustSAT::MaybeError ret = RustSAT::dpw_enforce_ub(dpw, rhs, &dpw_assumps, &assumptions);
+    assert(ret == RustSAT::MaybeError::Ok);
+    have_encoded_precision = true;
+}
+
+
 void CBLIN::dpw_assumps(int lit, void *assumps) {
   ((vec<Lit> *)assumps)->push(MaxSAT::int2Lit(lit));
 }
 
 void CBLIN::dpw_clause_collector(int lit, void *ptr) {
-  //std::cout << "Calling clause collector" << std::endl;
   SolverWithBuffer *solver_with_buffer = (SolverWithBuffer *)ptr;
   if (lit) {
     while (solver_with_buffer->solver_b->nVars() < abs(lit))  solver_with_buffer->solver_b->newVar();
     solver_with_buffer->buffer.push(MaxSAT::int2Lit(lit));
     return;
   }
+  solver_with_buffer->clauses_added += 1;
   solver_with_buffer->solver_b->addClause(solver_with_buffer->buffer);
   solver_with_buffer->buffer.clear();
 }
@@ -1103,18 +1144,8 @@ void CBLIN::updateBoundLinSearch (uint64_t newBound) {
       fine_bound = newBound;
       newBound = coarse_b;
       logPrint("Coarse convergence to: " + std::to_string(coarse_b));
-    }
-
-    SolverWithBuffer solver_with_buffer{.solver_b = solver};
-    int num_vars = solver->nVars();
-    logPrint("solver clauses before " + std::to_string(solver->nClauses()) + " num_vars " + std::to_string(num_vars));
-    RustSAT::dpw_encode_ub(dpw, newBound, newBound, &num_vars, &dpw_clause_collector, &solver_with_buffer);
-
-
-    logPrint("Enforcing " + std::to_string(newBound));
-    RustSAT::MaybeError ret = RustSAT::dpw_enforce_ub(dpw, newBound, &dpw_assumps, &assumptions);
-    logPrint("Length of assumptions " + std::to_string(assumptions.size()));
-    assert(ret == RustSAT::MaybeError::Ok);
+    } 
+    dpw_encode_and_enforce(newBound);
   }
   else{
     if (enc->hasPBEncoding()) {
@@ -1160,10 +1191,19 @@ void CBLIN::setPBencodings() {
       logPrint("Extending best model to full formula");
       extendBestModel();
   }
-  
+
+  nbCurrentSoft = 0; 
+  for (int i = 0; i < maxsat_formula->nSoft(); i++) {
+    uint64_t reducedWeight = maxsat_formula->getSoftClause(i).weight / maxsat_formula->getMaximumWeight();
+    if (reducedWeight > 0) { //i.e. if it wasnt hardened in PMRES step OR left out by varres. 
+          nbCurrentSoft++;
+      }
+    }
+  logPrint("There are " + std::to_string(nbCurrentSoft) + " of " + std::to_string(nRealSoft()) + " objective lits on this precision");
+
   uint64_t reduced_cost = computeCostReducedWeights(bestModel); 
   if (reduced_cost == 0 && maxsat_formula->getMaximumWeight() > 1) {
-      updateDivisionFactorLinear();
+      update_SIS_precision();
       setPBencodings(); 
       return; 
   }
@@ -1172,7 +1212,7 @@ void CBLIN::setPBencodings() {
 }
 
 void CBLIN::initializePBConstraint(uint64_t rhs) {
-  initRelaxation();
+  build_objective_func_and_coeffs();
 
   uint64_t red_gap = known_gap / maxsat_formula->getMaximumWeight();
 
@@ -1205,32 +1245,39 @@ void CBLIN::initializePBConstraint(uint64_t rhs) {
   }
 
   if (rhs == 0 && maxsat_formula->getMaximumWeight() > 1) {
-      updateDivisionFactorLinear();
+      update_SIS_precision();
       setPBencodings(); 
       return; 
   }
 
-  assert(objFunction.size() == coeffs.size());
-  logPrint("Encoding PB with UB: " + std::to_string(rhs) + " obj size " + std::to_string(objFunction.size()));
-
-  if (enc != NULL)
-    delete enc;
-  if (dpw != NULL) {
-    RustSAT::dpw_drop(dpw);
-    dpw = NULL;
-  }
+  logPrint("Encoding PB with UB: " + std::to_string(rhs) + " obj size: " + std::to_string(nbCurrentSoft) + " precision: " + std::to_string(maxsat_formula->getMaximumWeight()));
 
   if (use_DPW) {
-    dpw = RustSAT::dpw_new();
+    if (incremental_DPW) {
+      assert(dpw != NULL);
+      RustSAT::dpw_set_precision(dpw, maxsat_formula->getMaximumWeight());
+    }
+    else {
+      if (dpw != NULL) {
+        RustSAT::dpw_drop(dpw);
+        dpw = NULL;
+      }
+      dpw = RustSAT::dpw_new();
+      for (int i = 0; i < objFunction.size(); i++) {
+        RustSAT::dpw_add(dpw, lit2Int(objFunction[i]), coeffs[i]);
+      }
+    }
+    dpw_encode_and_enforce(rhs);
   }
   else {
+    if (enc != NULL)
+      delete enc;
     enc = new Encoder(_INCREMENTAL_NONE_, _CARD_MTOTALIZER_,
                                _AMO_LADDER_, _PB_GTE_);
     assert(!enc->hasPBEncoding());
+    enc->encodePB(solver, objFunction, coeffs, rhs);
+    init_rhs = rhs; 
   }
-
-  
-  
   /*
    ///DEBUGGING
   objFunction_.clear();
@@ -1250,43 +1297,19 @@ void CBLIN::initializePBConstraint(uint64_t rhs) {
   logPrint(print);
   */
 
-  
-  if (use_DPW) {
-    for (int i = 0; i < objFunction.size(); i++) {
-      RustSAT::dpw_add(dpw, lit2Int(objFunction[i]), coeffs[i]);
-    }
-    SolverWithBuffer solver_with_buffer{.solver_b = solver};
-    int num_vars = solver->nVars();
-    logPrint("solver clauses before " + std::to_string(solver->nClauses()) + " num_vars " + std::to_string(num_vars));
-    RustSAT::dpw_encode_ub(dpw, rhs, rhs, &num_vars, &dpw_clause_collector, &solver_with_buffer);
-    logPrint("solver clauses after " + std::to_string(solver->nClauses()) + " num_vars " + std::to_string(num_vars));
-    assumptions.clear();
-    RustSAT::MaybeError ret = RustSAT::dpw_enforce_ub(dpw, rhs, &dpw_assumps, &assumptions);
-    assert(ret == RustSAT::MaybeError::Ok);
-  }
-  else {
-    enc->encodePB(solver, objFunction, coeffs, rhs);
-  }
-  init_rhs = rhs;
- 
-
-  logPrint("Encoding Done #assumptions " + std::to_string(assumptions.size()));        
+  logPrint("Encoding done #assumptions " + std::to_string(assumptions.size()));        
   setCardVars(bound_set_by_prepro);
 }
 
-/*
-DPW Utility functions
-*/
 
 
 
-
-void CBLIN::initRelaxation() {
+void CBLIN::build_objective_func_and_coeffs() {
+  if (incremental_DPW) {
+    return; // in incremental mode, all objective literals are collected and added in the beginning of SIS.
+  }
   objFunction.clear();
   coeffs.clear();
-  nbCurrentSoft = 0; 
-
-  uint64_t maxreducedweight = 0; 
 
   for (int i = 0; i < maxsat_formula->nSoft(); i++) {
     uint64_t reducedWeight = maxsat_formula->getSoftClause(i).weight / maxsat_formula->getMaximumWeight();
@@ -1296,16 +1319,8 @@ void CBLIN::initRelaxation() {
           assert (l != lit_Undef);
           objFunction.push(l);
           coeffs.push(reducedWeight);
-          nbCurrentSoft++;
-
-          if (reducedWeight > maxreducedweight) {
-            maxreducedweight = reducedWeight;
-          }
-
       }
     }
-
-  logPrint("Considering " + std::to_string(nbCurrentSoft) + " of " + std::to_string(nRealSoft()) + " soft clauses");
   maxsat_formula->setProblemType(_WEIGHTED_);
   
 }
@@ -1502,6 +1517,7 @@ uint64_t CBLIN::computeCostReducedWeights(vec<lbool> &fullModel) {
       tot_reducedCost += (maxsat_formula->getSoftClause(i).weight / maxsat_formula->getMaximumWeight());
     }
   }
+
   uint64_t red_gap = known_gap / maxsat_formula->getMaximumWeight();
 
   logPrint("Reduced cost " + std::to_string(tot_reducedCost) + " gap " + std::to_string(red_gap));
@@ -1517,8 +1533,8 @@ void CBLIN::setAssumptions(vec<Lit> &assumps) {
       assert(maxsat_formula->getSoftClause(i).clause.size() == 1);
       
       bool shouldAdd = 
-            (maxsat_formula->getSoftClause(i).weight >= maxsat_formula->getMaximumWeight() && !varyingresCG) ||
-            (maxsat_formula->getSoftClause(i).weight / maxsat_formula->getMaximumWeight()  > 0 && varyingresCG); 
+            (maxsat_formula->getSoftClause(i).weight >= maxsat_formula->getMaximumWeight() ) ||
+            (maxsat_formula->getSoftClause(i).weight / maxsat_formula->getMaximumWeight()  > 0 ); 
 
       if (shouldAdd) {
         Lit l = maxsat_formula->getSoftClause(i).assumption_var;
@@ -1541,8 +1557,6 @@ StatusCode CBLIN::search() {
 
   logPrint("core-boosted linear search parameters");
   logPrint("linear_strat=" + std::to_string(lins));
-  logPrint("varying_res=" + std::to_string(varyingres));
-  logPrint("varying_resCG=" + std::to_string(varyingresCG));
   logPrint("time limit on cg-phase (s)=" + std::to_string(timeLimitCores));
   logPrint("relax prior to strat =" + std::to_string(relaxBeforeStrat));
   logPrint("do varying resolution incrementally =" + std::to_string(incrementalVarres));
@@ -1550,6 +1564,7 @@ StatusCode CBLIN::search() {
   logPrint("only coarse convergence =" + std::to_string(dpw_coarse));
   logPrint("minimize the solution =" + std::to_string(minimize_sol));
   logPrint("minimizing strat =" + std::to_string(minimize_strat));
+  logPrint("UB before search = " + std::to_string(ubCost));
   logPrint("LB before search = " + std::to_string(lbCost));
   logPrint("offset before search = " + std::to_string(off_set));
   logPrint("standardization removed before search = " + std::to_string(standardization_removed));
@@ -1758,10 +1773,17 @@ bool CBLIN::shouldUpdate() {
         checkGap();
     }
     if ( (modelCost == ubCost) && solver->model.size() > bestModel.size()) {
-      logPrint("Found same cost model covering more variables");
+      bool firstmodel = bestModel.size() == 0;
+      logPrint("Same cost model covering more variables");
       saveModel(solver->model);
       bestModel.clear();
       solver->model.copyTo(bestModel);
+      if (firstmodel) {
+        time_best_solution = time(NULL);
+        printProgress();
+        printBound(ubCost);
+        checkGap();
+      }
     }
     return isBetter;
  }

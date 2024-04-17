@@ -154,9 +154,7 @@ int main(int argc, char **argv) {
                   IntRange(0, 3));
 
    BoolOption pmreslin_delsol("CBLIN", "cb-del", "Reinitialise the SAT solver between core guided and linear phase.\n", true);
-   BoolOption pmreslin_varres("CBLIN", "cb-varres", "Do varying resolution.\n", true);
    BoolOption pmreslin_relax2strat("CBLIN", "cb-r-2-s", "Relax cores before lowering the stratification bound.\n", false);
-   BoolOption pmreslin_varresCG("CBLIN", "cb-varCG", "Do varying resolution during core-guided search.\n", false);
    BoolOption pmreslin_incvarres("CBLIN", "cb-i-varres", "Do varying resolution incrementally, without reinitialising the SAT solver.\n", false);
    IntOption pmreslin_cgLim("CBLIN", "cb-cglim", "Time limit for core guided phase (s): "
                                             "(-1=unlimited) .\n", 30,
@@ -164,6 +162,7 @@ int main(int argc, char **argv) {
    
    BoolOption pmreslin_dpw("CBLIN", "cb-DPW", "Use the dynanic polynomial watchdog (default=false in which case the generalized totalizer is used).\n", false);
    BoolOption pmreslin_dpw_coarse("CBLIN", "cb-DPW-coarse", "Only do coarse-convergence with the DPW for resolutions higher than 1.\n", false);
+   BoolOption pmreslin_dpw_inc("CBLIN", "cb-DPW-incremental", "Use ithe DPW incrementally.\n", false);
    BoolOption extend("CBLIN", "extend-models", "Extend models to the variables in cardinality constraints.\n", true);
     
   BoolOption prepro_rec("PREPROCESS", "pr-rec", "Reconstruct solutions before computing their costs (only applicable when preprocessing).\n", false);
@@ -186,9 +185,9 @@ int main(int argc, char **argv) {
     switch ((int)algorithm) {
     
     case _ALGORITHM_CBLIN_:
-      S = new CBLIN(verbosity, weight, pmreslin, pmreslin_delsol, pmreslin_varres, pmreslin_varresCG, 
+      S = new CBLIN(verbosity, weight, pmreslin, pmreslin_delsol,  
                     pmreslin_cgLim, pmreslin_relax2strat, pmreslin_incvarres, prepro_rec, 
-                    prepro_min,prepro_min_strat, pmreslin_dpw, pmreslin_dpw_coarse, extend);
+                    prepro_min,prepro_min_strat, pmreslin_dpw, pmreslin_dpw_coarse, pmreslin_dpw_inc, extend);
       break;
     
     case _ALGORITHM_OLLITER_:
