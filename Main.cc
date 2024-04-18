@@ -122,7 +122,7 @@ int main(int argc, char **argv) {
 
   IntOption verbosity("Open-WBO", "verbosity",
                         "Verbosity level (0=minimal, 1=more).\n", 0,
-                        IntRange(0, 1));
+                        IntRange(0, 3));
 
   IntOption algorithm("Open-WBO", "algorithm",
                         "MaxSAT algorithm "

@@ -324,24 +324,19 @@ void CBLIN::flipValueinBest(Lit l) {
 
   void CBLIN::set_up_objective_counter(uint64_t init) {
       logPrint("Building structures");
-      uint64_t precision_factor = incremental_DPW ? 2 : 10;
-      std::vector<uint64_t> all_candidates; 
-      uint64_t first_weight = 1; 
-      for (int i = 0; true; i++) {
-        if (i > 0) {
-          first_weight *= precision_factor;
-        }
-        all_candidates.push_back(first_weight);
-        if (first_weight == init) {
-          break;
-        }
-        assert(first_weight < init);
-      }
+
+      int maxExponent = exponent(init);
+      for (int i = 0; i <= maxExponent; i++) coeff_counter.push_back(0);
+
       for (int i = 0; i < maxsat_formula->nSoft(); i++) {
         uint64_t w = maxsat_formula->getSoftClause(i).weight;
-        for (uint64_t cand : all_candidates) {
-          if (w >= cand)
-            coeff_counter[cand]++;  
+        for (int i = 0; i <= maxExponent; i++) {
+          if (w >= raise_to(i) ) {
+            coeff_counter[i]++;
+          }
+          else {
+            break;
+          }
         }  
       }
 
@@ -349,11 +344,50 @@ void CBLIN::flipValueinBest(Lit l) {
       weight_map_setup = true;
   }
 
+   uint64_t CBLIN::raise_to(int exponent) {
+      uint64_t precision_factor = incremental_DPW ? 2 : 10; //TODO: this should be its own method
+      if (exponent == 0) {
+        return 1;
+      }
+      if (exponent == 1) {
+        return precision_factor;
+      }
+ //     if (precision_factor == 2) {
+ //       return 1 << exponent;
+ //     }
+      else if (exponent % 2 == 0) {
+        return raise_to(exponent / 2) * raise_to(exponent / 2);
+      }
+      else {
+        return precision_factor * raise_to(exponent - 1);
+      }
+   }
+
+  int CBLIN::exponent(uint64_t weight) {
+    assert(weight > 0);
+    uint64_t precision_factor = incremental_DPW ? 2 : 10; //TODO: this should be its own method
+    if (weight == 1) {
+      return 0; 
+    }
+    int exponent = 0; 
+    if (precision_factor == 2) {
+      while (weight >>= 1) ++exponent;
+    }
+    else {
+      while (weight) {
+        exponent++;
+        weight /= precision_factor;
+      }
+    }
+    return exponent;
+  }
+
   int CBLIN::moreThanWeight(uint64_t weightCand) {
     if (!weight_map_setup) {
           set_up_objective_counter(max_weight_after_cg);
     }
-    return coeff_counter[weightCand];
+    
+    return coeff_counter[exponent(weightCand)];
   }
 
 
@@ -968,12 +1002,21 @@ StatusCode CBLIN::linearSearch() {
     assert(dpw == NULL); 
     dpw = RustSAT::dpw_new();
 
+    if (verbosity > 1) {
+            cout << "c Adding to RustSAT: ";
+          }
     for (int i = 0; i < maxsat_formula->nSoft(); i++) {
       if (maxsat_formula->getSoftClause(i).weight > 0) {
           Lit l = maxsat_formula->getSoftClause(i).assumption_var; 
           assert (l != lit_Undef);
+          if (verbosity > 1) {
+            cout << lit2Int(l) << "/" << maxsat_formula->getSoftClause(i).weight ;
+          }
           RustSAT::dpw_add(dpw, lit2Int(l),  maxsat_formula->getSoftClause(i).weight);
       }
+    }
+    if (verbosity > 1) {
+            cout <<  endl;
     }
   }
 
@@ -992,6 +1035,14 @@ StatusCode CBLIN::linearSearch() {
       assumptions.clear();
     }   
     logPrint("SAT Call at " + print_timeSinceStart() + " # assumptions " + std::to_string(assumptions.size()) + " clauses in SAT solver " + std::to_string(solver->nClauses()));  
+    if (verbosity > 1) {
+      cout << "c assumptions:";
+      for (int i = 0; i < assumptions.size(); i++) {
+        cout << " " << lit2Int(assumptions[i]);
+      }
+      cout << endl;
+    }
+
     res = searchSATSolver(solver, assumptions);
 
     // std::string file_name = "output_" + std::to_string(file_name_counter) + ".wcnf";
@@ -1044,7 +1095,7 @@ StatusCode CBLIN::linearSearch() {
         updateBoundLinSearch(new_reduced_cost - 1);
       }
       else {
-        if (maxsat_formula->getMaximumWeight() == 1) {
+        if (maxsat_formula->getMaximumWeight() == 1 || RustSAT::dpw_is_max_precision(dpw)) {
             logPrint("New reduced cost " + std::to_string(new_reduced_cost) + " precision 1, quiting.");
             // No need to check for fine convergence because her we have a model whose cost matches the lb proven by core-guided search
             printAnswer(_OPTIMUM_);
@@ -1064,7 +1115,7 @@ StatusCode CBLIN::linearSearch() {
 
     } 
     else { //res = false
-       if (maxsat_formula->getMaximumWeight() == 1) {
+       if (maxsat_formula->getMaximumWeight() == 1 || RustSAT::dpw_is_max_precision(dpw)) {
           if (dpw_fine_convergence_after) {
             logPrint("Stopping coarse convergence");
             dpw_coarse = false;
@@ -1105,7 +1156,7 @@ uint64_t CBLIN::dpw_next_precision() {
 }
 
 void CBLIN::dpw_encode_and_enforce(uint64_t rhs) {
-  SolverWithBuffer solver_with_buffer{.solver_b = solver, .clauses_added = 0, .units_added = 0};
+  SolverWithBuffer solver_with_buffer{.solver_b = solver, .clauses_added = 0, .verbosity = verbosity};
     int num_vars = solver->nVars();
     RustSAT::dpw_encode_ub(dpw, rhs, rhs, &num_vars, &dpw_clause_collector, &solver_with_buffer);
     logPrint("clauses added in rustsat encoding " + std::to_string(solver_with_buffer.clauses_added));
@@ -1127,6 +1178,13 @@ void CBLIN::dpw_clause_collector(int lit, void *ptr) {
     solver_with_buffer->buffer.push(MaxSAT::int2Lit(lit));
     return;
   }
+  if (solver_with_buffer->verbosity > 1) {
+    cout << "c RUSTSAT clause:";
+    for (int i = 0; i < solver_with_buffer->buffer.size(); i++) {
+      cout << " " << MaxSAT::lit2Int(solver_with_buffer->buffer[i]); 
+    }
+    cout << endl;
+  }
   solver_with_buffer->clauses_added += 1;
   solver_with_buffer->solver_b->addClause(solver_with_buffer->buffer);
   solver_with_buffer->buffer.clear();
@@ -1137,7 +1195,6 @@ void CBLIN::updateBoundLinSearch (uint64_t newBound) {
   logPrint("New bound to enforce: " + std::to_string(newBound) + " at " + print_timeSinceStart());
   
   if (use_DPW) {
-    assumptions.clear();
     if (dpw_coarse) {
       uint64_t coarse_b = RustSAT::dpw_coarse_ub(dpw, newBound);
       dpw_fine_convergence_after = (coarse_b != newBound);

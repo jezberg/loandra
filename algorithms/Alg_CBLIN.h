@@ -176,7 +176,7 @@ protected:
     Solver *solver_b;
     vec<Lit> buffer;
     int clauses_added;
-    int units_added;
+    int verbosity;
 };
 
   RustSAT::DynamicPolyWatchdog *dpw;
@@ -218,7 +218,9 @@ protected:
   StatusCode setup(); // unsat search and other setups
   StatusCode coreGuidedLinearSearch();
   uint64_t max_weight_after_cg;
-  std::map<uint64_t, uint64_t> coeff_counter;
+  int exponent(uint64_t weight);
+  uint64_t raise_to(int exponent);
+  std::vector<int> coeff_counter;
   void set_up_objective_counter(uint64_t init);
   //These are subroutines in other searches and should not be 
   StatusCode linearSearch();
