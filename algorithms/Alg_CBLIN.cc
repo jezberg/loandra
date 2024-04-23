@@ -325,7 +325,9 @@ void CBLIN::flipValueinBest(Lit l) {
   void CBLIN::set_up_objective_counter(uint64_t init) {
       logPrint("Building structures");
 
+      logPrint("initial weight " + std::to_string(init));
       int maxExponent = exponent(init);
+      logPrint("after exponent weight " + std::to_string(init) + " exp: " + std::to_string(maxExponent));
       for (int i = 0; i <= maxExponent; i++) coeff_counter.push_back(0);
 
       for (int i = 0; i < maxsat_formula->nSoft(); i++) {
@@ -1010,7 +1012,7 @@ StatusCode CBLIN::linearSearch() {
           Lit l = maxsat_formula->getSoftClause(i).assumption_var; 
           assert (l != lit_Undef);
           if (verbosity > 1) {
-            cout << lit2Int(l) << "/" << maxsat_formula->getSoftClause(i).weight ;
+            cout << " " << lit2Int(l) << "/" << maxsat_formula->getSoftClause(i).weight ;
           }
           RustSAT::dpw_add(dpw, lit2Int(l),  maxsat_formula->getSoftClause(i).weight);
       }
@@ -1095,7 +1097,8 @@ StatusCode CBLIN::linearSearch() {
         updateBoundLinSearch(new_reduced_cost - 1);
       }
       else {
-        if (maxsat_formula->getMaximumWeight() == 1 || RustSAT::dpw_is_max_precision(dpw)) {
+        bool incremental_done = RustSAT::dpw_is_max_precision(dpw) && incremental_DPW;
+        if (maxsat_formula->getMaximumWeight() == 1 || incremental_done) {
             logPrint("New reduced cost " + std::to_string(new_reduced_cost) + " precision 1, quiting.");
             // No need to check for fine convergence because her we have a model whose cost matches the lb proven by core-guided search
             printAnswer(_OPTIMUM_);
@@ -1115,7 +1118,8 @@ StatusCode CBLIN::linearSearch() {
 
     } 
     else { //res = false
-       if (maxsat_formula->getMaximumWeight() == 1 || RustSAT::dpw_is_max_precision(dpw)) {
+         bool incremental_done = RustSAT::dpw_is_max_precision(dpw) && incremental_DPW;
+       if (maxsat_formula->getMaximumWeight() == 1 || incremental_done) {
           if (dpw_fine_convergence_after) {
             logPrint("Stopping coarse convergence");
             dpw_coarse = false;
@@ -1159,9 +1163,12 @@ void CBLIN::dpw_encode_and_enforce(uint64_t rhs) {
   SolverWithBuffer solver_with_buffer{.solver_b = solver, .clauses_added = 0, .verbosity = verbosity};
     int num_vars = solver->nVars();
     RustSAT::dpw_encode_ub(dpw, rhs, rhs, &num_vars, &dpw_clause_collector, &solver_with_buffer);
-    logPrint("clauses added in rustsat encoding " + std::to_string(solver_with_buffer.clauses_added));
+    logPrint("clauses added in rustsat encoding " + std::to_string(solver_with_buffer.clauses_added) + " rhs " + std::to_string(rhs)) ;
     assumptions.clear();
     RustSAT::MaybeError ret = RustSAT::dpw_enforce_ub(dpw, rhs, &dpw_assumps, &assumptions);
+    if (ret == RustSAT::MaybeError::NotEncoded) {
+      logPrint("not encoded");
+    }
     assert(ret == RustSAT::MaybeError::Ok);
     have_encoded_precision = true;
 }
