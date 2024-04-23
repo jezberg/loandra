@@ -96,13 +96,13 @@ clean:
 	rm -f $(EXEC) $(EXEC)_profile $(EXEC)_debug $(EXEC)_release $(EXEC)_static \
 	  $(COBJS) $(PCOBJS) $(DCOBJS) $(RCOBJS) *.core depend.mk
 	$(MAKE) -C $(PREPRO_DIR) clean
-	cd $(DPW_DIR) && cargo clean
+	cd $(DPW_DIR)/capi && cargo clean
 
 builddeps:
 	@echo Making MaxPre
 	$(MAKE) -C $(PREPRO_DIR) lib
 	@echo Making RustSAT
-	cd $(DPW_DIR)/rustsat && cargo build --release
+	cd $(DPW_DIR)/capi && cargo build --release
 
 ## Make dependencies
 depend.mk: $(CSRCS) $(CHDRS)
