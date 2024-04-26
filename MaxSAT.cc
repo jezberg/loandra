@@ -764,11 +764,9 @@ MaxSATFormula* MaxSAT::preprocessed_formula() {
     }
 
     pif = new maxPreprocessor::PreprocessorInterface (clauses_out, weights_out, top_orig, false);
-		
     pif->setBVEGateExtraction(gate_extraction);	
 	  pif->setLabelMatching(label_matching);
 	  pif->setSkipTechnique(skip_technique);
-
     pif->preprocess(prepro_techs, prepro_verb, preprocess_time_limit);
     ub_prepro = pif->getUpperBound();
     std::vector<uint64_t> rem_weight = pif->getRemovedWeight();
@@ -776,14 +774,13 @@ MaxSATFormula* MaxSAT::preprocessed_formula() {
       cost_removed_preprocessing += rem_weight[0];
     }
     lbCost += cost_removed_preprocessing;
-
     //COLLECT NEW
     std::vector<std::vector<int> > pre_Clauses; 
 		std::vector<uint64_t> pre_Weights; 
 		std::vector<int> pre_Labels; //will not be used	
 		pif->getInstance(pre_Clauses, pre_Weights, pre_Labels);
 		uint64_t top = pif->getTopWeight();
-
+    logPrint("Made got values");
     MaxSATFormula *copymx = new MaxSATFormula();
     copymx->setProblemType(maxsat_formula->getProblemType());
     copymx->setHardWeight(top);
@@ -793,7 +790,6 @@ MaxSATFormula* MaxSAT::preprocessed_formula() {
     uint64_t max_weight = 0;
     
     std::set<int> forced_hards;
-
     assert(pre_Weights.size() == pre_Clauses.size());
     for (int i = 0; i < pre_Weights.size(); i++) {
         uint64_t cur = pre_Weights[i];
@@ -817,7 +813,6 @@ MaxSATFormula* MaxSAT::preprocessed_formula() {
         }
 
     }
-
     copymx->setInitialVars(init_vars);
     copymx->updateSumWeights(sum_of_weights);
     copymx->setMaximumWeight(max_weight);
@@ -825,7 +820,6 @@ MaxSATFormula* MaxSAT::preprocessed_formula() {
     for (int i = 0; i < init_vars; i++) {
       copymx->newVar();
     }
-
     vec<Lit> sol_cla;		
     int num_skipped = 0;
     logPrint("Pre clauses size " + std::to_string(pre_Clauses.size()));
@@ -851,13 +845,13 @@ MaxSATFormula* MaxSAT::preprocessed_formula() {
 				copymx->addHardClause(sol_cla);
 			}			
 		}
-    //logPrint("Preprocess removed weight: "  + std::to_string(cost_removed_preprocessing) + " num_skipped " + std::to_string(num_skipped))  ;
-    //assert(cost_removed_preprocessing == 0 || num_skipped == 1 || pre_Clauses.size() == 0);
+    logPrint("Preprocess removed weight: "  + std::to_string(cost_removed_preprocessing) + " num_skipped " + std::to_string(num_skipped))  ;
+    assert(cost_removed_preprocessing == 0 || num_skipped == 1);
 
       //logPrint("Preprocess time: " + print_timeSinceStart() + " removed weight: "  + std::to_string(cost_removed_preprocessing)) ;
     logPrint("Preprocessing left " + std::to_string(copymx->nHard()) + " clauses and " + std::to_string(copymx->nSoft()) + " softs");
     logPrint("Preprocessing removed " + std::to_string(cla_before - copymx->nHard()) + " clauses and " + std::to_string(softs_before - copymx->nSoft()) + " softs");
-    logPrint("Preprocessing obtained ub: " + std::to_string(ub_prepro) + " lb " +std::to_string(cost_removed_preprocessing));
+    logPrint("After preprocessing obtained ub: " + std::to_string(ub_prepro) + " lb " +std::to_string(lbCost));
   return copymx;
 }
 

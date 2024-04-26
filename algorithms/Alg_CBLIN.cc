@@ -1079,11 +1079,6 @@ StatusCode CBLIN::linearSearch() {
         assert(t >= new_reduced_cost);
       }
 
-
-      if(checkModel()) {
-        savePhase();
-      }
-
       if (reconstruct_iter && minimize_strat == 2) reconstruct_iter = false;
       
 
@@ -1291,8 +1286,8 @@ void CBLIN::initializePBConstraint(uint64_t rhs) {
         rhs = minCost;
       }
       else {
-        logPrint("Setting rhs to reduced gap " + std::to_string(red_gap));
-        rhs = red_gap;
+          logPrint("Setting rhs to reduced gap " + std::to_string(red_gap));
+          rhs = red_gap;
       }
   }
   
@@ -1421,7 +1416,6 @@ void CBLIN::setCardVars(bool prepro_bound) {
     assert(res == l_True);
     checkModel();
     solver->setSolutionBasedPhaseSaving(true);
-    savePhase();
     logPrint("CardVars DONE  ");
     
 
@@ -1482,7 +1476,74 @@ void CBLIN::extendBestModel() {
     
 }
 
+void CBLIN::localsearch(vec<lbool> & sol) {
+    NUWLS nuwls_solver;
+    nuwls_solver.build_nuwls_clause_structure(maxsat_formula);
+    nuwls_solver.build_instance();
+    nuwls_solver.settings();
+
+    vector<int> init_solu(maxsat_formula->nVars() + 1);
+    for (int i = 0; i < maxsat_formula->nVars(); ++i)
+    {
+      if (sol[i] == l_False)
+        init_solu[i + 1] = 0;
+      else
+        init_solu[i + 1] = 1;
+    }
+
+    nuwls_solver.init(init_solu);
+    nuwls_solver.local_search(); 
+    vector<int> local_search_best;
+    if (nuwls_solver.best_soln_feasible) {
+      vec<lbool> local_search_best;
+      for (int i = 0; i < maxsat_formula->nVars(); i++) {
+        if (nuwls_solver.best_soln[i+1] == 1) {
+          local_search_best.push(l_True);
+        }
+        else {
+          local_search_best.push(l_False);
+        }
+      }
+      uint64_t local_search_cost =  computeCostOfModel(local_search_best);
+      if (local_search_cost <= ubCost) {
+        vec<Lit> local_search_model;
+        for (int i = 0; i < maxsat_formula->nVars(); i++ ) {
+          Lit l = mkLit(i, true); 
+          if (literalTrueInModel(l, local_search_best)) {
+            local_search_model.push(l);
+          }     
+          else {
+            local_search_model.push(~l);
+          }
+        }
+
+      solver->setSolutionBasedPhaseSaving(false);
+      lbool res = searchSATSolver(solver, local_search_model);
+      assert(res == l_True);
+      solver->setSolutionBasedPhaseSaving(true);
+      checkModel(true);
+      }
+    }
+    else {
+      logPrint("Local search found no solution");
+    }
+    nuwls_solver.free_memory();
+    
+}
+
+
 void CBLIN::minimizelinearsolution(vec<lbool> & sol) {
+  //
+  if (use_local_search) {
+    logPrint("LocalSearch");
+    if (!skip_local_search) {
+       localsearch(sol);
+    }
+    return;
+  }
+  
+  //
+
   if (objFunction.size() == 0) {
     return;
   }
@@ -1621,6 +1682,7 @@ StatusCode CBLIN::search() {
 
   logPrint("core-boosted linear search parameters");
   logPrint("linear_strat=" + std::to_string(lins));
+  logPrint("Use Local search: " + std::to_string(use_local_search));
   logPrint("time limit on cg-phase (s)=" + std::to_string(timeLimitCores));
   logPrint("relax prior to strat =" + std::to_string(relaxBeforeStrat));
   logPrint("do varying resolution incrementally =" + std::to_string(incrementalVarres));
@@ -1638,7 +1700,7 @@ StatusCode CBLIN::search() {
 
   time_start = time(NULL);
 	time_best_solution = time_start;
-  
+
   StatusCode r = setup(); 
 
   if (r == _UNSATISFIABLE_) {
@@ -1821,7 +1883,7 @@ bool CBLIN::shouldUpdate() {
  }
 
 //TODO parametrize on the model... 
- bool CBLIN::checkModel() {
+ bool CBLIN::checkModel(bool from_local_search) {
    logPrint("Checking model of size " + std::to_string(solver->model.size()));
 
    uint64_t modelCost = computeCostOfModel(solver->model);
@@ -1835,6 +1897,7 @@ bool CBLIN::shouldUpdate() {
         solver->model.copyTo(bestModel);
         printBound(ubCost);
         checkGap();
+        skip_local_search = from_local_search;
     }
     if ( (modelCost == ubCost) && solver->model.size() > bestModel.size()) {
       bool firstmodel = bestModel.size() == 0;
@@ -1842,12 +1905,9 @@ bool CBLIN::shouldUpdate() {
       saveModel(solver->model);
       bestModel.clear();
       solver->model.copyTo(bestModel);
-      if (firstmodel) {
-        time_best_solution = time(NULL);
-        printProgress();
-        printBound(ubCost);
-        checkGap();
-      }
+    }
+      if (isBetter && inLinSearch) {
+      savePhase();
     }
     return isBetter;
  }
