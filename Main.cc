@@ -159,11 +159,7 @@ int main(int argc, char **argv) {
    // TODO change this to be shorter
    BoolOption pmreslin_dpw_inc("CBLIN", "cb-DPW-inc", "Use the DPW incrementally.\n", false);
    BoolOption extend("CBLIN", "extend-model", "Extend models to the variables in cardinality constraints.\n", true);
-    
-  BoolOption pmreslin_dpw("CBLIN", "cb-DPW", "Use the dynamic polynomial watchdog (default=false in which case the generalized totalizer is used).\n", false);
-  BoolOption pmreslin_dpw_coarse("CBLIN", "cb-DPW-coarse", "Only do coarse-convergence with the DPW for resolutions higher than 1.\n", false);
   BoolOption pmreslin_local_search("CBLIN", "cb-local-search", "Use NuWLS for solution minimization.\n", false);
-  BoolOption extend("CBLIN", "extend-models", "Extend models to the variables in cardinality constraints.\n", true);
 
 
 

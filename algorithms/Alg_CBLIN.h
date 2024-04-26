@@ -57,7 +57,7 @@ public:
   CBLIN(int verb = _VERBOSITY_MINIMAL_, int weight = _WEIGHT_NORMAL_, 
         int linear = 0, bool delsol = false, 
         int gcLim = -1, bool r2strat = false, bool incrementalV = false, 
-        bool reconstruct_sol_ = false, bool minimize_sol_ = false, int m_strat = 0, bool use_dpw = false, 
+        bool reconstruct_sol_ = false, bool minimize_sol_ = true, int m_strat = 0, bool use_dpw = false, 
         bool dpw_coarse_ = false, bool dpw_inc_ = false, bool extend_models_ = true, bool local_s = false ) {
     
     solver = NULL;
@@ -106,8 +106,6 @@ public:
     use_local_search = local_s;
     skip_local_search = false;
 
-    use_local_search = local_s;
-    skip_local_search = false;
 
   }
 
