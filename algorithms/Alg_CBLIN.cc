@@ -272,6 +272,10 @@ void CBLIN::flipValueinBest(Lit l) {
  // Varying resolution 
  //
  ************************************************************************************************/  
+  uint64_t CBLIN::precision_factors() {
+    return incremental_DPW ? 2 : non_inc_precision;
+  }
+  
   uint64_t CBLIN::get_Maximum_Weight() {
     uint64_t maxW = 1;
     for (int i = 0; i < maxsat_formula->nSoft(); i++) {
@@ -290,7 +294,7 @@ void CBLIN::flipValueinBest(Lit l) {
       logPrint("RustSAT, next precision " + std::to_string(weightCand));
     }
     else {      
-      uint64_t varresFactor = 10;
+      uint64_t varresFactor = precision_factors();
       uint64_t maxW =  get_Maximum_Weight();
       int counter = 0; //64 bits, isokay  
       while (maxW > 0) {
@@ -305,7 +309,7 @@ void CBLIN::flipValueinBest(Lit l) {
   }
 
   void CBLIN::update_SIS_precision() {
-    uint64_t precision_factor = incremental_DPW ? 2 : 10;
+    uint64_t precision_factor = precision_factors();
     uint64_t nextFactor;
 
     if (incremental_DPW && have_encoded_precision) {
@@ -325,9 +329,7 @@ void CBLIN::flipValueinBest(Lit l) {
   void CBLIN::set_up_objective_counter(uint64_t init) {
       logPrint("Building structures");
 
-      logPrint("initial weight " + std::to_string(init));
       int maxExponent = exponent(init);
-      logPrint("after exponent weight " + std::to_string(init) + " exp: " + std::to_string(maxExponent));
       for (int i = 0; i <= maxExponent; i++) coeff_counter.push_back(0);
 
       for (int i = 0; i < maxsat_formula->nSoft(); i++) {
@@ -347,7 +349,7 @@ void CBLIN::flipValueinBest(Lit l) {
   }
 
    uint64_t CBLIN::raise_to(int exponent) {
-      uint64_t precision_factor = incremental_DPW ? 2 : 10; //TODO: this should be its own method
+      uint64_t precision_factor = precision_factors(); //TODO: this should be its own method
       if (exponent == 0) {
         return 1;
       }
@@ -367,7 +369,7 @@ void CBLIN::flipValueinBest(Lit l) {
 
   int CBLIN::exponent(uint64_t weight) {
     assert(weight > 0);
-    uint64_t precision_factor = incremental_DPW ? 2 : 10; //TODO: this should be its own method
+    uint64_t precision_factor = precision_factors(); //TODO: this should be its own method
     if (weight == 1) {
       return 0; 
     }
