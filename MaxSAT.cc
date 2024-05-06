@@ -780,7 +780,6 @@ MaxSATFormula* MaxSAT::preprocessed_formula() {
 		std::vector<int> pre_Labels; //will not be used	
 		pif->getInstance(pre_Clauses, pre_Weights, pre_Labels);
 		uint64_t top = pif->getTopWeight();
-    logPrint("Made got values");
     MaxSATFormula *copymx = new MaxSATFormula();
     copymx->setProblemType(maxsat_formula->getProblemType());
     copymx->setHardWeight(top);

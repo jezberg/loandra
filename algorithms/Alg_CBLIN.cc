@@ -1546,7 +1546,8 @@ void CBLIN::minimizelinearsolution(vec<lbool> & sol) {
   
   //
 
-  if (objFunction.size() == 0) {
+  if (nbCurrentSoft == 0) {
+    logPrint("No softs");
     return;
   }
 
