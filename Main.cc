@@ -148,6 +148,7 @@ int main(int argc, char **argv) {
                   IntRange(0, 3));
 
    BoolOption pmreslin_delsol("CBLIN", "cb-del", "Reinitialise the SAT solver between core guided and linear phase.\n", true);
+  BoolOption pmreslin_hardenSIS("CBLIN", "cb-harden-SIS", "Harden objective literals in the SIS phase.\n", false);
    BoolOption pmreslin_relax2strat("CBLIN", "cb-r-2-s", "Relax cores before lowering the stratification bound.\n", false);
    BoolOption pmreslin_incvarres("CBLIN", "cb-i-varres", "Do varying resolution incrementally, without reinitialising the SAT solver.\n", false);
    IntOption pmreslin_prec("CBLIN", "cb-prec", "Precision for non-incremental DPW "
@@ -157,7 +158,7 @@ int main(int argc, char **argv) {
                                             "(-1=unlimited) .\n", 30,
                   IntRange(-1, INT_MAX));
    
-   BoolOption pmreslin_dpw("CBLIN", "cb-DPW", "Use the dynanic polynomial watchdog (default=false in which case the generalized totalizer is used).\n", false);
+   BoolOption pmreslin_dpw("CBLIN", "cb-DPW", "Use the dynamic polynomial watchdog (default=false in which case the generalized totalizer is used).\n", false);
    BoolOption pmreslin_dpw_coarse("CBLIN", "cb-DPW-coarse", "Only do coarse-convergence with the DPW for resolutions higher than 1.\n", false);
    // TODO change this to be shorter
    BoolOption pmreslin_dpw_inc("CBLIN", "cb-DPW-inc", "Use the DPW incrementally.\n", false);
@@ -187,7 +188,7 @@ int main(int argc, char **argv) {
     case _ALGORITHM_CBLIN_:
       S = new CBLIN(verbosity, weight, pmreslin, pmreslin_delsol,  
                     pmreslin_cgLim, pmreslin_relax2strat, pmreslin_incvarres, prepro_rec, 
-                    prepro_min,prepro_min_strat, pmreslin_dpw, pmreslin_dpw_coarse, pmreslin_dpw_inc, extend,  pmreslin_local_search, pmreslin_prec);
+                    prepro_min,prepro_min_strat, pmreslin_dpw, pmreslin_dpw_coarse, pmreslin_dpw_inc, extend,  pmreslin_local_search, pmreslin_prec, pmreslin_hardenSIS);
       break;
     
     case _ALGORITHM_OLLITER_:

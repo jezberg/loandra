@@ -267,6 +267,43 @@ void CBLIN::flipValueinBest(Lit l) {
     bestModel[var(l)] = l_False;
   }
 }
+
+  void CBLIN::hardenClausesSIS(uint64_t reduced_cost, vec<lbool> &currentModel) { 
+      if (incremental_DPW) {
+        logPrint("Can not harden based on reduced cost with incremental DPW");
+        return; 
+      }
+     int num_hardened_round = 0;
+	   max_coeff_nothardened_sis = 0;
+     uint64_t precision = maxsat_formula->getMaximumWeight();
+
+     logPrint("Hardening in SIS, reduced cost " + std::to_string(reduced_cost) + " precision " + std::to_string(precision));
+
+	   for (int i = 0; i < maxsat_formula->nSoft(); i++)
+		  {
+      if (maxsat_formula->getSoftClause(i).weight <= precision) {
+        continue;
+      }
+      Lit l =  maxsat_formula->getSoftClause(i).clause[0];
+      uint64_t red_weight = maxsat_formula->getSoftClause(i).weight / precision;
+      assert(l != lit_Undef);
+			if (red_weight > reduced_cost || (red_weight == reduced_cost && literalTrueInModel(l, currentModel)) ) {  // 
+        assert(var(l) < solver->nVars());
+      	vec<Lit> clause;
+				clause.clear();
+				clause.push(l);
+				solver->addClause(clause);
+				num_hardened_round++;
+			}
+			else if (red_weight > maxw_nothardened) {
+				max_coeff_nothardened_sis = red_weight;
+			} 
+
+			
+		}
+		logPrint("Hardened in SIS total: " + std::to_string(num_hardened_round) + " clauses");
+    logPrint("Hardening again at red-cost " + std::to_string(max_coeff_nothardened_sis));
+   }
 /************************************************************************************************
  //
  // Varying resolution 
@@ -902,8 +939,7 @@ StatusCode CBLIN::coreGuidedLinearSearch() {
 
    
      if (nbCurrentSoft == nRealSoft()) {
-      uint64_t modelCost = computeCostOfModel(solver->model);
-      assert(modelCost == lbCost);
+      assert(computeCostOfModel(solver->model) == lbCost);
       if (lbCost < ubCost) {
         ubCost = lbCost;
         saveModel(solver->model);
@@ -1058,15 +1094,19 @@ StatusCode CBLIN::linearSearch() {
     if (res == l_True) {
       nbSatisfiable++;
       
- 
+      uint64_t new_reduced_cost = computeCostReducedWeights(solver->model);
+      checkModel();
       if (use_DPW && !incremental_DPW && assumptions.size() > 0) {
         vec<Lit> clause; 
         clause.push(assumptions[0]);
         solver->addClause(clause);
+
+        if (harden_in_SIS && !incremental_DPW && new_reduced_cost  < max_coeff_nothardened_sis) {
+          hardenClausesSIS(new_reduced_cost, solver->model);
+        }
+
       }
- 
-      uint64_t new_reduced_cost = computeCostReducedWeights(solver->model);
-      
+
       if (minimize_sol && new_reduced_cost > 0 && minimize_iteration && minimize_strat > 0) {
         uint64_t t = new_reduced_cost;
         vec<lbool> temp; 
@@ -1254,13 +1294,17 @@ void CBLIN::setPBencodings() {
   }
 
   nbCurrentSoft = 0; 
+  max_coeff_nothardened_sis = 0;
   for (int i = 0; i < maxsat_formula->nSoft(); i++) {
     uint64_t reducedWeight = maxsat_formula->getSoftClause(i).weight / maxsat_formula->getMaximumWeight();
     if (reducedWeight > 0) { //i.e. if it wasnt hardened in PMRES step OR left out by varres. 
           nbCurrentSoft++;
+          if (reducedWeight > max_coeff_nothardened_sis) {
+            max_coeff_nothardened_sis = reducedWeight;
+          }
       }
     }
-  logPrint("There are " + std::to_string(nbCurrentSoft) + " of " + std::to_string(nRealSoft()) + " objective lits on this precision");
+  logPrint("There are " + std::to_string(nbCurrentSoft) + " of " + std::to_string(nRealSoft()) + " objective lits on this precision and maxW " + std::to_string(max_coeff_nothardened_sis));
 
   uint64_t reduced_cost = computeCostReducedWeights(bestModel); 
   if (reduced_cost == 0 && maxsat_formula->getMaximumWeight() > 1) {
@@ -1535,16 +1579,13 @@ void CBLIN::localsearch(vec<lbool> & sol) {
 
 
 void CBLIN::minimizelinearsolution(vec<lbool> & sol) {
-  //
   if (use_local_search) {
-    logPrint("LocalSearch");
     if (!skip_local_search) {
        localsearch(sol);
     }
     return;
   }
   
-  //
 
   if (nbCurrentSoft == 0) {
     logPrint("No softs");
@@ -1556,7 +1597,6 @@ void CBLIN::minimizelinearsolution(vec<lbool> & sol) {
   vec<bool> skip; 
   vec<Lit> fixed_assumptions; 
   time_t rec = time(NULL);
-
   for (int i = 0; i < isSoft.size(); i ++) {
     if (isSoft[i]) continue; 
     Lit l = mkLit(i, true); 
@@ -1582,7 +1622,7 @@ void CBLIN::minimizelinearsolution(vec<lbool> & sol) {
   }
 
   vec<Lit> assumps; 
-  lbool res; 
+  lbool res = l_False; 
 
   int skipped = 0;
 
@@ -1689,7 +1729,9 @@ StatusCode CBLIN::search() {
   logPrint("time limit on cg-phase (s)=" + std::to_string(timeLimitCores));
   logPrint("relax prior to strat =" + std::to_string(relaxBeforeStrat));
   logPrint("do varying resolution incrementally =" + std::to_string(incrementalVarres));
+  logPrint("precision for varres =" + std::to_string(non_inc_precision));
   logPrint("use DPW =" + std::to_string(use_DPW));
+  logPrint("use incremental DPW =" + std::to_string(incremental_DPW));
   logPrint("only coarse convergence =" + std::to_string(dpw_coarse));
   logPrint("minimize the solution =" + std::to_string(minimize_sol));
   logPrint("minimizing strat =" + std::to_string(minimize_strat));
@@ -1903,7 +1945,6 @@ bool CBLIN::shouldUpdate() {
         skip_local_search = from_local_search;
     }
     if ( (modelCost == ubCost) && solver->model.size() > bestModel.size()) {
-      bool firstmodel = bestModel.size() == 0;
       logPrint("Same cost model covering more variables");
       saveModel(solver->model);
       bestModel.clear();
