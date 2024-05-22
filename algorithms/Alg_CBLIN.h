@@ -173,11 +173,12 @@ protected:
   void update_SIS_precision();
   int  moreThanWeight(uint64_t w);
   void init_SIS_precision();
+  void harden_incremental();
   void initializePBConstraint(uint64_t rhs);
 
   void updateBoundLinSearch (uint64_t newBound);
 
-  bool checkModel(bool from_local_search = false);
+  bool checkModel(bool from_local_search = false, bool improve_better = false);
   uint64_t computeCostReducedWeights(vec<lbool> &currentModel);
 
   void setPBencodings();

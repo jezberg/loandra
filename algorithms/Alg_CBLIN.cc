@@ -677,7 +677,7 @@ StatusCode CBLIN::unsatSearch() {
     nbSatisfiable++;
     uint64_t beforecheck = ubCost;
 //    logPrint("in unsat");
-    checkModel();
+    checkModel(false, true);
     
     uint64_t aftercheck = ubCost;
     assert(beforecheck >= aftercheck);    
@@ -1095,7 +1095,8 @@ StatusCode CBLIN::linearSearch() {
       nbSatisfiable++;
       
       uint64_t new_reduced_cost = computeCostReducedWeights(solver->model);
-      checkModel();
+      bool better = checkModel(false, false);
+      
       if (use_DPW && !incremental_DPW && assumptions.size() > 0) {
         vec<Lit> clause; 
         clause.push(assumptions[0]);
@@ -1106,6 +1107,11 @@ StatusCode CBLIN::linearSearch() {
         }
 
       }
+      if (better && incremental_DPW) {
+        harden_incremental();
+      }
+
+      
 
       if (minimize_sol && new_reduced_cost > 0 && minimize_iteration && minimize_strat > 0) {
         uint64_t t = new_reduced_cost;
@@ -1188,6 +1194,15 @@ StatusCode CBLIN::linearSearch() {
   return _ERROR_;
 }
 
+void CBLIN::harden_incremental() {
+  uint64_t global_ub_dpw = ubCost - lbCost;
+  logPrint("hardening incremental DPW");
+  SolverWithBuffer solver_with_buffer{.solver_b = solver, .clauses_added = 0, .verbosity = verbosity};
+  int num_vars = solver->nVars();
+  RustSAT::dpw_limit_range(dpw, 0, global_ub_dpw, &dpw_clause_collector, &solver_with_buffer);
+  logPrint("hardening incremental DPW bound: " +  std::to_string(global_ub_dpw) + " clauses added " + std::to_string(solver_with_buffer.clauses_added)) ;
+}
+
 
 uint64_t CBLIN::dpw_next_precision() {
   assert(have_encoded_precision);
@@ -1197,7 +1212,7 @@ uint64_t CBLIN::dpw_next_precision() {
 }
 
 void CBLIN::dpw_encode_and_enforce(uint64_t rhs) {
-  SolverWithBuffer solver_with_buffer{.solver_b = solver, .clauses_added = 0, .verbosity = verbosity};
+    SolverWithBuffer solver_with_buffer{.solver_b = solver, .clauses_added = 0, .verbosity = verbosity};
     int num_vars = solver->nVars();
     RustSAT::dpw_encode_ub(dpw, rhs, rhs, &num_vars, &dpw_clause_collector, &solver_with_buffer);
     logPrint("clauses added in rustsat encoding " + std::to_string(solver_with_buffer.clauses_added) + " rhs " + std::to_string(rhs)) ;
@@ -1291,6 +1306,7 @@ void CBLIN::setPBencodings() {
   if (bestModel.size() < maxsat_formula->nVars()) {
       logPrint("Extending best model to full formula");
       extendBestModel();
+      // solver->model.copyTo(bestModel); TODO:check if this is right.... 
   }
 
   nbCurrentSoft = 0; 
@@ -1460,11 +1476,8 @@ void CBLIN::setCardVars(bool prepro_bound) {
       return;
     }
     assert(res == l_True);
-    checkModel();
+    checkModel(false, true);
     solver->setSolutionBasedPhaseSaving(true);
-    logPrint("CardVars DONE  ");
-    
-
 }
 
 /*purely for debugging*/
@@ -1496,6 +1509,10 @@ void CBLIN::test_pb_enc(){
   }
 }
 
+/*
+  After this method, solver->model() is a model of all of the variables in the SAT solver that matches 
+  th ebest known model in terms of the original objective.
+*/
 void CBLIN::extendBestModel() {
     vec<Lit> modelAssumps;
 
@@ -1515,11 +1532,8 @@ void CBLIN::extendBestModel() {
     solver->setSolutionBasedPhaseSaving(false);
     lbool res = searchSATSolver(solver, modelAssumps);
     assert(res == l_True);
-
-    solver->setSolutionBasedPhaseSaving(true);
-    solver->model.copyTo(bestModel);
-    checkModel();
-    
+    solver->setSolutionBasedPhaseSaving(true);  
+    checkModel(false, true);  
 }
 
 void CBLIN::localsearch(vec<lbool> & sol) {
@@ -1567,7 +1581,7 @@ void CBLIN::localsearch(vec<lbool> & sol) {
       lbool res = searchSATSolver(solver, local_search_model);
       assert(res == l_True);
       solver->setSolutionBasedPhaseSaving(true);
-      checkModel(true);
+      checkModel(true, true);
       }
     }
     else {
@@ -1608,18 +1622,26 @@ void CBLIN::minimizelinearsolution(vec<lbool> & sol) {
     }
   }
 
-  for (int i = 0; i < objFunction.size(); i++) {
-    Lit l = objFunction[i]; 
-    assert(var(l) >= isSoft.size() || isSoft[var(l)] );
-    if (literalTrueInModel(l, sol)) {
-      // induces cost
-      minimizable.push(l);
-      skip.push(false);
+  for (int i = 0; i < maxsat_formula->nSoft(); i++) {
+    uint64_t reducedWeight = maxsat_formula->getSoftClause(i).weight / maxsat_formula->getMaximumWeight();
+
+    if (reducedWeight > 0) { 
+            Lit l = maxsat_formula->getSoftClause(i).assumption_var; 
+            assert (l != lit_Undef);
+            assert(var(l) >= isSoft.size() || isSoft[var(l)] );
+              if (literalTrueInModel(l, sol)) {
+                // induces cost
+                minimizable.push(l);
+                skip.push(false);
+              }
+              else {
+                fixed_assumptions.push(~l);
+              }
+      }
     }
-    else {
-      fixed_assumptions.push(~l);
-    }
-  }
+
+
+
 
   vec<Lit> assumps; 
   lbool res = l_False; 
@@ -1657,7 +1679,7 @@ void CBLIN::minimizelinearsolution(vec<lbool> & sol) {
     res = searchSATSolver(solver, fixed_assumptions);
     assert(res == l_True);
   }
-  checkModel();
+  checkModel(false, true);
   time_t done = time(NULL);
   logPrint("Minimization time " +std::to_string(done - rec) + " init minsize " + std::to_string(minimizable.size()) + " skipped " + std::to_string(skipped));
 
@@ -1913,6 +1935,7 @@ bool CBLIN::shouldUpdate() {
 // save polarity from last model 
  void CBLIN::savePhase() {
     //TODO: think about how to do this better with the DPW, new variables are mostl ikely 1. 
+    logPrint("save phase");
     solver->_user_phase_saving.clear();
 		for (int i = 0; i < bestModel.size(); i++){
 			solver->_user_phase_saving.push(bestModel[i]);		
@@ -1928,8 +1951,8 @@ bool CBLIN::shouldUpdate() {
  }
 
 //TODO parametrize on the model... 
- bool CBLIN::checkModel(bool from_local_search) {
-   logPrint("Checking model of size " + std::to_string(solver->model.size()));
+ bool CBLIN::checkModel(bool from_local_search, bool improve_better) {
+   logPrint("checking model of size " + std::to_string(solver->model.size()));
 
    uint64_t modelCost = computeCostOfModel(solver->model);
    bool isBetter = modelCost < ubCost;
@@ -1944,14 +1967,15 @@ bool CBLIN::shouldUpdate() {
         checkGap();
         skip_local_search = from_local_search;
     }
-    if ( (modelCost == ubCost) && solver->model.size() > bestModel.size()) {
-      logPrint("Same cost model covering more variables");
+    if ( improve_better && (modelCost == ubCost) && solver->model.size() >= bestModel.size()) {
+      logPrint("found same cost model over at least as many vars.");
       saveModel(solver->model);
       bestModel.clear();
       solver->model.copyTo(bestModel);
+      isBetter = true;
     }
       if (isBetter && inLinSearch) {
-      savePhase();
+        savePhase();
     }
     return isBetter;
  }
