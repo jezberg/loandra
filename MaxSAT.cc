@@ -763,6 +763,8 @@ MaxSATFormula* MaxSAT::preprocessed_formula() {
         weights_out.push_back(maxsat_formula->getSoftClause(i).weight);
     }
 
+    logPrint("clauses out " + std::to_string(clauses_out.size()) + " weights " + std::to_string(weights_out.size()));
+
     pif = new maxPreprocessor::PreprocessorInterface (clauses_out, weights_out, top_orig, false);
     pif->setBVEGateExtraction(gate_extraction);	
 	  pif->setLabelMatching(label_matching);

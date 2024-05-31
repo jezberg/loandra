@@ -101,7 +101,7 @@ clean:
 
 builddeps:
 	@echo Making MaxPre
-	$(MAKE) -C $(PREPRO_DIR) lib
+	$(MAKE) -C $(PREPRO_DIR) lib with_zlib=false
 	@echo Making RustSAT
 	cd $(DPW_DIR)/capi && cargo build --release
 

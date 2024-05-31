@@ -92,7 +92,7 @@ int main(int argc, char **argv) {
   printf("c\nc LOANDRA:\t an extension of Open-WBO to core-boosted linear search.\n");
   printf("c Version:\t July 2019 2018 -- Release: 1.3\n");
   printf("c Authors:\t Jeremias Berg\n");
-  printf("c Contributors:\t Emir Demirovic, Peter Stuckey, Christoph Jabs, Marcus Leivo, Matti Järvisalo\n");
+  printf("c Contributors:\t Emir Demirovic, Peter Stuckey, Christoph Jabs, Hannes Ihalainen, Marcus Leivo, Matti Järvisalo\n");
   printf("c We thank the developers of Open-WBO and NuWLS for their work\n");
   printf(
       "c\nc Open-WBO:\t a Modular MaxSAT Solver -- based on %s (%s version)\n",
