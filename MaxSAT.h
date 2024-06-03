@@ -336,7 +336,17 @@ public:
   void printStats(); // Print search statistics.
   std::string printSoftClause(int id); // Prints a soft clause.
   void printUnsatisfiedSoftClauses(); // Prints unsatisfied soft clauses.
-  void logPrint(std::string s); // Prints string if verbosity > 0
+  
+  template <typename... Args >
+  void logPrint(Args ... args) {
+  if (verbosity > 0) {
+    std::stringstream ss;
+    (ss << ... << args); 
+    std::cout << "c " << ss.str() << std::endl;
+  }
+}
+
+
 
   // Greater than comparator.
   bool static greaterThan(uint64_t i, uint64_t j) { return (i > j); }

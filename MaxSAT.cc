@@ -352,11 +352,7 @@ void MaxSAT::blockModel(Solver *solver) {
   solver->addClause(blocking);
 }
 
-void MaxSAT::logPrint(std::string s) {
-  if (verbosity > 0) {
-    std::cout << "c " << s << std::endl;
-  }
-}
+
 
 void MaxSAT::printBound(uint64_t bound)
 {
@@ -780,7 +776,7 @@ MaxSATFormula* MaxSAT::preprocessed_formula() {
     std::vector<std::vector<int> > pre_Clauses; 
 		std::vector<uint64_t> pre_Weights; 
 		std::vector<int> pre_Labels; //will not be used	
-		pif->getInstance(pre_Clauses, pre_Weights, pre_Labels);
+		pif->getInstance(pre_Clauses, pre_Weights, pre_Labels, true);
 		uint64_t top = pif->getTopWeight();
     MaxSATFormula *copymx = new MaxSATFormula();
     copymx->setProblemType(maxsat_formula->getProblemType());
@@ -823,12 +819,18 @@ MaxSATFormula* MaxSAT::preprocessed_formula() {
     }
     vec<Lit> sol_cla;		
     int num_skipped = 0;
-    logPrint("Pre clauses size " + std::to_string(pre_Clauses.size()));
+    logPrint("Pre clauses size " , pre_Clauses.size(), " top ", top);
 		for (int i = 0; i < pre_Clauses.size(); i++) {
 			sol_cla.clear();				
 			ppClause2SolClause(sol_cla, pre_Clauses[i]);
 			assert(sol_cla.size() == pre_Clauses[i].size());
-						
+      /*
+			logPrint("clause ", i);
+      for (int j = 0; j < pre_Clauses[i].size(); j++) {
+        cout << " " << pre_Clauses[i][j];
+      }
+      cout << " weight " << pre_Weights[i] << std::endl;
+      */
 			uint64_t weight = pre_Weights[i];
 			if (weight < top) {
 				//SOFT 

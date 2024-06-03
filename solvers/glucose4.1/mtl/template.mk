@@ -109,12 +109,12 @@ builddeps:
 depend.mk: $(CSRCS) $(CHDRS)
 	@echo Making dependencies
 	@$(CXX) $(CFLAGS) -I$(MROOT) \
-	   $(CSRCS) -MM | sed 's|\(.*\):|$(PWD)/\1 $(PWD)/\1r $(PWD)/\1d $(PWD)/\1p:|' > depend.mk
+		$(CSRCS) -MM | sed 's|\(.*\):|$(PWD)/\1 $(PWD)/\1r $(PWD)/\1d $(PWD)/\1p:|' > depend.mk
 	@for dir in $(DEPDIR); do \
-	      if [ -r $(MROOT)/$${dir}/depend.mk ]; then \
-		  echo Depends on: $${dir}; \
-		  cat $(MROOT)/$${dir}/depend.mk >> depend.mk; \
-	      fi; \
+			if [ -r $(MROOT)/$${dir}/depend.mk ]; then \
+			echo Depends on: $${dir}; \
+			cat $(MROOT)/$${dir}/depend.mk >> depend.mk; \
+			fi; \
 	  done
 
 -include $(MROOT)/mtl/config.mk

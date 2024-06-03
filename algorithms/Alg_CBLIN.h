@@ -216,7 +216,6 @@ protected:
   
   vec<bool> isSoft; 
 
-  std::string print_timeSinceStart();
   time_t timeSinceStart();
   time_t timeSincePrepro();
 
@@ -307,8 +306,6 @@ protected:
  void localsearch(vec<lbool> & sol);
 
   bool extend_models;
-
- void test_pb_enc();
 
 };
 } // namespace openwbo

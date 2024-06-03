@@ -259,7 +259,6 @@ int main(int argc, char **argv) {
     mxsolver->setup_formula();
     printf("c After Setup: \n");
     mxsolver->print_statistics(); 
-
     int ret = (int)mxsolver->search();
     delete mxsolver; // S
     return ret;

@@ -106,13 +106,12 @@ void CBLIN::updateCurrentWeight(int strategy) {
   assert(strategy == _WEIGHT_NORMAL_ || strategy == _WEIGHT_DIVERSIFY_);
 
   if (strategy == _WEIGHT_NORMAL_)
-    maxsat_formula->setMaximumWeight(
-        findNextWeight(maxsat_formula->getMaximumWeight()));
+    maxsat_formula->setMaximumWeight(findNextWeight(maxsat_formula->getMaximumWeight()));
   else if (strategy == _WEIGHT_DIVERSIFY_) {
     maxsat_formula->setMaximumWeight(findNextWeightDiversity(maxsat_formula->getMaximumWeight()));
   }
   
-  logPrint("CG New weight: " + std::to_string(maxsat_formula->getMaximumWeight()) + " at " + print_timeSinceStart());
+  logPrint("next_strat_weight=" ,maxsat_formula->getMaximumWeight(), " time " , timeSinceStart());
 }
 
 
@@ -122,7 +121,7 @@ void CBLIN::updateCurrentWeight(int strategy) {
   |
   |  Description:
   |
-  |    Finds the greatest weight that is smaller than the 'currentWeight'.
+  |    Finds the greatest weight that is smaller than the 'weight'.
   |
   |  For further details see:
   |    * Ruben Martins, Vasco Manquinho, Inês Lynce: On Partitioning for Maximum
@@ -216,15 +215,15 @@ uint64_t CBLIN::findNextWeightDiversity(uint64_t weight) {
   |________________________________________________________________________________________________@*/
 
   Solver *CBLIN::hardenClauses() { 
-	   uint64_t bound = ubCost - lbCost;
-     logPrint("Hardening with gap: " + std::to_string(bound));
+	   uint64_t gap = ubCost - lbCost;
+     logPrint("hardening at gap: " , gap);
      int num_hardened_round = 0;
 	   maxw_nothardened = 0;
 	   for (int i = 0; i < softs_added; i++)
 		  {
       Lit l =  maxsat_formula->getSoftClause(i).clause[0];
       assert(l != lit_Undef);
-			if (maxsat_formula->getSoftClause(i).weight > bound || (maxsat_formula->getSoftClause(i).weight == bound && literalTrueInModel(l, bestModel)) ) {  // 
+			if (maxsat_formula->getSoftClause(i).weight > gap || (maxsat_formula->getSoftClause(i).weight == gap && literalTrueInModel(l, bestModel)) ) {  // 
         
         assert(var(l) < solver->nVars());
         if (!literalTrueInModel(l, bestModel)) {
@@ -236,7 +235,6 @@ uint64_t CBLIN::findNextWeightDiversity(uint64_t weight) {
 				solver->addClause(clause);
         maxsat_formula->addHardClause(clause); 
         
-
 				maxsat_formula->getSoftClause(i).weight = 0;
         maxsat_formula->getSoftClause(i).assumption_var = lit_Undef;
 
@@ -250,8 +248,8 @@ uint64_t CBLIN::findNextWeightDiversity(uint64_t weight) {
 
 			
 		}
-		logPrint("Hardened in total: " + std::to_string(num_hardened_round) + " clauses");
-    logPrint("Hardening again at gap " + std::to_string(maxw_nothardened));
+		logPrint("hardened in total: " , num_hardened_round, " literals");
+    logPrint("hardening again at gap ", maxw_nothardened);
 		return solver;
    }
 
@@ -270,14 +268,14 @@ void CBLIN::flipValueinBest(Lit l) {
 
   void CBLIN::hardenClausesSIS(uint64_t reduced_cost, vec<lbool> &currentModel) { 
       if (incremental_DPW) {
-        logPrint("Can not harden based on reduced cost with incremental DPW");
+        logPrint("can not harden based on reduced cost with incremental DPW");
         return; 
       }
      int num_hardened_round = 0;
 	   max_coeff_nothardened_sis = 0;
      uint64_t precision = maxsat_formula->getMaximumWeight();
 
-     logPrint("Hardening in SIS, reduced cost " + std::to_string(reduced_cost) + " precision " + std::to_string(precision));
+     logPrint("hardening in SIS, reduced cost ", reduced_cost, " precision ", precision);
 
 	   for (int i = 0; i < maxsat_formula->nSoft(); i++)
 		  {
@@ -298,11 +296,9 @@ void CBLIN::flipValueinBest(Lit l) {
 			else if (red_weight > maxw_nothardened) {
 				max_coeff_nothardened_sis = red_weight;
 			} 
-
-			
 		}
-		logPrint("Hardened in SIS total: " + std::to_string(num_hardened_round) + " clauses");
-    logPrint("Hardening again at red-cost " + std::to_string(max_coeff_nothardened_sis));
+		logPrint("hardened in total: " , num_hardened_round, " literals");
+    logPrint("Hardening again at red-cost ", max_coeff_nothardened_sis);
    }
 /************************************************************************************************
  //
@@ -328,7 +324,6 @@ void CBLIN::flipValueinBest(Lit l) {
     if (incremental_DPW) {
       have_encoded_precision = true; 
       weightCand = dpw_next_precision();
-      logPrint("RustSAT, next precision " + std::to_string(weightCand));
     }
     else {      
       uint64_t varresFactor = precision_factors();
@@ -342,7 +337,7 @@ void CBLIN::flipValueinBest(Lit l) {
     }
     maxsat_formula->setMaximumWeight(weightCand);
     max_weight_after_cg = weightCand;
-    logPrint("First precision for SIS " + std::to_string(maxsat_formula->getMaximumWeight()));
+    logPrint("first precision for SIS " , maxsat_formula->getMaximumWeight());
   }
 
   void CBLIN::update_SIS_precision() {
@@ -360,11 +355,11 @@ void CBLIN::flipValueinBest(Lit l) {
       nextFactor /= precision_factor; 
     }
     maxsat_formula->setMaximumWeight(nextFactor);
-    logPrint("New precision for SIS " + std::to_string(nextFactor));
+    logPrint("new precision for SIS " , nextFactor);
   }
 
   void CBLIN::set_up_objective_counter(uint64_t init) {
-      logPrint("Building structures");
+      logPrint("building objective counters");
 
       int maxExponent = exponent(init);
       for (int i = 0; i <= maxExponent; i++) coeff_counter.push_back(0);
@@ -381,7 +376,7 @@ void CBLIN::flipValueinBest(Lit l) {
         }  
       }
 
-      logPrint("Building done");
+      logPrint("building done");
       weight_map_setup = true;
   }
 
@@ -406,7 +401,7 @@ void CBLIN::flipValueinBest(Lit l) {
 
   int CBLIN::exponent(uint64_t weight) {
     assert(weight > 0);
-    uint64_t precision_factor = precision_factors(); //TODO: this should be its own method
+    uint64_t precision_factor = precision_factors(); 
     if (weight == 1) {
       return 0; 
     }
@@ -712,7 +707,7 @@ StatusCode CBLIN::unsatSearch() {
         return _UNKNOWN_;
       }
       if(timeLimitCores > 0) {
-        logPrint("Core budget remaining " + std::to_string((time_t)timeLimitCores - timeSinceStart()));
+        logPrint("cg time remaining " , (time_t)timeLimitCores - timeSinceStart());
         solver->setTimeBudget(timeLimitCores- timeSinceStart());
       }
       setAssumptions(assumptions);
@@ -731,10 +726,7 @@ StatusCode CBLIN::unsatSearch() {
         uint64_t coreCost = computeCostCore(solver->conflict);
         lbCost += coreCost;
         checkGap();
-        if (verbosity > 0) {
-         printf("c LB : %-12" PRIu64 " CS : %-12d W  : %-12" PRIu64 "\n", lbCost,
-                solver->conflict.size(), coreCost);
-        }
+        logPrint("LB ", lbCost, " core-size ", solver->conflict.size(), " core-min-cost " , coreCost); 
         relaxCore(solver->conflict, coreCost);
       }
 
@@ -742,7 +734,7 @@ StatusCode CBLIN::unsatSearch() {
         return _SATISFIABLE_; 
       }
       if (lbCost > ubCost) {
-        logPrint("Something fishy is going on....");
+        logPrint("LB bigger than UB, something fishy is going on....");
         return _ERROR_;
       }
 
@@ -850,7 +842,7 @@ StatusCode CBLIN::weightSearch() {
 
     //LB phase proves optimality, current model is not for the current formula. 
     if (us == _OPTIMUM_) {
-        printf("c LB = UB\n");
+        logPrint("LB = UB");
         return getModelAfterCG();
     }
 
@@ -865,7 +857,7 @@ StatusCode CBLIN::weightSearch() {
     }
     if (lbCost == ubCost) {
       if (verbosity > 0)
-        printf("c LB = UB\n");          
+        logPrint("LB = UB");          
         printAnswer(_OPTIMUM_);
         return _OPTIMUM_;
     }
@@ -909,14 +901,14 @@ StatusCode CBLIN::coreGuidedLinearSearch() {
   for (;;) {
     StatusCode us = weightDisjointCores(); 
     if (us == _OPTIMUM_) {
-        printf("c LB = UB\n");
+        logPrint("LB = UB");
         return getModelAfterCG();
     }
 
     if (us == _UNKNOWN_ ) {
-        logPrint("Interrupted core guided phase");
+        logPrint("interrupted core guided phase");
         if(shouldUpdate()) {
-          logPrint("Updating solver at " + print_timeSinceStart());
+          logPrint("updating solver at ",  timeSinceStart());
           solver = updateSolver();
         }
         return linearSearch();
@@ -926,13 +918,13 @@ StatusCode CBLIN::coreGuidedLinearSearch() {
     //At this point solver returned true and as such has a model
     assert(us == _SATISFIABLE_ );
 
-    logPrint("SAT-During core guided phase at " + print_timeSinceStart());
+    logPrint("SAT-During core guided phase at " , timeSinceStart());
     nbSatisfiable++;
     checkModel();
 
     if (lbCost == ubCost) {
       if (verbosity > 0)
-        printf("c LB = UB\n");
+        logPrint("LB = UB");
         printAnswer(_OPTIMUM_);
         return _OPTIMUM_;
     }
@@ -958,14 +950,14 @@ StatusCode CBLIN::coreGuidedLinearSearch() {
    if(relaxBeforeStrat) {
       logPrint("Relax 2 Strat");
       if(shouldUpdate()) {
-          logPrint("Updating solver at " + print_timeSinceStart());
+          logPrint("updating solver at ", timeSinceStart());
           solver = updateSolver();
       }
       else if (maxsat_formula->getMaximumWeight() > 1) {
-              logPrint("Weight update at " + print_timeSinceStart());
+              logPrint("weight update at " , timeSinceStart());
               updateCurrentWeight(weightStrategy); 
               if (maxsat_formula->getMaximumWeight() == 1) {
-                logPrint("Weight = 1 -> Done with cores at " + print_timeSinceStart());
+                logPrint("Weight = 1 -> Done with cores at ", timeSinceStart());
                 return linearSearch();
               }
       }
@@ -977,13 +969,13 @@ StatusCode CBLIN::coreGuidedLinearSearch() {
   else {
       logPrint("Strat 2 Relax");
       if (maxsat_formula->getMaximumWeight() > 1) {
-              logPrint("Weight update at " + print_timeSinceStart());
+              logPrint("weight update at " , timeSinceStart());
               updateCurrentWeight(weightStrategy); 
                       
       }
       if (maxsat_formula->getMaximumWeight() == 1 && nbCores > 0) {
         if(shouldUpdate()) {
-          logPrint("Updating solver at " + print_timeSinceStart());
+          logPrint("updating solver at " , timeSinceStart());
           solver = updateSolver();
         }
         return linearSearch();
@@ -1022,9 +1014,8 @@ StatusCode CBLIN::getModelAfterCG() {
 
 
 StatusCode CBLIN::linearSearch() {
-  logPrint( "Starting lin search with: LB: " + std::to_string(lbCost) + " UB: " + std::to_string(ubCost) + 
-            " UB - LB: " + std::to_string(ubCost-lbCost) + " Time " + print_timeSinceStart() );
-  // logPrint("REFORM SCLA: " + std::to_string(nRealSoft()));
+  logPrint( "Starting lin search with: LB: ",lbCost, " UB: " ,ubCost,
+            " UB - LB: " ,ubCost-lbCost, " time " , timeSinceStart() );
 
   inLinSearch = true;
   solver->budgetOff();
@@ -1074,7 +1065,7 @@ StatusCode CBLIN::linearSearch() {
     if (!(incrementalVarres || use_DPW)) {
       assumptions.clear();
     }   
-    logPrint("SAT Call at " + print_timeSinceStart() + " # assumptions " + std::to_string(assumptions.size()) + " clauses in SAT solver " + std::to_string(solver->nClauses()));  
+    logPrint("SAT Call at " , timeSinceStart(), " # assumptions " , assumptions.size(), " clauses in SAT solver " ,solver->nClauses());  
     if (verbosity > 1) {
       cout << "c assumptions:";
       for (int i = 0; i < assumptions.size(); i++) {
@@ -1084,12 +1075,6 @@ StatusCode CBLIN::linearSearch() {
     }
 
     res = searchSATSolver(solver, assumptions);
-
-    // std::string file_name = "output_" + std::to_string(file_name_counter) + ".wcnf";
-
-   // solver->toDimacs(file_name.c_str());
-   // file_name_counter++;
-
 
     if (res == l_True) {
       nbSatisfiable++;
@@ -1123,7 +1108,7 @@ StatusCode CBLIN::linearSearch() {
         }
         new_reduced_cost = computeCostReducedWeights(temp); 
         if ( t != new_reduced_cost )
-          logPrint("DIF before minim: " + std::to_string(t) + " after " + std::to_string(new_reduced_cost));
+          logPrint("cost minimized, before: ",  t , " after " , new_reduced_cost);
         assert(t >= new_reduced_cost);
       }
 
@@ -1131,7 +1116,7 @@ StatusCode CBLIN::linearSearch() {
       
 
       if (ubCost == lbCost) {
-        logPrint("c LB = UB\n");
+        logPrint("LB = UB");
         printAnswer(_OPTIMUM_);
         return _OPTIMUM_;
       }
@@ -1142,13 +1127,13 @@ StatusCode CBLIN::linearSearch() {
       else {
         bool incremental_done = RustSAT::dpw_is_max_precision(dpw) && incremental_DPW;
         if (maxsat_formula->getMaximumWeight() == 1 || incremental_done) {
-            logPrint("New reduced cost " + std::to_string(new_reduced_cost) + " precision 1, quiting.");
+            logPrint("new reduced cost " , new_reduced_cost, " at precision 1, stopping.");
             // No need to check for fine convergence because her we have a model whose cost matches the lb proven by core-guided search
             printAnswer(_OPTIMUM_);
             return _OPTIMUM_;
         }
         else {
-          logPrint("Rebuilding after SAT");
+          logPrint("rebuilding after SAT");
           minimize_iteration = true;
           reconstruct_iter = true;
           if (!(incrementalVarres || incremental_DPW)) {
@@ -1164,20 +1149,20 @@ StatusCode CBLIN::linearSearch() {
          bool incremental_done = RustSAT::dpw_is_max_precision(dpw) && incremental_DPW;
        if (maxsat_formula->getMaximumWeight() == 1 || incremental_done) {
           if (dpw_fine_convergence_after) {
-            logPrint("Stopping coarse convergence");
+            logPrint("stopping coarse convergence");
             dpw_coarse = false;
             dpw_fine_convergence_after = false;
             updateBoundLinSearch(fine_bound); 
             res = l_True;
           }
           else {
-            logPrint("UNSAT, stopping");
+            logPrint("UNSAT at precision 1, stopping.");
             printAnswer(_OPTIMUM_);
             return _OPTIMUM_;
           }
         }
         else {
-          logPrint("Rebuilding after UNSAT");
+          logPrint("rebuilding after UNSAT");
           if (!(incrementalVarres || incremental_DPW)) {
             solver = resetSolver();
           } 
@@ -1196,11 +1181,11 @@ StatusCode CBLIN::linearSearch() {
 
 void CBLIN::harden_incremental() {
   uint64_t global_ub_dpw = ubCost - lbCost;
-  logPrint("hardening incremental DPW");
+  logPrint("hardening in incremental DPW");
   SolverWithBuffer solver_with_buffer{.solver_b = solver, .clauses_added = 0, .verbosity = verbosity};
   int num_vars = solver->nVars();
   RustSAT::dpw_limit_range(dpw, 0, global_ub_dpw, &dpw_clause_collector, &solver_with_buffer);
-  logPrint("hardening incremental DPW bound: " +  std::to_string(global_ub_dpw) + " clauses added " + std::to_string(solver_with_buffer.clauses_added)) ;
+  logPrint("hardening incremental DPW bound: " , global_ub_dpw, " clauses added " , solver_with_buffer.clauses_added) ;
 }
 
 
@@ -1215,11 +1200,11 @@ void CBLIN::dpw_encode_and_enforce(uint64_t rhs) {
     SolverWithBuffer solver_with_buffer{.solver_b = solver, .clauses_added = 0, .verbosity = verbosity};
     int num_vars = solver->nVars();
     RustSAT::dpw_encode_ub(dpw, rhs, rhs, &num_vars, &dpw_clause_collector, &solver_with_buffer);
-    logPrint("clauses added in rustsat encoding " + std::to_string(solver_with_buffer.clauses_added) + " rhs " + std::to_string(rhs)) ;
+    logPrint("clauses added in encode and enforce " , solver_with_buffer.clauses_added, " rhs " , rhs) ;
     assumptions.clear();
     RustSAT::MaybeError ret = RustSAT::dpw_enforce_ub(dpw, rhs, &dpw_assumps, &assumptions);
     if (ret == RustSAT::MaybeError::NotEncoded) {
-      logPrint("not encoded");
+      logPrint("rustsat returned not encoded");
     }
     assert(ret == RustSAT::MaybeError::Ok);
     have_encoded_precision = true;
@@ -1251,7 +1236,7 @@ void CBLIN::dpw_clause_collector(int lit, void *ptr) {
 
 
 void CBLIN::updateBoundLinSearch (uint64_t newBound) {  
-  logPrint("New bound to enforce: " + std::to_string(newBound) + " at " + print_timeSinceStart());
+  logPrint("new bound to enforce: " , newBound, " at ", timeSinceStart());
   
   if (use_DPW) {
     if (dpw_coarse) {
@@ -1259,7 +1244,7 @@ void CBLIN::updateBoundLinSearch (uint64_t newBound) {
       dpw_fine_convergence_after = (coarse_b != newBound);
       fine_bound = newBound;
       newBound = coarse_b;
-      logPrint("Coarse convergence to: " + std::to_string(coarse_b));
+      logPrint("Coarse convergence bound: " , coarse_b);
     } 
     dpw_encode_and_enforce(newBound);
   }
@@ -1279,7 +1264,7 @@ void CBLIN::updateBoundLinSearch (uint64_t newBound) {
       }
     }
     else {
-      logPrint("No encoding :(");
+      logPrint("no encoding");
       int added = 0;
       for (int i = 0 ; i < objFunction.size(); i ++) {
         if (coeffs[i] > newBound && coeffs[i] <= init_rhs) { //the second condition is here because literals that have coefficients higher than init_rhs are fixed to dfalse in the encoder
@@ -1304,9 +1289,7 @@ void CBLIN::updateBoundLinSearch (uint64_t newBound) {
 void CBLIN::setPBencodings() {
   
   if (bestModel.size() < maxsat_formula->nVars()) {
-      logPrint("Extending best model to full formula");
       extendBestModel();
-      // solver->model.copyTo(bestModel); TODO:check if this is right.... 
   }
 
   nbCurrentSoft = 0; 
@@ -1320,7 +1303,7 @@ void CBLIN::setPBencodings() {
           }
       }
     }
-  logPrint("There are " + std::to_string(nbCurrentSoft) + " of " + std::to_string(nRealSoft()) + " objective lits on this precision and maxW " + std::to_string(max_coeff_nothardened_sis));
+  logPrint("there are " , nbCurrentSoft, " of ", nRealSoft(),  " objective lits on this precision with maxcoeff " , max_coeff_nothardened_sis);
 
   uint64_t reduced_cost = computeCostReducedWeights(bestModel); 
   if (reduced_cost == 0 && maxsat_formula->getMaximumWeight() > 1) {
@@ -1328,7 +1311,7 @@ void CBLIN::setPBencodings() {
       setPBencodings(); 
       return; 
   }
-  logPrint("Building new PB");
+  logPrint("building new PB");
   initializePBConstraint(reduced_cost); 
 }
 
@@ -1339,16 +1322,16 @@ void CBLIN::initializePBConstraint(uint64_t rhs) {
 
   if (minimize_sol) {
       if (rhs <= red_gap) {
-        logPrint("Minimizing in PB initialisation");
+        logPrint("minimizing in PB initialisation");
         minimizelinearsolution(bestModel);
         uint64_t minCost = computeCostReducedWeights(bestModel);       
         if (rhs != minCost) {
-          logPrint("DIF before minim: " + std::to_string(rhs) + " after " + std::to_string(minCost));
+          logPrint("cost miinimized: before " ,rhs, " after " , minCost);
         }
         rhs = minCost;
       }
       else {
-          logPrint("Setting rhs to reduced gap " + std::to_string(red_gap));
+          logPrint("setting rhs to reduced gap ", red_gap);
           rhs = red_gap;
       }
   }
@@ -1359,7 +1342,7 @@ void CBLIN::initializePBConstraint(uint64_t rhs) {
 
     uint64_t red_p_gap = (ub_prepro - lbCost) / maxsat_formula->getMaximumWeight();
     if (rhs > red_p_gap) {
-        logPrint("reduced cost from preprocessor gap: " + std::to_string(red_p_gap) + " better than best model " + std::to_string(rhs));
+        logPrint("reduced cost from preprocessor gap: " ,red_p_gap, " better than best model " ,rhs);
         rhs = red_p_gap;
         bound_set_by_prepro = true;
     }
@@ -1371,7 +1354,7 @@ void CBLIN::initializePBConstraint(uint64_t rhs) {
       return; 
   }
 
-  logPrint("Encoding PB with UB: " + std::to_string(rhs) + " obj size: " + std::to_string(nbCurrentSoft) + " precision: " + std::to_string(maxsat_formula->getMaximumWeight()));
+  logPrint("encoding PB with UB: " ,rhs, " obj size: " ,nbCurrentSoft, " precision: " ,maxsat_formula->getMaximumWeight());
 
   if (use_DPW) {
     if (incremental_DPW) {
@@ -1399,26 +1382,8 @@ void CBLIN::initializePBConstraint(uint64_t rhs) {
     enc->encodePB(solver, objFunction, coeffs, rhs);
     init_rhs = rhs; 
   }
-  /*
-   ///DEBUGGING
-  objFunction_.clear();
-  coeffs_.clear();
-  objFunction.copyTo(objFunction_);
-  coeffs.copyTo(coeffs_);
-  rhs_ = rhs;
-  num_literals_ = solver->nVars();
-  ///////////
-  */
-
- /*
-  std::string print = "";
-  for (int i = 0; i < objFunction.size() ; i ++) {
-    print += (" (" + std::to_string(lit2Int(objFunction[i])) + "/" + std::to_string(coeffs[i]) +")");
-  }
-  logPrint(print);
-  */
-
-  logPrint("Encoding done #assumptions " + std::to_string(assumptions.size()));        
+  
+  logPrint("Encoding done #assumptions " , assumptions.size());        
   setCardVars(bound_set_by_prepro);
 }
 
@@ -1450,7 +1415,7 @@ void CBLIN::setCardVars(bool prepro_bound) {
     if (!extend_models) {
       return;
     }
-    logPrint("Setting Card Vars currently: " + std::to_string(solver->nVars()) + " / orig " + std::to_string(isSoft.size()));
+    logPrint("setting Card Vars currently: " , solver->nVars(),  " / orig ", isSoft.size());
     solver->setSolutionBasedPhaseSaving(false);
     vec<Lit> cardAssumps;
 
@@ -1480,40 +1445,12 @@ void CBLIN::setCardVars(bool prepro_bound) {
     solver->setSolutionBasedPhaseSaving(true);
 }
 
-/*purely for debugging*/
-void CBLIN::test_pb_enc(){
-  logPrint("Testing PB encoding with " + std::to_string(objFunction_.size()) + " literals and rhs " + std::to_string(rhs_) + " num lits " + std::to_string(num_literals_));
-  assert(objFunction_.size() > 0);
-  assert(objFunction_.size() == coeffs_.size());
-
-  Solver* testsolver = newSATSolver();
-  while(testsolver->nVars() < num_literals_) testsolver->newVar();
-
-  Encoder * enc_ = new Encoder(_INCREMENTAL_NONE_, _CARD_MTOTALIZER_,
-                               _AMO_LADDER_, _PB_GTE_);
-
-  assert(!enc_->hasPBEncoding());
-  enc_->encodePB(testsolver, objFunction_, coeffs_, rhs_);
-  assert(enc_->hasPBEncoding());
-
-  vec<Lit> assumps;
-  lbool res = searchSATSolver(testsolver, assumps);
-  logPrint("first bound " + std::to_string(rhs_));
-  assert(res == l_True);
-
-  for (uint64_t k = 0; k < maxsat_formula->nHard(); k++) {
-    testsolver->addClause(maxsat_formula->getHardClause(k).clause); 
-    res = searchSATSolver(testsolver, assumps);
-    logPrint("num_clauses added " +  std::to_string(k));
-    assert(res == l_True);
-  }
-}
-
 /*
   After this method, solver->model() is a model of all of the variables in the SAT solver that matches 
   th ebest known model in terms of the original objective.
 */
 void CBLIN::extendBestModel() {
+    logPrint("extending best model to full formula");
     vec<Lit> modelAssumps;
 
     for (int i = 0; i < isSoft.size(); i++ ) {
@@ -1681,7 +1618,7 @@ void CBLIN::minimizelinearsolution(vec<lbool> & sol) {
   }
   checkModel(false, true);
   time_t done = time(NULL);
-  logPrint("Minimization time " +std::to_string(done - rec) + " init minsize " + std::to_string(minimizable.size()) + " skipped " + std::to_string(skipped));
+  logPrint("minimization time " , done - rec, " init minsize " , minimizable.size(), " skipped ", skipped);
 
 } 
 
@@ -1710,7 +1647,7 @@ uint64_t CBLIN::computeCostReducedWeights(vec<lbool> &fullModel) {
 
   uint64_t red_gap = known_gap / maxsat_formula->getMaximumWeight();
 
-  logPrint("Reduced cost " + std::to_string(tot_reducedCost) + " gap " + std::to_string(red_gap));
+  logPrint("reduced cost " , tot_reducedCost, " gap ", red_gap);
   return tot_reducedCost;
 }
 
@@ -1740,30 +1677,25 @@ void CBLIN::setAssumptions(vec<Lit> &assumps) {
 // Public search method
 StatusCode CBLIN::search() {
   if (weightStrategy == _WEIGHT_NONE_) {
-    logPrint("forcing a weight strategy on you :)");
+    logPrint("changing weight strategy to normal");
     weightStrategy = _WEIGHT_NORMAL_;
   }
+  logPrint("parameters");
+  logPrint("linear_strat=", lins);
+  logPrint("use_local_search=", use_local_search);
+  logPrint("time_limit_cg-phase=", timeLimitCores);
+  logPrint("relax_before_strat=", relaxBeforeStrat);
+  logPrint("incremental_varying_res_GTE=", incrementalVarres);
+  logPrint("precision_varres=" , non_inc_precision);
+  logPrint("use_DPW=" , use_DPW);
+  logPrint("incremental_DPW=" ,incremental_DPW);
+  logPrint("dpw_coarse=" , dpw_coarse);
+  logPrint("minimize_sol=" , minimize_sol);
+  logPrint("minimize_strat=" , minimize_strat);
 
-
-  logPrint("core-boosted linear search parameters");
-  logPrint("linear_strat=" + std::to_string(lins));
-  logPrint("Use Local search: " + std::to_string(use_local_search));
-  logPrint("time limit on cg-phase (s)=" + std::to_string(timeLimitCores));
-  logPrint("relax prior to strat =" + std::to_string(relaxBeforeStrat));
-  logPrint("do varying resolution incrementally =" + std::to_string(incrementalVarres));
-  logPrint("precision for varres =" + std::to_string(non_inc_precision));
-  logPrint("use DPW =" + std::to_string(use_DPW));
-  logPrint("use incremental DPW =" + std::to_string(incremental_DPW));
-  logPrint("only coarse convergence =" + std::to_string(dpw_coarse));
-  logPrint("minimize the solution =" + std::to_string(minimize_sol));
-  logPrint("minimizing strat =" + std::to_string(minimize_strat));
-  logPrint("UB before search = " + std::to_string(ubCost));
-  logPrint("LB before search = " + std::to_string(lbCost));
-  logPrint("offset before search = " + std::to_string(off_set));
-  logPrint("standardization removed before search = " + std::to_string(standardization_removed));
-  logPrint("preprocessing removed before search = " + std::to_string(cost_removed_preprocessing));
-
-
+  logPrint("Before search: UB ", ubCost, " LB ", lbCost, " off_set ", off_set, 
+            " standarddization_removed ", standardization_removed, " preprocessing_removed ", 
+                cost_removed_preprocessing);
 
   time_start = time(NULL);
 	time_best_solution = time_start;
@@ -1771,7 +1703,7 @@ StatusCode CBLIN::search() {
   StatusCode r = setup(); 
 
   if (r == _UNSATISFIABLE_) {
-         logPrint("Clauses unsat...");
+         logPrint("clauses unsat, no solutions");
          return _UNSATISFIABLE_;
   }
   if (r == _OPTIMUM_) {
@@ -1797,7 +1729,7 @@ StatusCode CBLIN::search() {
       break;
 
     default:
-      cout << "c Error: Invalid variation value." << std::endl;
+      logPrint("Error: Invalid variation value.");
       cout << "s UNKNOWN" << std::endl;
       exit(_ERROR_);
     }
@@ -1811,17 +1743,15 @@ StatusCode CBLIN::search() {
 
 /*_________________________________________________________________________________________________
   |
-  |  initAssumptions : (assumps : vec<Lit>&) ->  [void]
+  |  initAssumptions :  [void]
   |
   |  Description:
   |
-  |    Creates a new assumption literal for each soft clause and initializes the
-  |    assumption vector with negation of this literal. Assumptions are used to
-  |    extract cores.
-  |    TODO: Translate to standard form
+  |    Defines the new assumption literal for each soft clause  Assumptions are used to
+  |    extract cores. Assumes all soft clauses are of length 1.
   |  Post-conditions:
-  |    * For each soft clause 'i' creates an assumption literal and assigns it
-  |      to 'softClauses[i].assumptionVar'.
+  |    * Map the literal in each soft clause as the assumption. I.e. set 'softClauses[i].assumptionVar' to equal the negation of the 
+        literal in the clause.
   |    * 'coreMapping' is updated by mapping each assumption literal with the
   |      corresponding index of each soft clause.
   |    * original weights tracks the initial weights of the formula
@@ -1839,12 +1769,7 @@ void CBLIN::initAssumptions() {
 
 
 void CBLIN::printProgress() {
-  std::string prefix = inLinSearch ? "LIN " : "CG ";
-  logPrint(prefix + "best " + std::to_string(ubCost) + " LB: " + std::to_string(lbCost)  + " at " + std::to_string(time_best_solution - time_start) );  
-}
-
-std::string CBLIN::print_timeSinceStart() {
-  return std::to_string(timeSinceStart());
+  logPrint(inLinSearch ? "LIN " : "CG ", "UB " , ubCost, " LB " , lbCost, " time " , time_best_solution - time_start );  
 }
 
 time_t CBLIN::timeSinceStart() {
@@ -1884,30 +1809,23 @@ uint64_t CBLIN::computeCostOfModel(vec<lbool> &currentModel) {
     return computeCostOriginalClauses(currentModel);
   }
 
-
   uint64_t formula_cost = 0;
   uint64_t label_cost = computeCostObjective(currentModel);
+
   if (reconstruct_sol && reconstruct_iter) {
     vec<lbool> reconstructed;
     reconstruct_model_prepro(currentModel, reconstructed);
     formula_cost = computeCostOriginalClauses(reconstructed);
-  }
-  /*
-  if (minimize_sol && !inLinSearch) {
-    logPrint("Still in CG, reconstructing");
-    formula_cost = computeCostFromOriginalClauses(currentModel);
-  }
-  */
 
-  if (formula_cost != label_cost && reconstruct_sol && reconstruct_iter) {
+    if (formula_cost != label_cost) {
       if (inLinSearch) wrong_eval_lin++;
       else wrong_eval_cg++;
-      logPrint("DIF labels: " + std::to_string(label_cost) + " formula: " + std::to_string(formula_cost));
-        logPrint("# models wrongly evaluated Lin: " + std::to_string(wrong_eval_lin) + " CG: " + std::to_string(wrong_eval_cg));
+      logPrint("missmatch in cost of sol");
+      logPrint("label cost " , label_cost, " formula cost " , formula_cost);
+      logPrint("#wrong_eval_lin ", wrong_eval_lin, " wrong_eval_cg ", wrong_eval_cg);
+    }
   }
-
   
-
   if (reconstruct_sol && reconstruct_iter) {
     return formula_cost;
   }
@@ -1918,13 +1836,12 @@ uint64_t CBLIN::computeCostOfModel(vec<lbool> &currentModel) {
 
 
 Solver * CBLIN::resetSolver() {
-    logPrint("Deleting solver");
+    logPrint("deleting solver");
     delete solver; 
     solver = newSATSolver();
     clauses_added = 0;
     softs_added = 0;
     vars_added = 0;
-
     return updateSolver();
 } 
 
@@ -1952,7 +1869,7 @@ bool CBLIN::shouldUpdate() {
 
 //TODO parametrize on the model... 
  bool CBLIN::checkModel(bool from_local_search, bool improve_better) {
-   logPrint("checking model of size " + std::to_string(solver->model.size()));
+   logPrint("checkingModel size_of_model " , solver->model.size());
 
    uint64_t modelCost = computeCostOfModel(solver->model);
    bool isBetter = modelCost < ubCost;
@@ -1968,7 +1885,7 @@ bool CBLIN::shouldUpdate() {
         skip_local_search = from_local_search;
     }
     if ( improve_better && (modelCost == ubCost) && solver->model.size() >= bestModel.size()) {
-      logPrint("found same cost model over at least as many vars.");
+      logPrint("found same cost model over at least as many vars");
       saveModel(solver->model);
       bestModel.clear();
       solver->model.copyTo(bestModel);
@@ -1985,9 +1902,9 @@ bool CBLIN::shouldUpdate() {
    if (currentGap < known_gap) {
      known_gap = currentGap;
      if (inLinSearch)
-        logPrint("LIN GAP: " + std::to_string(known_gap) + " T " + print_timeSinceStart());
+        logPrint("LIN gap ", known_gap , " at " , timeSinceStart());
      else 
-        logPrint("CG GAP: " + std::to_string(known_gap) + " T " + print_timeSinceStart());
+        logPrint("CG gap ", known_gap, " at ",  timeSinceStart());
    }
  }
 
