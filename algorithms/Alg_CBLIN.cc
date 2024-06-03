@@ -1608,7 +1608,7 @@ void CBLIN::minimizelinearsolution(vec<lbool> & sol) {
       fixed_assumptions.push(l);
     } else {
       logPrint("undef in model minimisation");
-      exit(1);
+      exit(_ERROR_);
     }
   }
   

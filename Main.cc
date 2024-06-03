@@ -78,8 +78,8 @@ using namespace openwbo;
 static MaxSAT *mxsolver;
 
 static void SIGINT_exit(int signum) {
-  mxsolver->printAnswer(_UNKNOWN_);
-  exit(_UNKNOWN_);
+    mxsolver->printAnswer(_UNKNOWN_);
+    exit(_UNKNOWN_);
 }
 
 
@@ -268,8 +268,8 @@ int main(int argc, char **argv) {
     //TODO print the solution here.
     std::cout << "c Error: Out of memory." << std::endl;
     if (mxsolver->hasSolution()) {
-      mxsolver->printAnswer(_UNKNOWN_);
-      exit(_UNKNOWN_);
+      mxsolver->printAnswer(_SATISFIABLE_);
+      exit(_SATISFIABLE_);
     }
     else {
       std::cout << "s UNKNOWN" << std::endl;
