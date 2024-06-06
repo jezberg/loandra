@@ -90,7 +90,7 @@ static void SIGINT_exit(int signum) {
 
 int main(int argc, char **argv) {
   printf("c\nc LOANDRA:\t an extension of Open-WBO to core-boosted linear search.\n");
-  printf("c Version:\t July 2019 2018 -- Release: 1.3\n");
+  printf("c Version:\t July 2019 2018 -- Release: 2.0\n");
   printf("c Authors:\t Jeremias Berg\n");
   printf("c Contributors:\t Emir Demirovic, Peter Stuckey, Christoph Jabs, Hannes Ihalainen, Marcus Leivo, Matti Järvisalo\n");
   printf("c We thank the developers of Open-WBO and NuWLS for their work\n");
@@ -126,12 +126,12 @@ int main(int argc, char **argv) {
 
   IntOption algorithm("Open-WBO", "algorithm",
                         "MaxSAT algorithm "
-                        "(0=core-boosted linear search (default),2=oll)."
+                        "(0=core-boosted linear search (default),1=oll)."
                         "\n",
                         0, IntRange(0, 1));
 
   IntOption cardinality("Encodings", "cardinality",
-                          "Cardinality encoding (0=cardinality networks, "
+                          "Cardinality encoding in OLL (0=cardinality networks, "
                           "1=totalizer, 2=modulo totalizer).\n",
                           1, IntRange(0, 2));
 
@@ -143,7 +143,7 @@ int main(int argc, char **argv) {
         "Weight strategy (0=none, 1=weight-based, 2=diversity-based).\n", 2,
         IntRange(0, 2));
 
-  IntOption pmreslin("CBLIN", "cb", "Run sat-unsat search in conjunction with core-guided search (i.e. core-boosted search): "
+  IntOption pmreslin("CBLIN", "cb", "Run SIS search in conjunction with core-guided search (i.e. core-boosted search): "
                                             "(0=not at all, 1=first cores then sat-unsat search 2=only sat-unsat) .\n", 1,
                   IntRange(0, 3));
 
@@ -160,7 +160,6 @@ int main(int argc, char **argv) {
    
    BoolOption pmreslin_dpw("CBLIN", "cb-DPW", "Use the dynamic polynomial watchdog (default=false in which case the generalized totalizer is used).\n", false);
    BoolOption pmreslin_dpw_coarse("CBLIN", "cb-DPW-coarse", "Only do coarse-convergence with the DPW for resolutions higher than 1.\n", false);
-   // TODO change this to be shorter
    BoolOption pmreslin_dpw_inc("CBLIN", "cb-DPW-inc", "Use the DPW incrementally.\n", false);
    BoolOption extend("CBLIN", "extend-model", "Extend models to the variables in cardinality constraints.\n", true);
   BoolOption pmreslin_local_search("CBLIN", "cb-local-search", "Use NuWLS for solution minimization.\n", false);

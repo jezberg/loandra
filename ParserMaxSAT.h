@@ -67,10 +67,11 @@ template <class B, class MaxSATFormula>
 static uint64_t readClause(B &in, MaxSATFormula *maxsat_formula,
                            vec<Lit> &lits) {
   int parsed_lit, var;
-  int64_t weight = 1;
+  uint64_t weight = 1;
   lits.clear();
-  if (maxsat_formula->getProblemType() == _WEIGHTED_)
+  if (maxsat_formula->getProblemType() == _WEIGHTED_) {
     weight = parseWeight(in);
+  }
   assert(weight > 0);
 
   for (;;) {
