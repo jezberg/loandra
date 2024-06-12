@@ -33,9 +33,6 @@ Also see the command-line arguments for [open-wbo](https://github.com/sat-group/
   - Relax the cores found on each stratification level before lowering the stratification bound. 
   - The bound is only lowered after no more cores can be found. 
 
-- **cb-varres, no-cb-varres**               (default: on)
-  - Do varying resolution. Turning this option of will increase memory usage significantly. 
-
 - **cb-del, no-cb-del**                     (default: on)
   - Reinitialize the SAT solver between core guided and solution improving search.
 
@@ -58,7 +55,7 @@ Also see the command-line arguments for [open-wbo](https://github.com/sat-group/
   - Attempt to find trivial inprovements to preprocessed instances by flipping objective literals to false. 
 
 - **cb-local-search, no-cb-local-searchn**                     (default: on)
-  - Call the NuWLS locaö search solver prior to SIS search and between each resolution. 
+  - Call the NuWLS local search solver prior to SIS search and between each resolution. 
 
 - **pr-min-strat** = <int32>  [   0 ..    2] (default: 0)
   - Which solutions should be minimized: 0=only the best after each resolution, 1=all solutions, 2=only the two first in each resolution.

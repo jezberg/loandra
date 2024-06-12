@@ -381,16 +381,13 @@ void CBLIN::flipValueinBest(Lit l) {
   }
 
    uint64_t CBLIN::raise_to(int exponent) {
-      uint64_t precision_factor = precision_factors(); //TODO: this should be its own method
+      uint64_t precision_factor = precision_factors(); 
       if (exponent == 0) {
         return 1;
       }
       if (exponent == 1) {
         return precision_factor;
       }
- //     if (precision_factor == 2) {
- //       return 1 << exponent;
- //     }
       else if (exponent % 2 == 0) {
         return raise_to(exponent / 2) * raise_to(exponent / 2);
       }
@@ -427,10 +424,6 @@ void CBLIN::flipValueinBest(Lit l) {
   }
 
 
-
-
-
-
 /************************************************************************************************
  //
  // Utils for core management
@@ -459,21 +452,20 @@ void CBLIN::flipValueinBest(Lit l) {
   |________________________________________________________________________________________________@*/
 void CBLIN::encodeMaxRes(vec<Lit> &core, uint64_t weightCore)
 {
-
 	assert(core.size() != 0); 
 
   int n = core.size(); 
   vec<Lit> dVars;
-	vec<Lit> clause; // for adding stuff
+	vec<Lit> clause; 
 
-	
   for (int i = 0; i < n - 1; i++)
     {
       Lit p = maxsat_formula->newLiteral();
       dVars.push(p);
     }
-    // NEW HARD CLAUSES
   
+  // NEW HARD CLAUSES
+  // lins == 0 -> only run PMRES 
   if (lins == 0) {
     clause.clear();
     core.copyTo(clause);
@@ -563,23 +555,17 @@ void CBLIN::encodeMaxRes(vec<Lit> &core, uint64_t weightCore)
   |      core:
   |      - 'softClauses[indexSoft].weight' is decreased by the weight of the
   |        core.
-  |      - A new soft clause is created. This soft clause has the weight of the
-  |        core.
-  |      - A new assumption literal is created and attached to the new soft
-  |        clause.
-  |      - 'coreMapping' is updated to map the new soft clause to its assumption
-  |        literal.
   |    * 'sumSizeCores' is updated.
   |
   |________________________________________________________________________________________________@*/
-void CBLIN::relaxCore(vec<Lit> &conflict, uint64_t weightCore) {
+void CBLIN::relaxCore(vec<Lit> &core, uint64_t weightCore) {
 
-  assert(conflict.size() > 0);
+  assert(core.size() > 0);
   assert(weightCore > 0);
 
 
-  for (int i = 0; i < conflict.size(); i++) {
-    int indexSoft = coreMapping[conflict[i]];
+  for (int i = 0; i < core.size(); i++) {
+    int indexSoft = coreMapping[core[i]];
     assert(maxsat_formula->getSoftClause(indexSoft).weight >= weightCore);
     maxsat_formula->getSoftClause(indexSoft).weight -= weightCore;
 
@@ -588,8 +574,8 @@ void CBLIN::relaxCore(vec<Lit> &conflict, uint64_t weightCore) {
       num_hardened++;
     }
   }
-  encodeMaxRes(conflict, weightCore);
-  sumSizeCores += conflict.size();
+  encodeMaxRes(core, weightCore);
+  sumSizeCores += core.size();
 }
 
 /*_________________________________________________________________________________________________
@@ -598,24 +584,24 @@ void CBLIN::relaxCore(vec<Lit> &conflict, uint64_t weightCore) {
   |
   |    Description:
   |
-  |      Computes the cost of the core. The cost of a core is the minimum weight
-  |      of the soft clauses that appear in that core.
+  |      Computes the cost of the core. The cost of a core is the minimum coefficient
+  |      of the objective literals that appear in that core.
   |
   |    Pre-conditions:
   |      * Assumes that 'conflict' is not empty.
   |
   |________________________________________________________________________________________________@*/
-uint64_t CBLIN::computeCostCore(const vec<Lit> &conflict) {
+uint64_t CBLIN::computeCostCore(const vec<Lit> &core) {
 
-  assert(conflict.size() != 0);
+  assert(core.size() != 0);
 
   if (maxsat_formula->getProblemType() == _UNWEIGHTED_) {
     return 1;
   }
 
   uint64_t coreCost = UINT64_MAX;
-  for (int i = 0; i < conflict.size(); i++) {
-    int indexSoft = coreMapping[conflict[i]];
+  for (int i = 0; i < core.size(); i++) {
+    int indexSoft = coreMapping[core[i]];
     if (maxsat_formula->getSoftClause(indexSoft).weight < coreCost)
       coreCost = maxsat_formula->getSoftClause(indexSoft).weight;
   }
@@ -660,7 +646,6 @@ StatusCode CBLIN::unsatSearch() {
   solver = updateSolver();
 
   softsSatisfied();
-  //logPrint("In Unsat in solver " + std::to_string(solver->nVars()) + " vars amd " + std::to_string(solver->nClauses()) + " clauses" );
   lbool res = searchSATSolver(solver, assumptions);
   solver->resetFixes();
 
@@ -671,7 +656,6 @@ StatusCode CBLIN::unsatSearch() {
   } else if (res == l_True) {
     nbSatisfiable++;
     uint64_t beforecheck = ubCost;
-//    logPrint("in unsat");
     checkModel(false, true);
     
     uint64_t aftercheck = ubCost;
@@ -726,7 +710,7 @@ StatusCode CBLIN::unsatSearch() {
         uint64_t coreCost = computeCostCore(solver->conflict);
         lbCost += coreCost;
         checkGap();
-        logPrint("LB ", lbCost, " core-size ", solver->conflict.size(), " core-min-cost " , coreCost); 
+        logPrint("LB ", lbCost, " core size ", solver->conflict.size(), " core-min-cost " , coreCost); 
         relaxCore(solver->conflict, coreCost);
       }
 
@@ -753,7 +737,6 @@ StatusCode CBLIN::unsatSearch() {
   |  Post-conditions:
   |     * SAT solver exists 
   |     * Solutions exists
-  |     * 1 model exists
   |________________________________________________________________________________________________@*/
   StatusCode CBLIN::setup() {
 
@@ -775,11 +758,17 @@ StatusCode CBLIN::unsatSearch() {
 
 
       while (isSoft.size() < maxsat_formula->nVars()) isSoft.push(false);
+
+      maxw_nothardened = 0;
+
       for (int i = 0; i < maxsat_formula->nSoft(); i++)  {
           assert( maxsat_formula->getSoftClause(i).clause.size() == 1);
           Lit l = maxsat_formula->getSoftClause(i).clause[0];
           assert(var(l) < isSoft.size());
           isSoft[var(l)] = true; 
+          if ( maxsat_formula->getSoftClause(i).weight > maxw_nothardened) {
+            maxw_nothardened = maxsat_formula->getSoftClause(i).weight;
+          }
       }
       
       initAssumptions();  
@@ -791,14 +780,10 @@ StatusCode CBLIN::unsatSearch() {
       //Here we know that the formula is SAT
       if (maxsat_formula->nSoft() == 0 || ubCost == lbCost) {
           return _OPTIMUM_; //Solved by preprocessing
-      }  
-
-      maxw_nothardened = maxsat_formula->getSumWeights();
-      
+      }        
 
       updateCurrentWeight(weightStrategy);
       
-
       return rs;
   }
 
@@ -1128,7 +1113,7 @@ StatusCode CBLIN::linearSearch() {
         bool incremental_done = RustSAT::dpw_is_max_precision(dpw) && incremental_DPW;
         if (maxsat_formula->getMaximumWeight() == 1 || incremental_done) {
             logPrint("new reduced cost " , new_reduced_cost, " at precision 1, stopping.");
-            // No need to check for fine convergence because her we have a model whose cost matches the lb proven by core-guided search
+            // No need to check for fine convergence because here we have a model whose cost matches the lb proven by core-guided search
             printAnswer(_OPTIMUM_);
             return _OPTIMUM_;
         }
@@ -1447,7 +1432,7 @@ void CBLIN::setCardVars(bool prepro_bound) {
 
 /*
   After this method, solver->model() is a model of all of the variables in the SAT solver that matches 
-  th ebest known model in terms of the original objective.
+  the best known model in terms of the original objective.
 */
 void CBLIN::extendBestModel() {
     logPrint("extending best model to full formula");

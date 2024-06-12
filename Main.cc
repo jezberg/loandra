@@ -130,9 +130,9 @@ int main(int argc, char **argv) {
                         "\n",
                         0, IntRange(0, 1));
 
-  IntOption cardinality("Encodings", "cardinality",
-                          "Cardinality encoding in OLL (0=cardinality networks, "
-                          "1=totalizer, 2=modulo totalizer).\n",
+  IntOption cardinality("Encodings OLL", "cardinality",
+                          "Cardinality encoding in the pure OLL (0=cardinality networks, "
+                          "1=totalizer (default), 2=modulo totalizer).\n",
                           1, IntRange(0, 2));
 
   IntOption formula("Open-WBO", "formula",
@@ -162,7 +162,7 @@ int main(int argc, char **argv) {
    BoolOption pmreslin_dpw_coarse("CBLIN", "cb-DPW-coarse", "Only do coarse-convergence with the DPW for resolutions higher than 1.\n", false);
    BoolOption pmreslin_dpw_inc("CBLIN", "cb-DPW-inc", "Use the DPW incrementally.\n", false);
    BoolOption extend("CBLIN", "extend-model", "Extend models to the variables in cardinality constraints.\n", true);
-  BoolOption pmreslin_local_search("CBLIN", "cb-local-search", "Use NuWLS for solution minimization.\n", true);
+   BoolOption pmreslin_local_search("CBLIN", "cb-local-search", "Use NuWLS for solution minimization.\n", true);
 
 
 

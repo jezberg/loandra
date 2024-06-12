@@ -54,7 +54,7 @@ class CBLIN : public MaxSAT {
 
 public:
   // NOTE: currently the encoding is not set as an input parameter.
-  CBLIN(int verb = _VERBOSITY_MINIMAL_, int weight = _WEIGHT_NORMAL_, 
+  CBLIN(int verb = _VERBOSITY_MINIMAL_, int weight = _WEIGHT_DIVERSIFY_, 
         int linear = 0, bool delsol = false, 
         int gcLim = -1, bool r2strat = false, bool incrementalV = false, 
         bool reconstruct_sol_ = false, bool minimize_sol_ = true, int m_strat = 0, bool use_dpw = false, 
