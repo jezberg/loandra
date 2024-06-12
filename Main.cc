@@ -148,7 +148,7 @@ int main(int argc, char **argv) {
                   IntRange(0, 3));
 
    BoolOption pmreslin_delsol("CBLIN", "cb-del", "Reinitialise the SAT solver between core guided and linear phase.\n", true);
-  BoolOption pmreslin_hardenSIS("CBLIN", "cb-harden-SIS", "Harden objective literals in the SIS phase.\n", false);
+  BoolOption pmreslin_hardenSIS("CBLIN", "cb-harden-SIS", "Harden objective literals in the SIS phase.\n", true);
    BoolOption pmreslin_relax2strat("CBLIN", "cb-r-2-s", "Relax cores before lowering the stratification bound.\n", false);
    BoolOption pmreslin_incvarres("CBLIN", "cb-i-varres", "Do varying resolution incrementally, without reinitialising the SAT solver.\n", false);
    IntOption pmreslin_prec("CBLIN", "cb-prec", "Precision for non-incremental DPW "
@@ -158,11 +158,11 @@ int main(int argc, char **argv) {
                                             "(-1=unlimited) .\n", 30,
                   IntRange(-1, INT_MAX));
    
-   BoolOption pmreslin_dpw("CBLIN", "cb-DPW", "Use the dynamic polynomial watchdog (default=false in which case the generalized totalizer is used).\n", false);
+   BoolOption pmreslin_dpw("CBLIN", "cb-DPW", "Use the dynamic polynomial watchdog (default=false in which case the generalized totalizer is used).\n", true);
    BoolOption pmreslin_dpw_coarse("CBLIN", "cb-DPW-coarse", "Only do coarse-convergence with the DPW for resolutions higher than 1.\n", false);
    BoolOption pmreslin_dpw_inc("CBLIN", "cb-DPW-inc", "Use the DPW incrementally.\n", false);
    BoolOption extend("CBLIN", "extend-model", "Extend models to the variables in cardinality constraints.\n", true);
-  BoolOption pmreslin_local_search("CBLIN", "cb-local-search", "Use NuWLS for solution minimization.\n", false);
+  BoolOption pmreslin_local_search("CBLIN", "cb-local-search", "Use NuWLS for solution minimization.\n", true);
 
 
 
