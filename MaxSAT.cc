@@ -768,9 +768,7 @@ MaxSATFormula* MaxSAT::preprocessed_formula() {
     pif->preprocess(prepro_techs, prepro_verb, preprocess_time_limit);
     ub_prepro = pif->getUpperBound();
     std::vector<uint64_t> rem_weight = pif->getRemovedWeight();
-    if (rem_weight.size() > 0) {
-      cost_removed_preprocessing += rem_weight[0];
-    }
+    if (rem_weight.size() > 0) { cost_removed_preprocessing += rem_weight[0]; }
     lbCost += cost_removed_preprocessing;
     //COLLECT NEW
     std::vector<std::vector<int> > pre_Clauses; 
@@ -790,7 +788,7 @@ MaxSATFormula* MaxSAT::preprocessed_formula() {
     assert(pre_Weights.size() == pre_Clauses.size());
     for (int i = 0; i < pre_Weights.size(); i++) {
         uint64_t cur = pre_Weights[i];
-        if (cur < top) {
+        if (cur < top) { // is soft clause 
           if (cur > max_weight) {
             max_weight = cur;
           }
@@ -824,13 +822,6 @@ MaxSATFormula* MaxSAT::preprocessed_formula() {
 			sol_cla.clear();				
 			ppClause2SolClause(sol_cla, pre_Clauses[i]);
 			assert(sol_cla.size() == pre_Clauses[i].size());
-      /*
-			logPrint("clause ", i);
-      for (int j = 0; j < pre_Clauses[i].size(); j++) {
-        cout << " " << pre_Clauses[i][j];
-      }
-      cout << " weight " << pre_Weights[i] << std::endl;
-      */
 			uint64_t weight = pre_Weights[i];
 			if (weight < top) {
 				//SOFT 
@@ -850,8 +841,6 @@ MaxSATFormula* MaxSAT::preprocessed_formula() {
 		}
     logPrint("Preprocess removed weight: "  + std::to_string(cost_removed_preprocessing) + " num_skipped " + std::to_string(num_skipped))  ;
     assert(cost_removed_preprocessing == 0 || num_skipped == 1);
-
-      //logPrint("Preprocess time: " + print_timeSinceStart() + " removed weight: "  + std::to_string(cost_removed_preprocessing)) ;
     logPrint("Preprocessing left " + std::to_string(copymx->nHard()) + " clauses and " + std::to_string(copymx->nSoft()) + " softs");
     logPrint("Preprocessing removed " + std::to_string(cla_before - copymx->nHard()) + " clauses and " + std::to_string(softs_before - copymx->nSoft()) + " softs");
     logPrint("After preprocessing obtained ub: " + std::to_string(ub_prepro) + " lb " +std::to_string(lbCost));

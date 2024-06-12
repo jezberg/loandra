@@ -1270,7 +1270,6 @@ void CBLIN::updateBoundLinSearch (uint64_t newBound) {
 
 
 // Sets according to current maxweight
-// Delete solver as needed 
 void CBLIN::setPBencodings() {
   
   if (bestModel.size() < maxsat_formula->nVars()) {
@@ -1324,7 +1323,6 @@ void CBLIN::initializePBConstraint(uint64_t rhs) {
   // if the bound is obtained from preprocessing, we can not set variables in encoding according to a model. 
   bool bound_set_by_prepro = false;
   if (do_preprocess) {
-
     uint64_t red_p_gap = (ub_prepro - lbCost) / maxsat_formula->getMaximumWeight();
     if (rhs > red_p_gap) {
         logPrint("reduced cost from preprocessor gap: " ,red_p_gap, " better than best model " ,rhs);
