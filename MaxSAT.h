@@ -249,7 +249,8 @@ public:
   uint64_t standardization_removed;
   MaxSATFormula* standardized_formula();
 
-
+  uint64_t hashClause(const vec<Lit>& clause);  
+  bool are_duplicates(const vec<Lit>& clause1, const vec<Lit>& clause2);
   void reconstruct_model_prepro(vec<lbool> &currentModel, vec<lbool> &reconstructed_out);
   
   maxPreprocessor::PreprocessorInterface * pif;
@@ -264,10 +265,10 @@ public:
 
   
   
-  int lit2Int(Lit l);
-  Lit int2Lit(int l);
-  void ppClause2SolClause(vec<Lit>  & solClause_out, const std::vector<int> & ppClause);
-  void solClause2ppClause(const vec<Lit>  & solClause,  std::vector<int> & ppClause_out);
+  static int lit2Int(Lit l);
+  static Lit int2Lit(int l);
+  static void ppClause2SolClause(vec<Lit>  & solClause_out, const std::vector<int> & ppClause);
+  static void solClause2ppClause(const vec<Lit>  & solClause,  std::vector<int> & ppClause_out);
 
   
 
@@ -302,7 +303,7 @@ public:
   uint64_t ubCost; // Upper bound value.
   uint64_t lbCost; // Lower bound value.
   uint64_t cost_removed_preprocessing; 
-  int64_t off_set; // Offset of the objective function for PB solving.
+  int64_t off_set; // Offset of the objective function with empty clauses.
 
   MaxSATFormula *maxsat_formula;
   MaxSATFormula *original_labels;
@@ -335,7 +336,17 @@ public:
   void printStats(); // Print search statistics.
   std::string printSoftClause(int id); // Prints a soft clause.
   void printUnsatisfiedSoftClauses(); // Prints unsatisfied soft clauses.
-  void logPrint(std::string s); // Prints string if verbosity > 0
+  
+  template <typename... Args >
+  void logPrint(Args ... args) {
+  if (verbosity > 0) {
+    std::stringstream ss;
+    (ss << ... << args); 
+    std::cout << "c " << ss.str() << std::endl;
+  }
+}
+
+
 
   // Greater than comparator.
   bool static greaterThan(uint64_t i, uint64_t j) { return (i > j); }

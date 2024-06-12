@@ -6,7 +6,8 @@
  * MiniSat,  Copyright (c) 2003-2006, Niklas Een, Niklas Sorensson
  *           Copyright (c) 2007-2010, Niklas Sorensson
  * Open-WBO, Copyright (c) 2013-2017, Ruben Martins, Vasco Manquinho, Ines Lynce
- * Loandra    Copyright (c) 2018-2019, Jeremias Berg, Emir Demirovic, Peter Stuckey
+ * NuWLS -- Copyright (c) 2021-2022, Yi Chu, Xiang He
+ * Loandra    Copyright (c) 2018-2024, Jeremias Berg, Emir Demirovic, Peter Stuckey
  * 
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -77,8 +78,8 @@ using namespace openwbo;
 static MaxSAT *mxsolver;
 
 static void SIGINT_exit(int signum) {
-  mxsolver->printAnswer(_UNKNOWN_);
-  exit(_UNKNOWN_);
+    mxsolver->printAnswer(_UNKNOWN_);
+    exit(_UNKNOWN_);
 }
 
 
@@ -89,18 +90,17 @@ static void SIGINT_exit(int signum) {
 
 int main(int argc, char **argv) {
   printf("c\nc LOANDRA:\t an extension of Open-WBO to core-boosted linear search.\n");
-  printf("c Version:\t July 2019 2018 -- Release: 1.2\n");
-  printf("c Authors:\t Jeremias Berg, Emir Demirovic, Peter Stuckey\n");
-  printf("c We thank the developers of Open-WBO for their work\n");
+  printf("c Version:\t July 2019 2018 -- Release: 2.0\n");
+  printf("c Authors:\t Jeremias Berg\n");
+  printf("c Contributors:\t Emir Demirovic, Peter Stuckey, Christoph Jabs, Hannes Ihalainen, Marcus Leivo, Matti Järvisalo\n");
+  printf("c We thank the developers of Open-WBO and NuWLS for their work\n");
   printf(
       "c\nc Open-WBO:\t a Modular MaxSAT Solver -- based on %s (%s version)\n",
       SATVER, VER);
   printf("c Version:\t September 2018 -- Release: 2.1\n");
   printf("c Authors:\t Ruben Martins, Vasco Manquinho, Ines Lynce\n");
   printf("c Contributors:\t Miguel Neves, Saurabh Joshi, Norbert Manthey, Mikolas Janota\n");
-  printf("c Contact:\t open-wbo@sat.inesc-id.pt -- "
-         "http://sat.inesc-id.pt/open-wbo/\nc\n");
-  
+  printf("c Author of NuWLS:\t Yi Chu, Xiang He\n");
   char* _emergencyMemory = new char[16384];
   try {
     NSPACE::setUsageHelp("c USAGE: %s [options] <input-file>\n\n");
@@ -122,61 +122,59 @@ int main(int argc, char **argv) {
 
   IntOption verbosity("Open-WBO", "verbosity",
                         "Verbosity level (0=minimal, 1=more).\n", 0,
-                        IntRange(0, 1));
+                        IntRange(0, 3));
 
   IntOption algorithm("Open-WBO", "algorithm",
                         "MaxSAT algorithm "
-                        "(0=core-boosted linear search (default),2=oll_iter)."
+                        "(0=core-boosted linear search (default),1=oll)."
                         "\n",
                         0, IntRange(0, 1));
 
-  IntOption cardinality("Encodings", "cardinality",
-                          "Cardinality encoding (0=cardinality networks, "
-                          "1=totalizer, 2=modulo totalizer).\n",
+  IntOption cardinality("Encodings OLL", "cardinality",
+                          "Cardinality encoding in the pure OLL (0=cardinality networks, "
+                          "1=totalizer (default), 2=modulo totalizer).\n",
                           1, IntRange(0, 2));
-
-  IntOption amo("Encodings", "amo", "AMO encoding (0=Ladder).\n", 0,
-                  IntRange(0, 0));
-
-  IntOption pb("Encodings", "pb", "PB encoding (0=SWC,1=GTE,2=Adder).\n", 1,
-                 IntRange(0, 2));
 
   IntOption formula("Open-WBO", "formula",
                       "Type of formula (0=WCNF, 1=OPB).\n", 0, IntRange(0, 1));
 
   IntOption weight(
-        "WBO", "weight-strategy",
+        "CBLIN", "weight-strategy",
         "Weight strategy (0=none, 1=weight-based, 2=diversity-based).\n", 2,
         IntRange(0, 2));
 
-  BoolOption symmetry("WBO", "symmetry", "Symmetry breaking.\n", true);
-    
-  IntOption symmetry_lim(
-        "WBO", "symmetry-limit",
-        "Limit on the number of symmetry breaking clauses.\n", 500000,
-        IntRange(0, INT32_MAX));
-
-  IntOption pmreslin("CBLIN", "cb", "Run sat-unsat search in conjunction with core-guided search (i.e. core-boosted search): "
+  IntOption pmreslin("CBLIN", "cb", "Run SIS search in conjunction with core-guided search (i.e. core-boosted search): "
                                             "(0=not at all, 1=first cores then sat-unsat search 2=only sat-unsat) .\n", 1,
                   IntRange(0, 3));
 
    BoolOption pmreslin_delsol("CBLIN", "cb-del", "Reinitialise the SAT solver between core guided and linear phase.\n", true);
-   BoolOption pmreslin_varres("CBLIN", "cb-varres", "Do varying resolution.\n", true);
+  BoolOption pmreslin_hardenSIS("CBLIN", "cb-harden-SIS", "Harden objective literals in the SIS phase.\n", true);
    BoolOption pmreslin_relax2strat("CBLIN", "cb-r-2-s", "Relax cores before lowering the stratification bound.\n", false);
-   BoolOption pmreslin_varresCG("CBLIN", "cb-varCG", "Do varying resolution during core-guided search.\n", false);
    BoolOption pmreslin_incvarres("CBLIN", "cb-i-varres", "Do varying resolution incrementally, without reinitialising the SAT solver.\n", false);
+   IntOption pmreslin_prec("CBLIN", "cb-prec", "Precision for non-incremental DPW "
+                                            "(10=default) .\n", 10,
+                  IntRange(1, INT_MAX));
    IntOption pmreslin_cgLim("CBLIN", "cb-cglim", "Time limit for core guided phase (s): "
                                             "(-1=unlimited) .\n", 30,
                   IntRange(-1, INT_MAX));
-    
+   
+   BoolOption pmreslin_dpw("CBLIN", "cb-DPW", "Use the dynamic polynomial watchdog (default=false in which case the generalized totalizer is used).\n", true);
+   BoolOption pmreslin_dpw_coarse("CBLIN", "cb-DPW-coarse", "Only do coarse-convergence with the DPW for resolutions higher than 1.\n", false);
+   BoolOption pmreslin_dpw_inc("CBLIN", "cb-DPW-inc", "Use the DPW incrementally.\n", false);
+   BoolOption extend("CBLIN", "extend-model", "Extend models to the variables in cardinality constraints.\n", true);
+   BoolOption pmreslin_local_search("CBLIN", "cb-local-search", "Use NuWLS for solution minimization.\n", true);
+
+
+
   BoolOption prepro_rec("PREPROCESS", "pr-rec", "Reconstruct solutions before computing their costs (only applicable when preprocessing).\n", false);
   BoolOption prepro_min("PREPROCESS", "pr-min", "Minimize solutions locally after preprocessing.\n", true);
   IntOption prepro_min_strat("PREPROCESS", "pr-min-strat", "Strategy for solution minimization: 1=agressive (all solutions), 2=only the two first in each resolution: "
                                             "(0=only the best after each resolution) .\n", 0,
                   IntRange(0, 2));
-  StringOption prT("PREPROCESS", "pr-tech", "Preprcess techniques used (see MaxPRE documentation).\n", "[u]#[uvsrgVGc]");
-
+  StringOption prT("PREPROCESS", "pr-tech", "Preprocess techniques used (see MaxPRE documentation for more details).\n", "[u]#[uvsrgVGc]");
   BoolOption preprocess("PREPROCESS", "preprocess", "Preprocess the instance prior to search.\n", true);
+
+  
 
     parseOptions(argc, argv, true);
     std::string preTechs(prT);
@@ -187,9 +185,9 @@ int main(int argc, char **argv) {
     switch ((int)algorithm) {
     
     case _ALGORITHM_CBLIN_:
-      S = new CBLIN(verbosity, weight, pmreslin, pmreslin_delsol, pmreslin_varres, pmreslin_varresCG, 
+      S = new CBLIN(verbosity, weight, pmreslin, pmreslin_delsol,  
                     pmreslin_cgLim, pmreslin_relax2strat, pmreslin_incvarres, prepro_rec, 
-                    prepro_min,prepro_min_strat);
+                    prepro_min,prepro_min_strat, pmreslin_dpw, pmreslin_dpw_coarse, pmreslin_dpw_inc, extend,  pmreslin_local_search, pmreslin_prec, pmreslin_hardenSIS);
       break;
     
     case _ALGORITHM_OLLITER_:
@@ -260,7 +258,6 @@ int main(int argc, char **argv) {
     mxsolver->setup_formula();
     printf("c After Setup: \n");
     mxsolver->print_statistics(); 
-
     int ret = (int)mxsolver->search();
     delete mxsolver; // S
     return ret;
@@ -270,8 +267,8 @@ int main(int argc, char **argv) {
     //TODO print the solution here.
     std::cout << "c Error: Out of memory." << std::endl;
     if (mxsolver->hasSolution()) {
-      mxsolver->printAnswer(_UNKNOWN_);
-      exit(_UNKNOWN_);
+      mxsolver->printAnswer(_SATISFIABLE_);
+      exit(_SATISFIABLE_);
     }
     else {
       std::cout << "s UNKNOWN" << std::endl;

@@ -352,11 +352,7 @@ void MaxSAT::blockModel(Solver *solver) {
   solver->addClause(blocking);
 }
 
-void MaxSAT::logPrint(std::string s) {
-  if (verbosity > 0) {
-    std::cout << "c " << s << std::endl;
-  }
-}
+
 
 void MaxSAT::printBound(uint64_t bound)
 {
@@ -364,15 +360,12 @@ void MaxSAT::printBound(uint64_t bound)
 
   // print bound only, if its below the hard weight
   // FIXME: possible issue for PB instances when bound is negative; in MaxSAT bound is always positive
-  if( bound <= maxsat_formula->getHardWeight() ) printf("o %" PRIu64 "\n", bound);
+  if( bound <= maxsat_formula->getHardWeight() ) printf("o %" PRIu64 "\n", bound + off_set);
 }
 
 // Prints the best satisfying model if it found one.
 void MaxSAT::printModel() {
   
-  if (model.size() == 0)
-      return;
-
   assert(maxsat_formula->getFormat() != _FORMAT_PB_); //disabled for now
 
   std::stringstream s;
@@ -562,6 +555,8 @@ void MaxSAT::setup_formula() {
   MaxSATFormula* temp_formula = NULL;
   full_original_scla = maxsat_formula->copySoftsFromFormula();
 
+
+
   if (do_preprocess) {
     temp_formula = preprocessed_formula();  
   }
@@ -575,6 +570,33 @@ void MaxSAT::setup_formula() {
 
 }
 
+uint64_t MaxSAT::hashClause(const vec<Lit>& clause) {
+	uint64_t hash = 0;
+	for (int i = 0; i < clause.size() ; i++) {
+    uint64_t l = (uint64_t)lit2Int(clause[i]);
+		hash |= ((uint64_t)1 << (l&(uint64_t)63));
+	}
+  return hash;
+}
+
+bool MaxSAT::are_duplicates(const vec<Lit> & clause1, const vec<Lit> & clause2 ) {
+	if (clause1.size() != clause2.size()) {
+    return false;
+  }
+  std::vector<int> clause_one;
+  for (int i = 0; i < clause1.size(); i++) clause_one.push_back(lit2Int(clause1[i]));
+  std::vector<int> clause_two;
+  for (int i = 0; i < clause2.size(); i++) clause_two.push_back(lit2Int(clause2[i]));
+
+  assert(clause_one.size() == clause1.size());
+  assert(clause_two.size() == clause2.size());
+
+  std::sort(clause_one.begin(), clause_one.end());
+  std::sort(clause_two.begin(), clause_two.end());
+
+  return clause_one == clause_two;
+}
+
 MaxSATFormula* MaxSAT::standardized_formula() {
   MaxSATFormula *copymx = new MaxSATFormula();
   copymx->setInitialVars(maxsat_formula->nVars());
@@ -582,34 +604,81 @@ MaxSATFormula* MaxSAT::standardized_formula() {
   for (int i = 0; i < maxsat_formula->nVars(); i++)
     copymx->newVar();
 
-  for (int i = 0; i < maxsat_formula->nHard(); i++)
+
+  std::set<int> hard_units;
+
+  for (int i = 0; i < maxsat_formula->nHard(); i++)  {
     copymx->addHardClause(maxsat_formula->getHardClause(i).clause);
+    if (maxsat_formula->getHardClause(i).clause.size() == 1) {
+      Lit l = maxsat_formula->getHardClause(i).clause[0];
+      hard_units.insert(lit2Int(l));
+    }
+  }
+  
+  std::map<uint64_t, std::set< size_t >> hash_to_pos;
+  std::vector<uint64_t> weights;
+
+  for (int i = 0; i < maxsat_formula->nSoft(); i++) {
+      if (maxsat_formula->getSoftClause(i).clause.size() == 0) {
+        weights.push_back(0);
+        off_set += maxsat_formula->getSoftClause(i).weight;
+        continue;
+      }
+      uint64_t hash = hashClause(maxsat_formula->getSoftClause(i).clause);
+      if (hash_to_pos.find(hash) != hash_to_pos.end()) {
+        bool duplicate = false;
+        for (int ind : hash_to_pos[hash]) {
+          assert (ind < i);
+          if (are_duplicates(maxsat_formula->getSoftClause(i).clause, maxsat_formula->getSoftClause(ind).clause)) {
+            weights[ind] += maxsat_formula->getSoftClause(i).weight;
+            weights.push_back(0);
+            duplicate = true;
+            break;
+          }
+        }
+        if (!duplicate) {
+          hash_to_pos[hash].insert(i);
+          weights.push_back(maxsat_formula->getSoftClause(i).weight);
+        }
+      }
+      else {
+        hash_to_pos[hash].insert(i);
+        weights.push_back(maxsat_formula->getSoftClause(i).weight);
+      }
+  }
+  assert(weights.size() == maxsat_formula->nSoft());
 
   vec<Lit> clause; 
   std::map<int, uint64_t> existing_units;
   for (int i = 0; i < maxsat_formula->nSoft(); i++) {
+    if (weights[i] == 0) continue;
     clause.clear();
     maxsat_formula->getSoftClause(i).clause.copyTo(clause);
     if (clause.size() != 1){
       Lit l = copymx->newLiteral();
       clause.push(l);
       copymx->addHardClause(clause);
-    
       clause.clear();
       clause.push(~l);
-      copymx->addSoftClause(maxsat_formula->getSoftClause(i).weight, clause);
+      copymx->addSoftClause(weights[i], clause);
     }  
     else {
       Lit l = clause[0];
-      uint64_t w_mew = maxsat_formula->getSoftClause(i).weight;
-      if (existing_units.find(lit2Int(l)) == existing_units.end()) {
-        existing_units[lit2Int(l)] = w_mew;
+      //value is force to true by the hard clauses
+      if (hard_units.find(lit2Int(l)) != hard_units.end()) {
+        continue;
+      }
+      else if (hard_units.find(lit2Int(~l)) != hard_units.end()) {
+        lbCost += weights[i]; 
+        standardization_removed += weights[i];
+        continue;
       }
       else {
-        existing_units[lit2Int(l)] += w_mew;
-      }
+        existing_units[lit2Int(l)] = weights[i];
+      } 
     }
   }
+
   std::set<int> to_be_removed;
   for (auto iter = existing_units.begin(); iter != existing_units.end(); iter++ ) {
     int lit = iter->first;
@@ -618,7 +687,9 @@ MaxSATFormula* MaxSAT::standardized_formula() {
     if (to_be_removed.find(lit) != to_be_removed.end() ) {
       continue;
     }
+
     bool contradicting_literal = existing_units.find(negation) != existing_units.end();
+    
     clause.clear();
     if (contradicting_literal) {
       to_be_removed.insert(negation);
@@ -647,10 +718,7 @@ MaxSATFormula* MaxSAT::standardized_formula() {
     }
 
   }
-       
 
-
-  //TODO, add the literals in the map... map is stored "key is hte exact polarity it appears in the soft clause"
 
   copymx->setProblemType(maxsat_formula->getProblemType());
   copymx->updateSumWeights(maxsat_formula->getSumWeights());
@@ -658,6 +726,7 @@ MaxSATFormula* MaxSAT::standardized_formula() {
   copymx->setHardWeight(maxsat_formula->getHardWeight());
   return copymx;
 }
+
 
 
 MaxSATFormula* MaxSAT::preprocessed_formula() {
@@ -679,36 +748,34 @@ MaxSATFormula* MaxSAT::preprocessed_formula() {
     }
 
     for (int i = 0; i < maxsat_formula->nSoft(); i++) {
-        bool isHardened = maxsat_formula->getSoftClause(i).weight == 0;
-        if (!isHardened) {
-          solClause2ppClause(maxsat_formula->getSoftClause(i).clause, ppClause);
-          assert(maxsat_formula->getSoftClause(i).clause.size() == ppClause.size());
-          clauses_out.push_back(ppClause);
-          weights_out.push_back(maxsat_formula->getSoftClause(i).weight);
-        } 
+        if (maxsat_formula->getSoftClause(i).weight == 0) continue;
+        if (maxsat_formula->getSoftClause(i).clause.size() == 0) {
+          off_set += maxsat_formula->getSoftClause(i).weight;
+          continue;
+        }
+        solClause2ppClause(maxsat_formula->getSoftClause(i).clause, ppClause);
+        assert(maxsat_formula->getSoftClause(i).clause.size() == ppClause.size());
+        clauses_out.push_back(ppClause);
+        weights_out.push_back(maxsat_formula->getSoftClause(i).weight);
     }
 
+    logPrint("clauses out " + std::to_string(clauses_out.size()) + " weights " + std::to_string(weights_out.size()));
+
     pif = new maxPreprocessor::PreprocessorInterface (clauses_out, weights_out, top_orig, false);
-		
     pif->setBVEGateExtraction(gate_extraction);	
 	  pif->setLabelMatching(label_matching);
 	  pif->setSkipTechnique(skip_technique);
-
     pif->preprocess(prepro_techs, prepro_verb, preprocess_time_limit);
     ub_prepro = pif->getUpperBound();
-    uint64_t lb = pif->getRemovedWeight();
-    
-
-    cost_removed_preprocessing += pif->getRemovedWeight();
+    std::vector<uint64_t> rem_weight = pif->getRemovedWeight();
+    if (rem_weight.size() > 0) { cost_removed_preprocessing += rem_weight[0]; }
     lbCost += cost_removed_preprocessing;
-
     //COLLECT NEW
     std::vector<std::vector<int> > pre_Clauses; 
 		std::vector<uint64_t> pre_Weights; 
 		std::vector<int> pre_Labels; //will not be used	
-		pif->getInstance(pre_Clauses, pre_Weights, pre_Labels);
+		pif->getInstance(pre_Clauses, pre_Weights, pre_Labels, true);
 		uint64_t top = pif->getTopWeight();
-
     MaxSATFormula *copymx = new MaxSATFormula();
     copymx->setProblemType(maxsat_formula->getProblemType());
     copymx->setHardWeight(top);
@@ -718,11 +785,10 @@ MaxSATFormula* MaxSAT::preprocessed_formula() {
     uint64_t max_weight = 0;
     
     std::set<int> forced_hards;
-
     assert(pre_Weights.size() == pre_Clauses.size());
     for (int i = 0; i < pre_Weights.size(); i++) {
         uint64_t cur = pre_Weights[i];
-        if (cur < top) {
+        if (cur < top) { // is soft clause 
           if (cur > max_weight) {
             max_weight = cur;
           }
@@ -742,7 +808,6 @@ MaxSATFormula* MaxSAT::preprocessed_formula() {
         }
 
     }
-
     copymx->setInitialVars(init_vars);
     copymx->updateSumWeights(sum_of_weights);
     copymx->setMaximumWeight(max_weight);
@@ -750,14 +815,13 @@ MaxSATFormula* MaxSAT::preprocessed_formula() {
     for (int i = 0; i < init_vars; i++) {
       copymx->newVar();
     }
-
     vec<Lit> sol_cla;		
     int num_skipped = 0;
+    logPrint("Pre clauses size " , pre_Clauses.size(), " top ", top);
 		for (int i = 0; i < pre_Clauses.size(); i++) {
 			sol_cla.clear();				
 			ppClause2SolClause(sol_cla, pre_Clauses[i]);
 			assert(sol_cla.size() == pre_Clauses[i].size());
-						
 			uint64_t weight = pre_Weights[i];
 			if (weight < top) {
 				//SOFT 
@@ -775,13 +839,11 @@ MaxSATFormula* MaxSAT::preprocessed_formula() {
 				copymx->addHardClause(sol_cla);
 			}			
 		}
-    //logPrint("Preprocess removed weight: "  + std::to_string(cost_removed_preprocessing) + " num_skipped " + std::to_string(num_skipped))  ;
+    logPrint("Preprocess removed weight: "  + std::to_string(cost_removed_preprocessing) + " num_skipped " + std::to_string(num_skipped))  ;
     assert(cost_removed_preprocessing == 0 || num_skipped == 1);
-
-      //logPrint("Preprocess time: " + print_timeSinceStart() + " removed weight: "  + std::to_string(cost_removed_preprocessing)) ;
     logPrint("Preprocessing left " + std::to_string(copymx->nHard()) + " clauses and " + std::to_string(copymx->nSoft()) + " softs");
     logPrint("Preprocessing removed " + std::to_string(cla_before - copymx->nHard()) + " clauses and " + std::to_string(softs_before - copymx->nSoft()) + " softs");
-    logPrint("Preprocessing obtained ub: " + std::to_string(ub_prepro) + " lb " +std::to_string(lb));
+    logPrint("After preprocessing obtained ub: " + std::to_string(ub_prepro) + " lb " +std::to_string(lbCost));
   return copymx;
 }
 

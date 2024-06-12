@@ -42,8 +42,11 @@ MaxSATFormula *MaxSATFormula::copySoftsFromFormula() {
   for (int i = 0; i < nVars(); i++)
     copymx->newVar();
 
-  for (int i = 0; i < nSoft(); i++)
-    copymx->addSoftClause(getSoftClause(i).weight, getSoftClause(i).clause);
+  for (int i = 0; i < nSoft(); i++) {
+    if (getSoftClause(i).clause.size() > 0) {
+      copymx->addSoftClause(getSoftClause(i).weight, getSoftClause(i).clause);
+    }
+  }
 
  // copymx->setProblemType(getProblemType());
  // copymx->updateSumWeights(getSumWeights());
