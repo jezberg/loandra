@@ -13,12 +13,9 @@ DSRCS      = $(foreach dir, $(DEPDIR), $(filter-out $(MROOT)/$(dir)/Main.cc, $(w
 CHDRS      = $(wildcard $(PWD)/*.h)
 COBJS      = $(CSRCS:.cc=.o) $(DSRCS:.cc=.o)
 PREOBJ	   = $(wildcard $(PREPRO_DIR)/src/lib/*.a) 
-<<<<<<< HEAD
 CADOBJ	   = $(wildcard $(CADICAL_DIR)/build/*.a) 
 
-=======
 DPWOBJ	   = $(wildcard $(DPW_DIR)/target/release/*.a) 
->>>>>>> master
 
 PCOBJS     = $(addsuffix p,  $(COBJS))
 DCOBJS     = $(addsuffix d,  $(COBJS))
@@ -80,13 +77,9 @@ lib$(LIB)_release.a:	$(filter-out */Main.or, $(RCOBJS))
 ## Linking rules (standard/profile/debug/release)
 $(EXEC) $(EXEC)_profile $(EXEC)_debug $(EXEC)_release $(EXEC)_static: 
 	@echo Linking: "$@ ( $(foreach f,$^,$(subst $(MROOT)/,,$f)) )"
-<<<<<<< HEAD
-	@$(CXX) $^ $(PREOBJ) $(CADOBJ) $(LFLAGS) -o $@
-=======
 	@echo preprocessor and DPW library: $(DPWOBJ)  $(PREOBJ)
 	@echo @$(CXX) $^ $(DPWOBJ) $(PREOBJ) $(LFLAGS) -o $@  
 	@$(CXX) $^ $(DPWOBJ) $(PREOBJ) $(LFLAGS) -o $@  
->>>>>>> master
 
 ## Library rules (standard/profile/debug/release)
 lib$(LIB)_standard.a lib$(LIB)_profile.a lib$(LIB)_release.a lib$(LIB)_debug.a:
@@ -105,9 +98,6 @@ allclean: clean
 	$(MAKE) -C $(CADICAL_DIR) clean
 clean:
 	rm -f $(EXEC) $(EXEC)_profile $(EXEC)_debug $(EXEC)_release $(EXEC)_static \
-<<<<<<< HEAD
-	  $(COBJS) $(PCOBJS) $(DCOBJS) $(RCOBJS) *.core depend.mk 
-=======
 	  $(COBJS) $(PCOBJS) $(DCOBJS) $(RCOBJS) *.core depend.mk
 	$(MAKE) -C $(PREPRO_DIR) clean
 	cd $(DPW_DIR)/capi && cargo clean
@@ -117,7 +107,8 @@ builddeps:
 	$(MAKE) -C $(PREPRO_DIR) lib with_zlib=false
 	@echo Making RustSAT
 	cd $(DPW_DIR)/capi && cargo build --release
->>>>>>> master
+	@echo Making cadical
+	$(MAKE) -C $(CADICAL_DIR)
 
 ## Make dependencies
 depend.mk: $(CSRCS) $(CHDRS)

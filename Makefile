@@ -20,7 +20,7 @@ DEPDIR     +=  ../../encodings ../../algorithms ../../graph ../../classifier
 ## potential bug, depdir has  ../../maxpre2
 MROOT      ?= $(PWD)/solvers/$(SOLVERDIR)
 LFLAGS     += -lgmpxx -lgmp -pthread -ldl
-CFLAGS     += -Wall -Wno-parentheses -std=c++11 -DNSPACE=$(NSPACE) -DSOLVERNAME=$(SOLVERNAME) -DVERSION=$(VERSION)
+CFLAGS     += -Wall -Wc++17-extensions -Wno-parentheses -std=c++11 -DNSPACE=$(NSPACE) -DSOLVERNAME=$(SOLVERNAME) -DVERSION=$(VERSION)
 ifeq ($(VERSION),simp)
 DEPDIR     += simp
 CFLAGS     += -DSIMP=1 

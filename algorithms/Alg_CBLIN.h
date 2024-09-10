@@ -264,7 +264,7 @@ protected:
   
   void addSoftClauseAndAssumptionVar(uint64_t weight, vec<Lit> &clause);
   uint64_t computeCostOfModel();
-
+  bool did_harden;
   int nRealSoft();
   bool shouldUpdate();
   void flipValueinBestModel(Lit l);
