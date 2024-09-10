@@ -488,6 +488,7 @@ void CBLIN::encodeMaxRes(vec<Lit> &core, uint64_t weightCore)
 		
 		
 			// (b_{i+1} v d_{i+1}) -> d_i
+      
 			// d_i v -b_{i+1}
 			// clause = { dVars[i], ~core[i + 1] };
 			clause.clear();

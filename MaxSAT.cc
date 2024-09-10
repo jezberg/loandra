@@ -184,7 +184,7 @@ uint64_t MaxSAT::computeCostOriginalClauses(vec<lbool> &reconstructed_model) {
 
 uint64_t MaxSAT::computeCostObjective(vec<lbool> &model) {
   assert(model.size() != 0);
-  uint64_t currentCost = standardization_removed; //this is 0 if no preprocessing
+  uint64_t currentCost = standardization_removed; //this is increased by preprocessing or conflicting units
 
   for (int i = 0; i < original_labels->nSoft(); i++) {
     assert(original_labels->getSoftClause(i).clause.size() == 1); 
