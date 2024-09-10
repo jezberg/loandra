@@ -38,11 +38,15 @@
 #include "../Encoder.h"
 #include "../MaxSAT.h"
 #include "../MaxTypes.h"
+#include "Alg_NUWLS.h"
+#include "../rustsat/capi/rustsat.h"
 #include "utils/System.h"
 #include <map>
 #include <set>
 #include <utility>
 #include <iostream>
+#include <stdio.h>
+
 
 namespace openwbo {
 
@@ -50,10 +54,12 @@ class CBLIN : public MaxSAT {
 
 public:
   // NOTE: currently the encoding is not set as an input parameter.
-  CBLIN(int verb = _VERBOSITY_MINIMAL_, int weight = _WEIGHT_NORMAL_, 
-        int linear = 0, bool delsol = false, bool varR = false, bool varRCG = false,
-        int gcLim = -1, bool r2strat = false, 
-        bool u = false, bool m = false, int m_strat = 0, bool opt_phase_save = false) {
+  CBLIN(int verb = _VERBOSITY_MINIMAL_, int weight = _WEIGHT_DIVERSIFY_, 
+        int linear = 0, bool delsol = false, 
+        int gcLim = -1, bool r2strat = false, bool incrementalV = false, 
+        bool reconstruct_sol_ = false, bool minimize_sol_ = true, int m_strat = 0, bool use_dpw = false, 
+        bool dpw_coarse_ = false, bool dpw_inc_ = false, bool extend_models_ = true, bool local_s = false, uint64_t _non_inc_precision = 10 , 
+        bool _harden_in_SIS = false, bool opt_phase_save = false) {
     
     solverCad = NULL;
     timer = new Timer(gcLim);
@@ -69,13 +75,11 @@ public:
     maxw_nothardened = 0;
     
     lins = linear;
-    varyingres = varR;
     enc = NULL;
-    varresFactor = 10; 
-    varyingresCG = varRCG; 
+    did_harden = false;
     known_gap = UINT64_MAX;
     relaxBeforeStrat = r2strat;
-    reconstruct_sol = u;
+    reconstruct_sol = reconstruct_sol_;
     reconstruct_iter = false;
 
     inLinSearch = false;
@@ -83,12 +87,30 @@ public:
     wrong_eval_lin = 0;
     init_rhs = 0;
     delete_before_lin = delsol;
-    encoder.setCardEncoding(_CARD_TOTALIZER_);
-    encoder.setPBEncoding( _PB_GTE_);
-    minimize_sol = m;
+
+    minimize_sol = minimize_sol_;
     minimize_strat = m_strat;
 
+    extend_models = extend_models_;
+    max_weight_after_cg = 0;
+    dpw = NULL;
+    use_DPW = use_dpw;
+    dpw_coarse = dpw_coarse_;
+    dpw_fine_convergence_after = false;
+    incremental_DPW = dpw_inc_;
+    have_encoded_precision = false;
+    weight_map_setup = false;
+    if (incremental_DPW) {
+      assert(use_DPW);
+    }
+
+    use_local_search = local_s;
+    skip_local_search = false;
+    harden_in_SIS = _harden_in_SIS;
+
+    non_inc_precision = _non_inc_precision;
     optimistic = opt_phase_save;
+
   }
 
   ~CBLIN() {
@@ -131,8 +153,11 @@ protected:
   int num_hardened;
 
   void hardenClauses();
+  bool harden_in_SIS; 
+  void hardenClausesSIS(uint64_t reduced_cost, vec<lbool> &currentModel);
   void resetSolver();
   uint64_t maxw_nothardened;
+  uint64_t max_coeff_nothardened_sis;
 
   uint64_t known_gap;
 
@@ -142,33 +167,60 @@ protected:
   bool inLinSearch;
 
   //Varying Resolutio
-  int varresFactor;
-  bool varyingres; 
-  bool varyingresCG;
-  void resetMaximumWeight();
-  void updateDivisionFactor();
-  void updateDivisionFactorLinear();
+  bool weight_map_setup;
+  bool incrementalVarres;
+  uint64_t get_Maximum_Weight();
+  void update_SIS_precision();
   int  moreThanWeight(uint64_t w);
-  void initializeDivisionFactor(bool use);
+  void init_SIS_precision();
+  void harden_incremental();
   void initializePBConstraint(uint64_t rhs);
 
   void updateBoundLinSearch (uint64_t newBound);
 
-  bool checkModel();
-  uint64_t computeCostReducedWeights();
+  bool checkModel(bool from_local_search = false, bool improve_better = false);
+  uint64_t computeCostReducedWeights(vec<lbool> &currentModel);
 
   void setPBencodings();
   Encoder * enc;
+  
+  ///DPW
+  struct SolverWithBuffer {
+    CaDiCaL::Solver *solver_b;
+    vec<Lit> buffer;
+    int clauses_added;
+    int verbosity;
+};
+
+  RustSAT::DynamicPolyWatchdog *dpw;
+  bool use_DPW;
+  bool have_encoded_precision;
+  bool dpw_coarse;
+  bool dpw_fine_convergence_after;
+  uint64_t fine_bound;
+  uint64_t dpw_next_precision();
+  void dpw_encode_and_enforce(uint64_t rhs);
+  static void dpw_assumps(int lit, void *assumps);
+  static void dpw_clause_collector(int lit, void *ptr);
+
+  bool incremental_DPW;
+
+  ///DPW
+  
+  
   vec<lbool> bestModel;
+  void flipValueinBest(Lit l);
 
   void extendBestModel();
   void setCardVars(bool prepro);
   
   vec<bool> isSoft; 
 
-  std::string print_timeSinceStart();
   time_t timeSinceStart();
   time_t timeSincePrepro();
+
+  uint64_t precision_factors();
+  uint64_t non_inc_precision;
 
   // Core guided division
   std::vector<uint64_t> reducedWeight;
@@ -180,14 +232,15 @@ protected:
  
   StatusCode setup(); // unsat search and other setups
   StatusCode coreGuidedLinearSearch();
-  StatusCode weightDivisionSearch();
-
-
-  bool enoughSoftAboveWeight(uint64_t weightCand);
+  uint64_t max_weight_after_cg;
+  int exponent(uint64_t weight);
+  uint64_t raise_to(int exponent);
+  std::vector<int> coeff_counter;
+  void set_up_objective_counter(uint64_t init);
   //These are subroutines in other searches and should not be 
   StatusCode linearSearch();
   StatusCode weightDisjointCores(); // LB phase
-  void initRelaxation();
+  void build_objective_func_and_coeffs();
   vec<Lit> objFunction; // Literals to be used in the constraint that excludes
                         // models.
   vec<uint64_t> coeffs; // Coefficients of the literals that are used in the
@@ -241,7 +294,7 @@ protected:
  bool reconstruct_iter;
  bool minimize_sol;
  int  minimize_strat;
- void minimizelinearsolution();
+ void minimizelinearsolution(vec<lbool> & sol);
  
  //TODO refactor these into some other class. 
  bool has_flipped;
@@ -252,6 +305,12 @@ protected:
  
  // Timer
  Timer* timer;
+
+ bool use_local_search;
+ bool skip_local_search;
+ void localsearch(vec<lbool> & sol);
+
+  bool extend_models;
 
 
 };

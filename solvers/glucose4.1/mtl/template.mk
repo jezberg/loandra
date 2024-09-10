@@ -13,8 +13,12 @@ DSRCS      = $(foreach dir, $(DEPDIR), $(filter-out $(MROOT)/$(dir)/Main.cc, $(w
 CHDRS      = $(wildcard $(PWD)/*.h)
 COBJS      = $(CSRCS:.cc=.o) $(DSRCS:.cc=.o)
 PREOBJ	   = $(wildcard $(PREPRO_DIR)/src/lib/*.a) 
+<<<<<<< HEAD
 CADOBJ	   = $(wildcard $(CADICAL_DIR)/build/*.a) 
 
+=======
+DPWOBJ	   = $(wildcard $(DPW_DIR)/target/release/*.a) 
+>>>>>>> master
 
 PCOBJS     = $(addsuffix p,  $(COBJS))
 DCOBJS     = $(addsuffix d,  $(COBJS))
@@ -22,7 +26,7 @@ RCOBJS     = $(addsuffix r,  $(COBJS))
 
 CXX       ?= g++
 CFLAGS    ?= -Wall -Wno-parentheses -std=c++11
-LFLAGS    ?= -Wall -lpthread 
+LFLAGS    ?= -Wall -pthread 
 
 COPTIMIZE ?= -O3
 
@@ -31,11 +35,11 @@ LFLAGS    += -lz
 
 .PHONY : s p d r rs clean 
 
-s:	$(EXEC)
-p:	$(EXEC)_profile
-d:	$(EXEC)_debug
-r:	$(EXEC)_release
-rs:	$(EXEC)_static
+s:	builddeps $(EXEC) 
+p:	builddeps $(EXEC)_profile
+d:	builddeps $(EXEC)_debug
+r:	builddeps $(EXEC)_release
+rs:	builddeps $(EXEC)_static
 
 libs:	lib$(LIB)_standard.a
 libp:	lib$(LIB)_profile.a
@@ -74,9 +78,15 @@ lib$(LIB)_release.a:	$(filter-out */Main.or, $(RCOBJS))
 	@$(CXX) $(CFLAGS) -c -o $@ $<
 
 ## Linking rules (standard/profile/debug/release)
-$(EXEC) $(EXEC)_profile $(EXEC)_debug $(EXEC)_release $(EXEC)_static:
+$(EXEC) $(EXEC)_profile $(EXEC)_debug $(EXEC)_release $(EXEC)_static: 
 	@echo Linking: "$@ ( $(foreach f,$^,$(subst $(MROOT)/,,$f)) )"
+<<<<<<< HEAD
 	@$(CXX) $^ $(PREOBJ) $(CADOBJ) $(LFLAGS) -o $@
+=======
+	@echo preprocessor and DPW library: $(DPWOBJ)  $(PREOBJ)
+	@echo @$(CXX) $^ $(DPWOBJ) $(PREOBJ) $(LFLAGS) -o $@  
+	@$(CXX) $^ $(DPWOBJ) $(PREOBJ) $(LFLAGS) -o $@  
+>>>>>>> master
 
 ## Library rules (standard/profile/debug/release)
 lib$(LIB)_standard.a lib$(LIB)_profile.a lib$(LIB)_release.a lib$(LIB)_debug.a:
@@ -95,18 +105,30 @@ allclean: clean
 	$(MAKE) -C $(CADICAL_DIR) clean
 clean:
 	rm -f $(EXEC) $(EXEC)_profile $(EXEC)_debug $(EXEC)_release $(EXEC)_static \
+<<<<<<< HEAD
 	  $(COBJS) $(PCOBJS) $(DCOBJS) $(RCOBJS) *.core depend.mk 
+=======
+	  $(COBJS) $(PCOBJS) $(DCOBJS) $(RCOBJS) *.core depend.mk
+	$(MAKE) -C $(PREPRO_DIR) clean
+	cd $(DPW_DIR)/capi && cargo clean
+
+builddeps:
+	@echo Making MaxPre
+	$(MAKE) -C $(PREPRO_DIR) lib with_zlib=false
+	@echo Making RustSAT
+	cd $(DPW_DIR)/capi && cargo build --release
+>>>>>>> master
 
 ## Make dependencies
 depend.mk: $(CSRCS) $(CHDRS)
 	@echo Making dependencies
 	@$(CXX) $(CFLAGS) -I$(MROOT) \
-	   $(CSRCS) -MM | sed 's|\(.*\):|$(PWD)/\1 $(PWD)/\1r $(PWD)/\1d $(PWD)/\1p:|' > depend.mk
+		$(CSRCS) -MM | sed 's|\(.*\):|$(PWD)/\1 $(PWD)/\1r $(PWD)/\1d $(PWD)/\1p:|' > depend.mk
 	@for dir in $(DEPDIR); do \
-	      if [ -r $(MROOT)/$${dir}/depend.mk ]; then \
-		  echo Depends on: $${dir}; \
-		  cat $(MROOT)/$${dir}/depend.mk >> depend.mk; \
-	      fi; \
+			if [ -r $(MROOT)/$${dir}/depend.mk ]; then \
+			echo Depends on: $${dir}; \
+			cat $(MROOT)/$${dir}/depend.mk >> depend.mk; \
+			fi; \
 	  done
 
 -include $(MROOT)/mtl/config.mk

@@ -1,8 +1,8 @@
 # Loandra Anytime MaxSAT solver
-## Version 2.0 June 2023
+## Version 2.2 June 2024
 
-The version of the Master branch was finally updated to match the 2022 version of Loandra. 
-In addition to a new version of MaxPre, there's been a numerous quality of life improvements and better naming of options. 
+The master branch matches the 2024 version of Loandra. 
+The main additions are the dynamic polynomial watchdog encoding. 
 
 ### Citing
 If you use Loandra in your work please cite: 
@@ -10,32 +10,32 @@ If you use Loandra in your work please cite:
 - Berg, J., Demirović, E. and Stuckey, P.J., 2019. Core-boosted linear search for incomplete MaxSAT. In Integration of Constraint Programming, Artificial Intelligence, and Operations Research: 16th International Conference, CPAIOR 2019, Thessaloniki, Greece, June 4–7, 2019, Proceedings 16 (pp. 39-56). Springer International Publishing.
 
 ### Building
-First ensure the maxpre2 subfolder is updated. Newer versions of git do this automatically after cloning, with older versions you need 
-to run git submodule init and git submodule update in the maxpre2 subfolder. 
+First ensure you have [Rust installed](https://www.rust-lang.org/tools/install). 
+Clone this repo with submodules. This can be done using `git clone --recurse-submodules https://github.com/jezberg/loandra.git`.
+Alternatively, make sure to go to the `maxpre2` and rustsat folders, and run the `git submodule init` and `git submodule update`.
+
 
 Afterwards, run make in the base folder.
 
 ### Most significant command-line arguments:
-Please also see the command-line arguments for open-wbo and maxpre 2
+Run ```./loandra --help or --help-verb``` for more information. 
+Also see the command-line arguments for [open-wbo](https://github.com/sat-group/open-wbo) and [maxpre2](https://bitbucket.org/coreo-group/maxpre2/src/master/)
 
-- **cb-i-varres, no-cb-i-varres**           (default: off)
-  - Do varying resolution incrementally, i.e. do not delete the SAT solver between resolutions. 
-  - In practice incremental varying resolution by adding an extra assumption variable to all PB encodings, which is then used to delete clauses afterwards. 
+- **print-model, no-print-model** (default: off)
+  - Print the final solution found after search. 
 
-- **cb-varCG, no-cb-varCG**                 (default: off)
-  - Do a varying resolution inspired stratifictation in the core-guided phase. 
-  - In practice this is a more aggressive stratification heuristic that decreases the weight more between all interations. 
+- **old-format, no-print-model** (default: off)
+  - Parse WCNF files in the pre 2022 format.
+
+- **cb-DPW, no-cb-DPW** (default: on)
+  - Use the dynamic polynomial watchdog encoding during the solution improving phase. Otherwise, use the generalized totalizer. 
 
 - **cb-r-2-s, no-cb-r-2-s**                 (default: off)
   - Relax the cores found on each stratification level before lowering the stratification bound. 
   - The bound is only lowered after no more cores can be found. 
 
-- **cb-varres, no-cb-varres**               (default: on)
-  - Do varying resolution. Note that if not, then the full PB encoding is immediately built, which memory intensive. 
-
-
 - **cb-del, no-cb-del**                     (default: on)
-  - Reinitialize the SAT solver between core guided and linear search.
+  - Reinitialize the SAT solver between core guided and solution improving search.
 
 - **cb-cglim**     = <int32>  [  -1 .. imax] (default: 30)
   - Time limit for core guided phase (s): (-1=unlimited) .
@@ -49,58 +49,24 @@ Please also see the command-line arguments for open-wbo and maxpre 2
 - **pr-rec, no-pr-rec**                     (default: off)
   - Reconstruct solutions prior to computing their costs. (Only applicable when preprocessing)
 
+- **pr-tech**    = <string>
+  - Which techniques should maxpre run? Please see MaxPREs documentation for details. 
 
 - **pr-min, no-pr-min**                     (default: on)
   - Attempt to find trivial inprovements to preprocessed instances by flipping objective literals to false. 
 
-- **pr-min-stra**t** = <int32>  [   0 ..    2] (default: 0)
+- **cb-local-search, no-cb-local-searchn**                     (default: on)
+  - Call the NuWLS local search solver prior to SIS search and between each resolution. 
+
+- **pr-min-strat** = <int32>  [   0 ..    2] (default: 0)
   - Which solutions should be minimized: 0=only the best after each resolution, 1=all solutions, 2=only the two first in each resolution.
 
-- **pr-tech**    = <string>
-  - Which techniques should maxpre run? Please see MaxPREs documentation for details. 
 
 ### Additional references
 
 - Ihalainen, H., Berg, J. and Järvisalo, M., 2022, August. Clause Redundancy and Preprocessing in Maximum Satisfiability. In Automated Reasoning: 11th International Joint Conference, IJCAR 2022, Haifa, Israel, August 8–10, 2022, Proceedings (pp. 75-94). Cham: Springer International Publishing.
 
 - Demirović, E. and Stuckey, P.J., 2019. Techniques inspired by local search for incomplete maxsat and the linear algorithm: Varying resolution and solution-guided search. In Principles and Practice of Constraint Programming: 25th International Conference, CP 2019, Stamford, CT, USA, September 30–October 4, 2019, Proceedings 25 (pp. 177-194). Springer International Publishing.
-
-
-
-## Version 1.0 July 2019
-
-Loandra is an extension of the OpenWBO MaxSAT solver to core-boosted linear search. Loandra was one of the best performing solvers in the incomlete category of the 2019 MaxSAT Evaluation. 
-
-This project includes the 2.1 version of Open-WBO as well as the algorithm CBLIN that implements core-boosted linear search as describedi in [1].
-
-## Command line arguments 
-Loandra accepts all of the same arguments as Open wbo + the following:
-
-
-### core guided, core boosted or linear search
-```-pmreslin = <int32> [0 (core-guided), 1 (core-boosted), 2 (only linear search)] (default 1)``` 
-
-
-### set time limit (seconds) for core guided phase during core-boosted search 
-```-pmreslin-cglim" = <int32> [-1 (unlimited, run intil stratification bound gets to 1), ...] (default 30) ```
-   
-   
-### delete SAT solver between core-guided and linear phases
-```-pmreslin-del, -no-pmreslin-del (default on) ```
-
-### Do varying resolution during linear search: 
-```-pmreslin-varres, -no-pmreslin-varres (default on) ```
-
-### Encode maxres before lowering strat bound: 
-```-pmreslin-relax2strat, -no-pmreslin-relax2strat (default off) ```
-
-###  Keep satsolver between resolutions: 
-```-pmreslin-incvarres, -no-pmreslin-incvarres (default off) ```
-
-We thank the developers of Open-WBO!
-
-[1] Berg, Jeremias & Demirović, Emir & Stuckey, Peter. (2019). Core-Boosted Linear Search for Incomplete MaxSAT. 10.1007/978-3-030-19212-9_3. 
-
 
 
 # Open-WBO MaxSAT Solver

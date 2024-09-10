@@ -1,3 +1,5 @@
+depend.mk
+
 # Prerequisites
 *.d
 

@@ -5,3 +5,6 @@
 	path = cadical
 	url = git@github.com:arminbiere/cadical.git
 	branch = cadical-integration
+[submodule "rustsat"]
+	path = rustsat
+	url = https://github.com/chrjabs/rustsat.git
