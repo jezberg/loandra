@@ -1865,7 +1865,7 @@ bool CBLIN::shouldUpdate() {
   }
 
 //TODO parametrize on the model... 
- bool CBLIN::checkModel() {
+bool CBLIN::checkModel(bool from_local_search = false, bool improve_better = false) {
 
   uint64_t modelCost = computeCostOfModel();
 
