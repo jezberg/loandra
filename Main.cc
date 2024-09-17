@@ -162,7 +162,7 @@ int main(int argc, char **argv) {
    BoolOption pmreslin_dpw_inc("CBLIN", "cb-DPW-inc", "Use the DPW incrementally.\n", false);
    BoolOption extend("CBLIN", "extend-model", "Extend models to the variables in cardinality constraints.\n", true);
    BoolOption pmreslin_local_search("CBLIN", "cb-local-search", "Use NuWLS for solution minimization.\n", true);
-  BoolOption pmreslin_opt_phase("CBLIN", "cb-opt_phase", "Optimistic Phase saving.\n", true);
+  BoolOption pmreslin_opt_phase("CBLIN", "cb-opt-phase", "Optimistic Phase saving.\n", true);
 
 
   BoolOption prepro_rec("PREPROCESS", "pr-rec", "Reconstruct solutions before computing their costs (only applicable when preprocessing).\n", false);

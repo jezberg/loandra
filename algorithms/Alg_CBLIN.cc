@@ -1281,31 +1281,17 @@ void CBLIN::initializePBConstraint(uint64_t rhs) {
 
   uint64_t red_gap = known_gap / maxsat_formula->getMaximumWeight();
 
-  if (minimize_sol) {
-      if (rhs <= red_gap) {
-        logPrint("Minimizing in PB initialisation");
-
-        //call to extend model to ensure that cadical is in satisfiable and a solution that is not worse than the best known one
-        extendBestModel();
-        minimizelinearsolution(bestModel);
-        auto lambda = [this](Lit l){return literalTrueInModel(l, bestModel);};
-        uint64_t minCost = computeCostReducedWeights(&lambda);       
-        if (rhs != minCost) {
-          logPrint("cost miinimized: before " ,rhs, " after " , minCost);
-        }
-        rhs = minCost;
-      }
-      else {
-          logPrint("setting rhs to reduced gap ", red_gap);
-          rhs = red_gap;
-      }
+  if (use_local_search) {
+    localsearch(bestModel);
   }
-  else {
-    if (red_gap < rhs) {
-        logPrint("Setting rhs to reduced gap " + std::to_string(red_gap));
-        rhs = red_gap;
-    }
-  }
+  auto lambda = [this](Lit l){return literalTrueInModel(l, bestModel);};
+  rhs = computeCostReducedWeights(&lambda);
+  
+  if (red_gap < rhs) {
+      logPrint("Setting rhs to reduced gap " + std::to_string(red_gap));
+      rhs = red_gap;
+  }    
+  
   
   // if the bound is obtained from preprocessing, we can not set variables in encoding according to a model. 
   bool bound_set_by_prepro = false;
@@ -1461,7 +1447,7 @@ void CBLIN::localsearch(vec<lbool> & sol) {
       }
       auto lambda = [&local_search_best, this](Lit l){return literalTrueInModel(l, local_search_best);};
       uint64_t local_search_cost =  computeCostOfModel(&lambda);
-      if (local_search_cost <= ubCost) {
+      if (local_search_cost < ubCost) {
         vec<Lit> local_search_model;
         for (int i = 0; i < maxsat_formula->nVars(); i++ ) {
           Lit l = mkLit(i, true); 
@@ -1472,11 +1458,9 @@ void CBLIN::localsearch(vec<lbool> & sol) {
             local_search_model.push(~l);
           }
         }
-      //TODO how does cadical save phase? 
-     // solver->setSolutionBasedPhaseSaving(false);
-      lbool res = ICadical::searchSATSolver(solverCad, local_search_model); 
-      assert(res == l_True);
-      checkModel(true, true);
+        lbool res = ICadical::searchSATSolver(solverCad, local_search_model); 
+        assert(res == l_True);
+        checkModel(true, true);
       }
     }
     else {
