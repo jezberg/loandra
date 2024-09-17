@@ -1285,7 +1285,10 @@ void CBLIN::initializePBConstraint(uint64_t rhs) {
     localsearch(bestModel);
   }
   auto lambda = [this](Lit l){return literalTrueInModel(l, bestModel);};
-  rhs = computeCostReducedWeights(&lambda);
+  uint64_t min_cost = computeCostReducedWeights(&lambda);
+  if (min_cost < rhs) {
+    rhs = min_cost;
+  }
   
   if (red_gap < rhs) {
       logPrint("Setting rhs to reduced gap " + std::to_string(red_gap));
