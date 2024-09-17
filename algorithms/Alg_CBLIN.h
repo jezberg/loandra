@@ -204,13 +204,7 @@ protected:
   void setPBencodings();
   Encoder * enc;
   
-  ///DPW
-  struct SolverWithBuffer {
-    CaDiCaL::Solver *solver_b;
-    vec<Lit> buffer;
-    int clauses_added;
-    int verbosity;
-};
+
 
   RustSAT::DynamicPolyWatchdog *dpw;
   bool have_encoded_precision;

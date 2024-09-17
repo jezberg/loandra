@@ -1175,9 +1175,8 @@ StatusCode CBLIN::linearSearch() {
 void CBLIN::harden_incremental() {
   uint64_t global_ub_dpw = ubCost - lbCost;
   logPrint("hardening in incremental DPW");
-  SolverWithBuffer solver_with_buffer{.solver_b = solverCad, .clauses_added = 0, .verbosity = verbosity};
-  RustSAT::dpw_limit_range(dpw, 0, global_ub_dpw, &dpw_clause_collector, &solver_with_buffer);
-  logPrint("hardening incremental DPW bound: " , global_ub_dpw, " clauses added " , solver_with_buffer.clauses_added) ;
+  RustSAT::dpw_limit_range(dpw, 0, global_ub_dpw, &dpw_clause_collector, static_cast<void*>(solverCad));
+  logPrint("hardening incremental DPW bound: " , global_ub_dpw) ;
 }
 
 
@@ -1189,10 +1188,9 @@ uint64_t CBLIN::dpw_next_precision() {
 }
 
 void CBLIN::dpw_encode_and_enforce(uint64_t rhs) {
-    SolverWithBuffer solver_with_buffer{.solver_b = solverCad, .clauses_added = 0, .verbosity = verbosity};
     int num_vars = solverCad->vars();
-    RustSAT::dpw_encode_ub(dpw, rhs, rhs, &num_vars, &dpw_clause_collector, &solver_with_buffer);
-    logPrint("clauses added in encode and enforce " , solver_with_buffer.clauses_added, " rhs " , rhs) ;
+    RustSAT::dpw_encode_ub(dpw, rhs, rhs, &num_vars, &dpw_clause_collector, static_cast<void*>(solverCad));
+    logPrint("rhs in encode and enforce ", rhs) ;
     assumptions.clear();
     RustSAT::MaybeError ret = RustSAT::dpw_enforce_ub(dpw, rhs, &dpw_assumps, &assumptions);
     if (ret == RustSAT::MaybeError::NotEncoded) {
@@ -1209,23 +1207,8 @@ void CBLIN::dpw_assumps(int lit, void *assumps) {
 
 /// TDOD: with cadical this could be much more direct... 
 void CBLIN::dpw_clause_collector(int lit, void *ptr) {
-  SolverWithBuffer *solver_with_buffer = (SolverWithBuffer *)ptr;
-  CaDiCaL::Solver * solverC = solver_with_buffer->solver_b;
-  if (lit) {
-    solverC->reserve(abs(lit));
-    solver_with_buffer->buffer.push(MaxSAT::int2Lit(lit));
-    return;
-  }
-  if (solver_with_buffer->verbosity > 1) {
-    cout << "c RUSTSAT clause:";
-    for (int i = 0; i < solver_with_buffer->buffer.size(); i++) {
-      cout << " " << MaxSAT::lit2Int(solver_with_buffer->buffer[i]); 
-    }
-    cout << endl;
-  }
-  solver_with_buffer->clauses_added += 1;
-  ICadical::addClause(solverC, solver_with_buffer->buffer);
-  solver_with_buffer->buffer.clear();
+  CaDiCaL::Solver * solverC = static_cast<CaDiCaL::Solver *>(ptr);
+  solverC->add(lit);
 }
 
 
