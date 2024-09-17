@@ -69,8 +69,8 @@ void ICadical::getModel(CaDiCaL::Solver * solver, vec<lbool> & model_out) {
     assert(model_out.size() == 0);
     for (int i = 1; i <= solver->vars(); i++) {
         int v = solver->val(i);
-        if (v > 0) model_out.push(l_True);
-        else if (v < 0) model_out.push(l_False);
+        if (v == i) model_out.push(l_True);
+        else if (v == (-1)*i) model_out.push(l_False);
         else model_out.push(l_Undef);
     }
 }

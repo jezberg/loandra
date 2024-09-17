@@ -77,9 +77,9 @@ lib$(LIB)_release.a:	$(filter-out */Main.or, $(RCOBJS))
 ## Linking rules (standard/profile/debug/release)
 $(EXEC) $(EXEC)_profile $(EXEC)_debug $(EXEC)_release $(EXEC)_static: 
 	@echo Linking: "$@ ( $(foreach f,$^,$(subst $(MROOT)/,,$f)) )"
-	@echo preprocessor and DPW library: $(DPWOBJ)  $(PREOBJ)
+	@echo preprocessor $(PREOBJ) and DPW $(DPWOBJ) library.
 	@echo @$(CXX) $^ $(DPWOBJ) $(PREOBJ) $(LFLAGS) -o $@  
-	@$(CXX) $^ $(DPWOBJ) $(PREOBJ) $(LFLAGS) -o $@  
+	@$(CXX) $^ $(DPWOBJ) $(PREOBJ) $(CADOBJ) $(LFLAGS) -o $@  
 
 ## Library rules (standard/profile/debug/release)
 lib$(LIB)_standard.a lib$(LIB)_profile.a lib$(LIB)_release.a lib$(LIB)_debug.a:
@@ -96,11 +96,12 @@ allclean: clean
 	@rm -f ../simp/*.o ../simp/*.or ../simp/*.od  ../core/*.o ../core/*.or ../core/*.od
 	$(MAKE) -C $(PREPRO_DIR) clean
 	$(MAKE) -C $(CADICAL_DIR) clean
+	cd $(DPW_DIR)/capi && cargo clean
+
 clean:
 	rm -f $(EXEC) $(EXEC)_profile $(EXEC)_debug $(EXEC)_release $(EXEC)_static \
 	  $(COBJS) $(PCOBJS) $(DCOBJS) $(RCOBJS) *.core depend.mk
-	$(MAKE) -C $(PREPRO_DIR) clean
-	cd $(DPW_DIR)/capi && cargo clean
+	
 
 builddeps:
 	@echo Making MaxPre

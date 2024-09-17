@@ -158,12 +158,11 @@ int main(int argc, char **argv) {
                                             "(-1=unlimited) .\n", 30,
                   IntRange(-1, INT_MAX));
    
-   BoolOption pmreslin_dpw("CBLIN", "cb-DPW", "Use the dynamic polynomial watchdog (default=false in which case the generalized totalizer is used).\n", true);
    BoolOption pmreslin_dpw_coarse("CBLIN", "cb-DPW-coarse", "Only do coarse-convergence with the DPW for resolutions higher than 1.\n", false);
    BoolOption pmreslin_dpw_inc("CBLIN", "cb-DPW-inc", "Use the DPW incrementally.\n", false);
    BoolOption extend("CBLIN", "extend-model", "Extend models to the variables in cardinality constraints.\n", true);
    BoolOption pmreslin_local_search("CBLIN", "cb-local-search", "Use NuWLS for solution minimization.\n", true);
-
+  BoolOption pmreslin_opt_phase("CBLIN", "cb-opt_phase", "Optimistic Phase saving.\n", true);
 
 
   BoolOption prepro_rec("PREPROCESS", "pr-rec", "Reconstruct solutions before computing their costs (only applicable when preprocessing).\n", false);
@@ -187,7 +186,8 @@ int main(int argc, char **argv) {
     case _ALGORITHM_CBLIN_:
       S = new CBLIN(verbosity, weight, pmreslin, pmreslin_delsol,  
                     pmreslin_cgLim, pmreslin_relax2strat, pmreslin_incvarres, prepro_rec, 
-                    prepro_min,prepro_min_strat, pmreslin_dpw, pmreslin_dpw_coarse, pmreslin_dpw_inc, extend,  pmreslin_local_search, pmreslin_prec, pmreslin_hardenSIS);
+                    prepro_min,prepro_min_strat, pmreslin_dpw_coarse, pmreslin_dpw_inc, extend,  pmreslin_local_search, 
+                    pmreslin_prec, pmreslin_hardenSIS, pmreslin_opt_phase);
       break;
     
     case _ALGORITHM_OLLITER_:
@@ -227,11 +227,7 @@ int main(int argc, char **argv) {
       maxsat_formula->setFormat(_FORMAT_PB_);
     }
     gzclose(in);
-
-
-  
    
-
     if (S->getMaxSATFormula() == NULL)
       S->loadFormula(maxsat_formula);
     

@@ -700,18 +700,20 @@ bool OLL_ITER::checkModel() {
    uint64_t modelCost;
    uint64_t clausecost;
    uint64_t labelCost;
-  
-   vec<lbool> model;
-   ICadical::getModel(solver, model);
 
-   labelCost = computeCostObjective_legacy(model);
+
+   auto lambda = [ this](Lit l){return solver->val(MaxSAT::lit2Int(l) > 0);};
+   labelCost = computeCostObjective(&lambda);
    if (do_preprocess && use_reconstruct) {
+      vec<lbool> model;
+      ICadical::getModel(solver, model);
       vec<lbool> reconstruct; 
       reconstruct_model_prepro(model, reconstruct);
-      clausecost = computeCostOriginalClauses_legacy(reconstruct);
+      auto lambda_oirg = [this, &reconstruct](Lit l){return literalTrueInModel(l, reconstruct);};
+      clausecost = computeCostOriginalClauses(&lambda_oirg);
    } 
    else {
-      if (!do_preprocess) clausecost = computeCostOriginalClauses_legacy(model);
+      if (!do_preprocess) clausecost = computeCostOriginalClauses(&lambda);
       else clausecost = labelCost;
    }
 

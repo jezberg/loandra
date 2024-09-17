@@ -57,7 +57,7 @@ public:
   CBLIN(int verb = _VERBOSITY_MINIMAL_, int weight = _WEIGHT_DIVERSIFY_, 
         int linear = 0, bool delsol = false, 
         int gcLim = -1, bool r2strat = false, bool incrementalV = false, 
-        bool reconstruct_sol_ = false, bool minimize_sol_ = true, int m_strat = 0, bool use_dpw = false, 
+        bool reconstruct_sol_ = false, bool minimize_sol_ = true, int m_strat = 0,
         bool dpw_coarse_ = false, bool dpw_inc_ = false, bool extend_models_ = true, bool local_s = false, uint64_t _non_inc_precision = 10 , 
         bool _harden_in_SIS = false, bool opt_phase_save = false) {
     
@@ -94,17 +94,17 @@ public:
     extend_models = extend_models_;
     max_weight_after_cg = 0;
     dpw = NULL;
-    use_DPW = use_dpw;
     dpw_coarse = dpw_coarse_;
     dpw_fine_convergence_after = false;
     incremental_DPW = dpw_inc_;
     have_encoded_precision = false;
     weight_map_setup = false;
-    if (incremental_DPW) {
-      assert(use_DPW);
-    }
+
 
     use_local_search = local_s;
+    if (use_local_search)
+      minimize_sol = true;
+
     skip_local_search = false;
     harden_in_SIS = _harden_in_SIS;
 
@@ -154,7 +154,7 @@ protected:
 
   void hardenClauses();
   bool harden_in_SIS; 
-  void hardenClausesSIS(uint64_t reduced_cost, vec<lbool> &currentModel);
+  void hardenClausesSIS(uint64_t reduced_cost);
   void resetSolver();
   uint64_t maxw_nothardened;
   uint64_t max_coeff_nothardened_sis;
@@ -179,7 +179,27 @@ protected:
   void updateBoundLinSearch (uint64_t newBound);
 
   bool checkModel(bool from_local_search = false, bool improve_better = false);
-  uint64_t computeCostReducedWeights(vec<lbool> &currentModel);
+
+  //auto litValFromCadical() { return [this](Lit l){ return solverCad->val(MaxSAT::lit2Int(l)); }; }
+  //auto litValFromModel(vec<Lit> & model) {return [&model, this](Lit l){ return literalTrueInModel(l, model);};  }
+
+  template <typename LitVal>
+  uint64_t computeCostReducedWeights(LitVal* lit_true) {
+      logPrint("Computing cost of reduced precision");
+  
+      uint64_t tot_reducedCost = 0;
+
+      for (int i = 0; i < maxsat_formula->nSoft(); i++) {
+        assert(maxsat_formula->getSoftClause(i).clause.size() == 1);
+        Lit l = maxsat_formula->getSoftClause(i).clause[0];
+        if (!(*lit_true)(l)) {
+          tot_reducedCost += (maxsat_formula->getSoftClause(i).weight / maxsat_formula->getMaximumWeight());
+        }
+
+      }
+      logPrint("reduced cost " , tot_reducedCost, " gap ", known_gap / maxsat_formula->getMaximumWeight());
+      return tot_reducedCost;
+  }
 
   void setPBencodings();
   Encoder * enc;
@@ -193,7 +213,6 @@ protected:
 };
 
   RustSAT::DynamicPolyWatchdog *dpw;
-  bool use_DPW;
   bool have_encoded_precision;
   bool dpw_coarse;
   bool dpw_fine_convergence_after;
@@ -263,7 +282,34 @@ protected:
 
   
   void addSoftClauseAndAssumptionVar(uint64_t weight, vec<Lit> &clause);
-  uint64_t computeCostOfModel();
+  bool literal_sat_in_cadical(Lit l);
+
+  template <typename LitVal>
+  uint64_t computeCostOfModel(LitVal* lit_true) { 
+    logPrint("Compute cost ");
+    if (!do_preprocess) {
+        return computeCostOriginalClauses(lit_true);
+    }
+    if (reconstruct_sol && reconstruct_iter) {
+      vec<lbool> model;
+      assert(bestModel.size() > 0);
+      for (int i = 1; i <= bestModel.size(); i++) {
+        Lit l = mkLit(i, true);
+        if ((*lit_true)(l)) model.push(l_True);
+        else if (!(*lit_true)(l)) model.push(l_False);
+        else model.push(l_Undef);
+      }
+      vec<lbool> reconstructed;
+      reconstruct_model_prepro(model, reconstructed); 
+      auto lambda = [this, &reconstructed](Lit l){return literalTrueInModel(l, reconstructed);};
+      return computeCostOriginalClauses(&lambda);
+    }
+    else {
+      return computeCostObjective(lit_true);
+    }
+  }
+  
+  
   bool did_harden;
   int nRealSoft();
   bool shouldUpdate();
@@ -299,6 +345,7 @@ protected:
  //TODO refactor these into some other class. 
  bool has_flipped;
  bool flipLiterals();
+ void freezeObjective();
  
  //Cadical Related
  CaDiCaL:: Solver* solverCad;

@@ -97,90 +97,30 @@ void MaxSAT::saveModel(vec<lbool> &currentModel) {
   |    * Assumes that 'currentModel' is not empty.
   |
   |________________________________________________________________________________________________@*/
-uint64_t MaxSAT::computeCostOriginalClauses_legacy(vec<lbool> &reconstructed_model) {
-  assert(reconstructed_model.size() != 0 || full_original_scla->nSoft() == 0);
-  uint64_t currentCost = 0;
 
-  for (int i = 0; i < full_original_scla->nSoft(); i++) {
-    bool unsatisfied = true;
-    for (int j = 0; j < full_original_scla->getSoftClause(i).clause.size(); j++) {
-      Lit l = full_original_scla->getSoftClause(i).clause[j]; 
 
-      assert(var(l) < reconstructed_model.size());
-      if (literalTrueInModel(l, reconstructed_model)) {
-        unsatisfied = false;
-        break;
-      }
-    }
 
-    if (unsatisfied) {
-      currentCost += full_original_scla->getSoftClause(i).weight;
-    }
-  }
-  return currentCost;
-}
+//uint64_t MaxSAT::computeCostObjective(vec<lbool> & model) {
+//  auto lambda = [&model, this](Lit l){return literalTrueInModel(l, model);};
+//  return computeCostObjective_P(&lambda);
 
-uint64_t MaxSAT::computeCostOriginalClauses(CaDiCaL::Solver* solver) {
-  uint64_t currentCost = 0;
-  assert(solver->vars() >= full_original_scla->nVars());
-
-  for (int i = 0; i < full_original_scla->nSoft(); i++) {
-    bool unsatisfied = true;
-    for (int j = 0; j < full_original_scla->getSoftClause(i).clause.size(); j++) {
-      Lit l = full_original_scla->getSoftClause(i).clause[j]; 
-      if (solver->val(lit2Int(l)) > 0) {
-        unsatisfied = false;
-        break;
-      }
-    }
-
-    if (unsatisfied) {
-      currentCost += full_original_scla->getSoftClause(i).weight;
-    }
-  }
-  return currentCost;
-}
-
-uint64_t MaxSAT::computeCostObjective(CaDiCaL::Solver* solver) {
+  /*
   uint64_t currentCost = standardization_removed; //this is 0 if preprocessing
 
   for (int i = 0; i < original_labels->nSoft(); i++) {
     assert(original_labels->getSoftClause(i).clause.size() == 1); 
     Lit l = original_labels->getSoftClause(i).clause[0];
-    int res = solver->val(lit2Int(l));
-
-    //// satisfied soft
-    if (res > 0) {
-      continue;
-    }
-    currentCost += original_labels->getSoftClause(i).weight;  
-  } 
-  if (do_preprocess) {
-    currentCost += cost_removed_preprocessing;
-  }
-  return currentCost;
-}
-
-uint64_t MaxSAT::computeCostObjective_legacy(vec<lbool> &model) {
-  assert(model.size() != 0);
-  uint64_t currentCost = standardization_removed; //this is increased by preprocessing or conflicting units
-
-  for (int i = 0; i < original_labels->nSoft(); i++) {
-    assert(original_labels->getSoftClause(i).clause.size() == 1); 
-    Lit l = original_labels->getSoftClause(i).clause[0];
-    
-    //// satisfied soft
     if (literalTrueInModel(l, model)) {
       continue;
     }
     currentCost += original_labels->getSoftClause(i).weight;  
-  } 
+  }     
   if (do_preprocess) {
     currentCost += cost_removed_preprocessing;
   }
   return currentCost;
-}
-
+  */
+//}
 
 /*_________________________________________________________________________________________________
   |
@@ -462,7 +402,8 @@ void MaxSAT::printAnswer(int type) {
     model_of_original.clear(); 
 
     reconstruct_model_prepro(model, model_of_original);
-    uint64_t newCost = computeCostOriginalClauses_legacy(model_of_original);
+    auto lambda = [this](Lit l){return literalTrueInModel(l,model_of_original);};
+    uint64_t newCost = computeCostOriginalClauses(&lambda);
 
     if (newCost < ubCost) {
       logPrint("cost improved after reconstruction");
