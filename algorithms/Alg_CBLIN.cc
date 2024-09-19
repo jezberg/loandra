@@ -318,28 +318,32 @@ void CBLIN::flipValueinBest(Lit l) {
     return maxW;
   }
 
-  void CBLIN::init_SIS_precision() {
+  uint64_t CBLIN::compute_first_precision() {
     uint64_t weightCand;
     if (incremental_DPW) {
-      have_encoded_precision = true; 
-      weightCand = dpw_next_precision();
+        have_encoded_precision = true; 
+        weightCand = dpw_next_precision();
     }
     else {      
-      uint64_t varresFactor = precision_factors();
-      uint64_t maxW =  get_Maximum_Weight();
-      int counter = 0; //64 bits, isokay  
-      while (maxW > 0) {
+        uint64_t varresFactor = precision_factors();
+        uint64_t maxW =  get_Maximum_Weight();
+        int counter = 0; //64 bits, isokay  
+        while (maxW > 0) {
           counter++;
           maxW = maxW / varresFactor; 
       }
       weightCand = pow(varresFactor, counter - 1);   
     }
-    maxsat_formula->setMaximumWeight(weightCand);
     max_weight_after_cg = weightCand;
+    return weightCand;
+  }
+
+  void CBLIN::init_SIS_precision() {
+    maxsat_formula->setMaximumWeight(compute_first_precision());
     logPrint("first precision for SIS " , maxsat_formula->getMaximumWeight());
   }
 
-  void CBLIN::update_SIS_precision() {
+  uint64_t CBLIN::compute_next_SIS_precision(uint64_t current_precision) {
     uint64_t precision_factor = precision_factors();
     uint64_t nextFactor;
 
@@ -347,14 +351,18 @@ void CBLIN::flipValueinBest(Lit l) {
       nextFactor = dpw_next_precision();
     }
     else {
-     nextFactor = maxsat_formula->getMaximumWeight() / precision_factor;
+     nextFactor =  current_precision / precision_factor;
     }
      
     while (moreThanWeight(nextFactor) == nbCurrentSoft && nextFactor > 1 ) {
       nextFactor /= precision_factor; 
     }
-    maxsat_formula->setMaximumWeight(nextFactor);
-    logPrint("new precision for SIS " , nextFactor);
+    return nextFactor;
+  }
+
+  void CBLIN::update_SIS_precision() { 
+    maxsat_formula->setMaximumWeight(compute_next_SIS_precision(maxsat_formula->getMaximumWeight()));
+    logPrint("new precision for SIS " , maxsat_formula->getMaximumWeight());
   }
 
   void CBLIN::set_up_objective_counter(uint64_t init) {
@@ -994,10 +1002,166 @@ StatusCode CBLIN::getModelAfterCG() {
   return _OPTIMUM_;
 }
 
+void CBLIN::set_observed_vars(vec<Lit> & original_objective) {
+  assert(objFunction.size() == coeffs.size());
+  if (verbosity > 1) {
+    std::cout << "c Observing";
+  }
+  for (int i = 0; i < objFunction.size(); i ++) {
+      int lit = lit2Int(objFunction[i]);
+      if (verbosity > 1) {
+      std::cout << " " << abs(lit);
+      }
+      solverCad->add_observed_var(abs(lit));    
+  }
+  for (int i = 0; i < original_objective.size(); i ++) {
+      int lit = lit2Int(original_objective[i]);
+      if (verbosity > 1) {
+      std::cout << " " << abs(lit);
+      }
+      solverCad->add_observed_var(abs(lit));    
+  }
+  if (verbosity > 1) {
+      std::cout << endl;
+      }
+}
 
+uint64_t CBLIN::compute_ub_red_cost(uint64_t precision) {
+
+  if (bestModel.size() < maxsat_formula->nVars() || solverCad->status() != 10) {
+      logPrint("Extending best model to full formula");
+      extendBestModel();
+  }
+  auto lambda = [this](Lit l){return literalTrueInModel(l, bestModel);};
+  uint64_t reduced_cost = computeCostReducedWeights_prec(&lambda, precision);   
+  uint64_t red_gap = known_gap / maxsat_formula->getMaximumWeight();
+
+  if (red_gap < reduced_cost) {
+      logPrint("Setting reduced_cost to reduced gap " + std::to_string(red_gap));
+      reduced_cost = red_gap;
+  } 
+
+  if (use_local_search) {
+    //TODO maybe with reduced objective?
+    localsearch(bestModel);
+    auto lambda = [this](Lit l){return literalTrueInModel(l, bestModel);};
+    uint64_t min_cost = computeCostReducedWeights_prec(&lambda, precision);
+    if (min_cost < reduced_cost) {
+      reduced_cost = min_cost;
+    }
+  }
+   
+  // if the bound is obtained from preprocessing, we can not set variables in encoding according to a model. 
+  bool bound_set_by_prepro = false;
+  if (do_preprocess) {
+    uint64_t red_p_gap = (ub_prepro - lbCost) / precision;
+    if (reduced_cost > red_p_gap) {
+        logPrint("reduced cost from preprocessor gap: " ,red_p_gap, " better than best model " ,reduced_cost);
+        reduced_cost = red_p_gap;
+        bound_set_by_prepro = true;
+    }
+  }     
+  setCardVars(bound_set_by_prepro);
+  return reduced_cost;
+}
+
+void CBLIN::update_current_soft(uint64_t precision) {
+  nbCurrentSoft = 0;
+  for (int i = 0; i < objFunction.size(); i++) {
+        if ((coeffs[i] / precision) > 0) {
+          nbCurrentSoft++;
+        }
+  }
+  logPrint("There are ", nbCurrentSoft, " variables in this precision");
+}
+
+StatusCode CBLIN::linearSearch_propagator() {
+  logPrint( "Starting lin search with a propagator: LB: ",lbCost, " UB: " , ubCost,
+            " gap: " , known_gap, " time " , timeSinceStart() );
+  
+  inLinSearch = true;
+  assumptions.clear();
+
+  assert(bestModel.size() > 0);
+  savePhase();
+
+  uint64_t precision = compute_first_precision();
+  build_objective_func_and_coeffs_prop();
+
+  vec<Lit> original_objective;
+  vec<uint64_t> original_coeffs; 
+
+  for (int i = 0; i < original_labels->nSoft(); i++) {
+    Lit l = original_labels->getSoftClause(i).clause[0];
+    uint64_t coeff = original_labels->getSoftClause(i).weight;
+    original_objective.push(l);
+    original_coeffs.push(coeff);
+  }
+  SISPropagator* prop = NULL;
+  while (true) {
+    logPrint("Solving precision ", precision);
+    update_current_soft(precision);
+    resetSolver();
+    uint64_t red_cost_ub = compute_ub_red_cost(precision);
+    if (red_cost_ub > 0) {
+      // Call the SAT solver 
+      logPrint("New propagator: ubCost ", ubCost, " red_cost_ub ", red_cost_ub, " vars ", solverCad->vars(), " obj size ", objFunction.size(), " precision ", precision);
+      if (prop == NULL) {
+        prop = new SISPropagator(ubCost, red_cost_ub, solverCad->vars(), objFunction, coeffs, precision, original_objective, original_coeffs,  verbosity > 1);
+      }
+      else {
+        prop->resetPropagator(precision, red_cost_ub, solverCad->vars());
+      }
+      solverCad->connect_external_propagator(prop);
+      set_observed_vars(original_objective);
+      int res = solverCad->solve();
+      solverCad->disconnect_external_propagator();
+     // assert(res == 20);
+//      assert(prop->best_model.size() == objFunction.size());
+
+      //get the best model 
+      resetSolver();
+      freezeObjective();
+      if (verbosity > 1) {
+        cout << "c best model from propagator:" ;
+      }
+      for (int i = 0; i < (prop->best_model).size(); i++ ) {
+        if (verbosity > 1) {cout << " " << (prop->best_model)[i];}
+        solverCad->assume((prop->best_model)[i]);
+      }
+      if (verbosity > 1) { cout << endl; } 
+      res = solverCad->solve();
+      assert(res == 10);
+      flipLiterals();
+      checkModel(false, false);
+    }
+    if (precision > 1) {
+      if (ubCost == lbCost) {
+        logPrint("Terminating on bounds");
+        printAnswer(_OPTIMUM_);
+        return _OPTIMUM_;
+      }
+      else { 
+        logPrint("New precision");
+        precision = compute_next_SIS_precision(precision);
+      }
+    }
+    else {
+        //TODO so far incomplete, need to od more here ot get 
+        logPrint("Precision 1, stopping");
+        printAnswer(_SATISFIABLE_);
+        return _SATISFIABLE_;
+    }
+  }
+  return _ERROR_;
+}
 
 
 StatusCode CBLIN::linearSearch() {
+  if (use_propagator) {
+    return linearSearch_propagator();
+  }
+
   logPrint( "Starting lin search with: LB: ",lbCost, " UB: " ,ubCost,
             " UB - LB: " ,ubCost-lbCost, " time " , timeSinceStart() );
 
@@ -1318,7 +1482,29 @@ void CBLIN::initializePBConstraint(uint64_t rhs) {
   setCardVars(bound_set_by_prepro);
 }
 
-
+void CBLIN::build_objective_func_and_coeffs_prop() {
+  objFunction.clear();
+  coeffs.clear();
+  if (verbosity > 1) {
+          cout << "c objective and weights;"; 
+        }
+  for (int i = 0; i < maxsat_formula->nSoft(); i++) {
+    uint64_t weight = maxsat_formula->getSoftClause(i).weight;
+    if (weight > 0) { //i.e. if it wasnt hardened in PMRES step OR left out by varres. 
+        Lit l = maxsat_formula->getSoftClause(i).clause[0]; 
+        assert (l != lit_Undef);
+        objFunction.push(~l);
+        coeffs.push(weight);
+        if (verbosity > 1) {
+          cout << " l:" << lit2Int(~l) << ",w:" << weight; 
+        }
+    }
+    
+  }
+  if (verbosity > 1) {
+          cout << endl; 
+        }
+}
 
 
 void CBLIN::build_objective_func_and_coeffs() {
@@ -1760,7 +1946,7 @@ bool CBLIN::shouldUpdate() {
     for (int i = 0; i < original_labels->nSoft(); i++) {
       Lit l = original_labels->getSoftClause(i).clause[0];
       if(!literal_sat_in_cadical(l)) {
-        if (solverCad->flip(lit2Int(~l))) {
+        if (solverCad->flip(lit2Int(l))) {
           flips++;
         }
         else {
@@ -1779,6 +1965,7 @@ bool CBLIN::checkModel(bool from_local_search, bool improve_better) {
   auto lambda = [this](Lit l){ return literal_sat_in_cadical(l) ;};
 
   uint64_t modelCost = computeCostOfModel(&lambda);
+  logPrint("cost of new ", modelCost, " ub ", ubCost);
   
   bool isBetter = modelCost < ubCost;
   if (isBetter) {

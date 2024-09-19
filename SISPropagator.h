@@ -38,22 +38,41 @@
 namespace openwbo {
 
 class SISPropagator : public CaDiCaL::ExternalPropagator {
-
+//TODO the propagator should be allowed to compute costs of the actual old objective 
 public:
   // NOTE: currently the encoding is not set as an input parameter.
-  SISPropagator(uint64_t global_ub, uint64_t _precision_ub, vec<Lit> & objFunction, const vec<uint64_t> & coeffs, uint64_t _precision) {
-    clauses_to_add.clear();
+  SISPropagator(  uint64_t global_ub, uint64_t _precision_ub, int _num_vars, vec<Lit> & objFunction, const vec<uint64_t> & coeffs, 
+                  uint64_t _precision, vec<Lit> & orig_objFunction, const vec<uint64_t> & orig_coeffs, bool _verbosity) {
     precision = _precision;
+    verbose = _verbosity;
     ub = global_ub;
     precision_ub = _precision_ub;
-    build_objective_function(objFunction, coeffs);
-
+    build_objective_function(objFunction, coeffs, orig_objFunction, orig_coeffs);
+    clauses_to_add.clear();
+    num_vars = _num_vars;
+    has_encoded = false;
     dpw = RustSAT::dpw_new();
-    for (int i = 0; i < objFunction.size(); i++) {
-        if ((coeffs[i] / precision) > 0)
-          RustSAT::dpw_add(dpw, lit2Int(objFunction[i]), coeffs[i]);
+    sum_coeffs = 0;
+    for (int i = 0; i < objective_vars.size(); i++) {
+        int lit = objective_vars[i];
+        if ((objective_coefficients[abs(lit)] / precision) > 0) {
+          RustSAT::dpw_add(dpw, lit, objective_coefficients[abs(lit)] / precision);
+          if (verbose) {std::cout << "c adding to  RustSAT: " << lit << " weight " <<  objective_coefficients[abs(lit)] / precision << endl;}
+          sum_coeffs +=objective_coefficients[lit] / precision;
+        }
     }
-
+    if (verbose) {
+      std::cout << "c end of constructor objective_coefficients, size: " << objective_coefficients.size() << " elements:"; 
+      for (int i = 0; i < objective_coefficients.size(); i++) {
+        std::cout  << " " << i << "/" << objective_coefficients[i]; 
+      }
+      std::cout << endl;
+      std::cout << "c end of constructor orig_objective_coefficients, size: " << orig_objective_coefficients.size() << " elements:"; 
+      for (int i = 0; i < orig_objective_coefficients.size(); i++) {
+        std::cout  << " " << i << "/" << orig_objective_coefficients[i]; 
+      }
+      std::cout << endl;
+    }   
   }
 
   ~SISPropagator() {
@@ -67,7 +86,7 @@ public:
     }
   }
 
-  bool is_lazy = false; // lazy propagator only checks complete assignments
+  bool is_lazy = true; // lazy propagator only checks complete assignments
   bool are_reasons_forgettable = false; // Reason external clauses can be deleted
   bool is_tainting = true; 
 
@@ -100,17 +119,26 @@ public:
   //this will store the best assignment to the objective variables in terms of the full cost. 
   std::vector<int> best_model;
   uint64_t get_best_cost() {return ub;};
+  void resetPropagator(uint64_t _precision, uint64_t _precision_ub, int vars);
 
 
 protected:
   RustSAT::DynamicPolyWatchdog *dpw;
-
+  bool has_encoded; 
+  uint64_t sum_coeffs;
   
-  void build_objective_function(const vec<Lit> & objFunction, const vec<uint64_t> & coeffs);
+  void build_objective_function(const vec<Lit> & objFunction, const vec<uint64_t> & coeffs,
+                                const vec<Lit> & orig_objFunction, const vec<uint64_t> & orig_coeffs);
+  
+  std::vector<int> objective_vars;
   std::vector<uint64_t> objective_coefficients;
   // the entry in the in the i:th field here indicates the polarity that incurs cost 
   std::vector<bool> objective_lit_incurs_cost;
   bool literal_incurs_cost_in_objective(int lit);
+
+  std::vector<uint64_t> orig_objective_coefficients;
+  // the entry in the in the i:th field here indicates the polarity that incurs cost 
+  std::vector<bool> orig_objective_lit_incurs_cost;
 
   void check_sol_global_cost(const  std::vector<int> &model);
   uint64_t compute_cost_sol(uint64_t precision, const  std::vector<int> &model) ;
@@ -123,6 +151,9 @@ protected:
   uint64_t precision;
   uint64_t ub; 
   uint64_t precision_ub;
+
+  int num_vars; 
+  bool verbose;
 
   void store_best_model(); 
 

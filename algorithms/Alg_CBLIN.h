@@ -37,6 +37,7 @@
 
 #include "../Encoder.h"
 #include "../MaxSAT.h"
+#include "../SISPropagator.h"
 #include "../MaxTypes.h"
 #include "Alg_NUWLS.h"
 #include "../rustsat/capi/rustsat.h"
@@ -61,6 +62,7 @@ public:
         bool dpw_coarse_ = false, bool dpw_inc_ = false, bool extend_models_ = true, bool local_s = false, uint64_t _non_inc_precision = 10 , 
         bool _harden_in_SIS = false, bool opt_phase_save = false) {
     
+    use_propagator = true; 
     solverCad = NULL;
     timer = new Timer(gcLim);
     has_flipped = false;
@@ -165,13 +167,15 @@ protected:
 
   void checkGap();
   bool inLinSearch;
-
-  //Varying Resolutio
+  void update_current_soft(uint64_t precision);
+  //Varying Resolution
   bool weight_map_setup;
   bool incrementalVarres;
   uint64_t get_Maximum_Weight();
   void update_SIS_precision();
   int  moreThanWeight(uint64_t w);
+  uint64_t compute_first_precision();
+  uint64_t compute_next_SIS_precision(uint64_t current_precision);
   void init_SIS_precision();
   void harden_incremental();
   void initializePBConstraint(uint64_t rhs);
@@ -185,7 +189,12 @@ protected:
 
   template <typename LitVal>
   uint64_t computeCostReducedWeights(LitVal* lit_true) {
-      logPrint("Computing cost of reduced precision");
+      return computeCostReducedWeights_prec(lit_true, maxsat_formula->getMaximumWeight());
+  }
+
+  template <typename LitVal>
+  uint64_t computeCostReducedWeights_prec (LitVal* lit_true, uint64_t precision) {
+    logPrint("Computing cost of reduced precision");
   
       uint64_t tot_reducedCost = 0;
 
@@ -193,11 +202,11 @@ protected:
         assert(maxsat_formula->getSoftClause(i).clause.size() == 1);
         Lit l = maxsat_formula->getSoftClause(i).clause[0];
         if (!(*lit_true)(l)) {
-          tot_reducedCost += (maxsat_formula->getSoftClause(i).weight / maxsat_formula->getMaximumWeight());
+          tot_reducedCost += (maxsat_formula->getSoftClause(i).weight / precision);
         }
 
       }
-      logPrint("reduced cost " , tot_reducedCost, " gap ", known_gap / maxsat_formula->getMaximumWeight());
+      logPrint("reduced cost " , tot_reducedCost, " gap ", known_gap / precision);
       return tot_reducedCost;
   }
 
@@ -252,8 +261,16 @@ protected:
   void set_up_objective_counter(uint64_t init);
   //These are subroutines in other searches and should not be 
   StatusCode linearSearch();
+
+  bool use_propagator;
+  StatusCode linearSearch_propagator();
+  void set_observed_vars(vec<Lit> & orig_obj);
+  uint64_t compute_ub_red_cost(uint64_t precision);
+
+
   StatusCode weightDisjointCores(); // LB phase
   void build_objective_func_and_coeffs();
+  void build_objective_func_and_coeffs_prop();
   vec<Lit> objFunction; // Literals to be used in the constraint that excludes
                         // models.
   vec<uint64_t> coeffs; // Coefficients of the literals that are used in the

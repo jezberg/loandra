@@ -75,6 +75,7 @@ void ICadical::getModel(CaDiCaL::Solver * solver, vec<lbool> & model_out) {
     }
 }
 
+
 CaDiCaL::Solver* ICadical::newSATSolver() {
     return new CaDiCaL::Solver;
 }
