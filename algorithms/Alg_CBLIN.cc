@@ -1163,7 +1163,7 @@ StatusCode CBLIN::linearSearch() {
   }
 
   logPrint( "Starting lin search with: LB: ",lbCost, " UB: " ,ubCost,
-            " UB - LB: " ,ubCost-lbCost, " time " , timeSinceStart() );
+            " gap: " ,ubCost-lbCost, " time " , timeSinceStart() );
 
   inLinSearch = true;
   assumptions.clear();

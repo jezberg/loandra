@@ -163,7 +163,7 @@ int main(int argc, char **argv) {
    BoolOption extend("CBLIN", "extend-model", "Extend models to the variables in cardinality constraints.\n", true);
    BoolOption pmreslin_local_search("CBLIN", "cb-local-search", "Use NuWLS for solution minimization.\n", true);
   BoolOption pmreslin_opt_phase("CBLIN", "cb-opt-phase", "Optimistic Phase saving.\n", true);
-
+    BoolOption pmreslin_sis_propagate("CBLIN", "cb-sis-propagate", "DO solution improving search in a propagator.\n", false);
 
   BoolOption prepro_rec("PREPROCESS", "pr-rec", "Reconstruct solutions before computing their costs (only applicable when preprocessing).\n", false);
   BoolOption prepro_min("PREPROCESS", "pr-min", "Minimize solutions locally after preprocessing.\n", false);
@@ -187,7 +187,7 @@ int main(int argc, char **argv) {
       S = new CBLIN(verbosity, weight, pmreslin, pmreslin_delsol,  
                     pmreslin_cgLim, pmreslin_relax2strat, pmreslin_incvarres, prepro_rec, 
                     prepro_min,prepro_min_strat, pmreslin_dpw_coarse, pmreslin_dpw_inc, extend,  pmreslin_local_search, 
-                    pmreslin_prec, pmreslin_hardenSIS, pmreslin_opt_phase);
+                    pmreslin_prec, pmreslin_hardenSIS, pmreslin_opt_phase, pmreslin_sis_propagate);
       break;
     
     case _ALGORITHM_OLLITER_:

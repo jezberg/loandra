@@ -60,9 +60,9 @@ public:
         int gcLim = -1, bool r2strat = false, bool incrementalV = false, 
         bool reconstruct_sol_ = false, bool minimize_sol_ = true, int m_strat = 0,
         bool dpw_coarse_ = false, bool dpw_inc_ = false, bool extend_models_ = true, bool local_s = false, uint64_t _non_inc_precision = 10 , 
-        bool _harden_in_SIS = false, bool opt_phase_save = false) {
+        bool _harden_in_SIS = false, bool opt_phase_save = false, bool _sis_in_propagator = false) {
     
-    use_propagator = true; 
+    use_propagator = _sis_in_propagator; 
     solverCad = NULL;
     timer = new Timer(gcLim);
     has_flipped = false;
