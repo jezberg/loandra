@@ -95,8 +95,7 @@ int main(int argc, char **argv) {
   printf("c Contributors:\t Emir Demirovic, Peter Stuckey, Christoph Jabs, Hannes Ihalainen, Marcus Leivo, Matti Järvisalo\n");
   printf("c We thank the developers of Open-WBO and NuWLS for their work\n");
   printf(
-      "c\nc Open-WBO:\t a Modular MaxSAT Solver -- based on %s (%s version)\n",
-      SATVER, VER);
+      "c\nc Open-WBO:\t a Modular MaxSAT Solver -- based on CaDiCaL (2.0.0 version)\n");
   printf("c Version:\t September 2018 -- Release: 2.1\n");
   printf("c Authors:\t Ruben Martins, Vasco Manquinho, Ines Lynce\n");
   printf("c Contributors:\t Miguel Neves, Saurabh Joshi, Norbert Manthey, Mikolas Janota\n");
@@ -163,7 +162,7 @@ int main(int argc, char **argv) {
    BoolOption extend("CBLIN", "extend-model", "Extend models to the variables in cardinality constraints.\n", true);
    BoolOption pmreslin_local_search("CBLIN", "cb-local-search", "Use NuWLS for solution minimization.\n", true);
   BoolOption pmreslin_opt_phase("CBLIN", "cb-opt-phase", "Optimistic Phase saving.\n", true);
-    BoolOption pmreslin_sis_propagate("CBLIN", "cb-sis-propagate", "DO solution improving search in a propagator.\n", false);
+    BoolOption pmreslin_sis_propagate("CBLIN", "cb-sis-propagate", "Do solution improving search in a propagator.\n", false);
 
   BoolOption prepro_rec("PREPROCESS", "pr-rec", "Reconstruct solutions before computing their costs (only applicable when preprocessing).\n", false);
   BoolOption prepro_min("PREPROCESS", "pr-min", "Minimize solutions locally after preprocessing.\n", false);
