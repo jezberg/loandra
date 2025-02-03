@@ -1288,6 +1288,7 @@ void CBLIN::setPBencodings() {
           }
       }
     }
+  // nRealSoft() = maxsat_formula->nSoft() - num_hardened
   logPrint("there are " , nbCurrentSoft, " of ", nRealSoft(),  " objective lits on this precision with maxcoeff " , max_coeff_nothardened_sis);
 
   uint64_t reduced_cost = computeCostReducedWeights(bestModel); 
@@ -1616,15 +1617,10 @@ uint64_t CBLIN::computeCostReducedWeights(vec<lbool> &fullModel) {
   uint64_t tot_reducedCost = 0;
 
   for (int i = 0; i < maxsat_formula->nSoft(); i++) {
-    bool unsatisfied = true;
     assert(maxsat_formula->getSoftClause(i).clause.size() == 1);
     assert(var(maxsat_formula->getSoftClause(i).clause[0]) < fullModel.size());
     Lit l = maxsat_formula->getSoftClause(i).clause[0];
-    if (literalTrueInModel(l, fullModel)) {
-      unsatisfied = false;
-    }
-
-    if (unsatisfied) {
+    if (!literalTrueInModel(l, fullModel)) {
       tot_reducedCost += (maxsat_formula->getSoftClause(i).weight / maxsat_formula->getMaximumWeight());
     }
   }
