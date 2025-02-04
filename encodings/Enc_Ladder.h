@@ -37,6 +37,9 @@
 #include "Encodings.h"
 #include "core/SolverTypes.h"
 
+#include <string>
+#include <ctime>
+
 namespace openwbo {
 
 class Ladder : public Encodings {
