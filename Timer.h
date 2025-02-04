@@ -32,6 +32,9 @@
 #include "utils/System.h"
 #include "cadical/src/cadical.hpp"
 
+#include <string>
+#include <ctime>
+
 namespace openwbo {
 
 class Timer : public CaDiCaL::Terminator {
