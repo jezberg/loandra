@@ -107,13 +107,11 @@ allclean: clean
 	$(MAKE) -C $(PREPRO_DIR) clean
 	$(MAKE) -C $(CADICAL_DIR) clean
 	cd $(DPW_DIR)/capi && cargo clean
+	$(MAKE) -C $(BOUMS_DIR) clean
 
 clean:
 	rm -f $(EXEC) $(EXEC)_profile $(EXEC)_debug $(EXEC)_release $(EXEC)_static \
 	  $(COBJS) $(PCOBJS) $(DCOBJS) $(RCOBJS) *.core depend.mk
-	$(MAKE) -C $(PREPRO_DIR) clean
-	cd $(DPW_DIR)/capi && cargo clean
-	$(MAKE) -C $(BOUMS_DIR) clean
 
 builddeps:
 	@echo Making MaxPre
