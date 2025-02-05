@@ -102,12 +102,13 @@ libs libp libd libr:
 allclean: clean
 	
 	@rm -f ../simp/*.o ../simp/*.or ../simp/*.od  ../core/*.o ../core/*.or ../core/*.od
-clean:
-	rm -f $(EXEC) $(EXEC)_profile $(EXEC)_debug $(EXEC)_release $(EXEC)_static \
-	  $(COBJS) $(PCOBJS) $(DCOBJS) $(RCOBJS) *.core depend.mk
 	$(MAKE) -C $(PREPRO_DIR) clean
 	cd $(DPW_DIR)/capi && cargo clean
 	$(MAKE) -C $(BOUMS_DIR) clean
+
+clean:
+	rm -f $(EXEC) $(EXEC)_profile $(EXEC)_debug $(EXEC)_release $(EXEC)_static \
+	  $(COBJS) $(PCOBJS) $(DCOBJS) $(RCOBJS) *.core depend.mk
 
 builddeps:
 	@echo Making MaxPre
