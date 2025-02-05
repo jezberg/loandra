@@ -34,10 +34,6 @@
 #include <string> 
 #include <ctime>
 
-
-#include <string>
-#include <ctime>
-
 namespace openwbo {
 
 class Timer : public CaDiCaL::Terminator {
