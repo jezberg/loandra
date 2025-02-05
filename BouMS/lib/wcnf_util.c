@@ -212,6 +212,13 @@ bool BouMS_wcnf_util_finishBatchClauseAdding(BouMS_wcnf_util_batchClauseAddingSt
     stop = &STOP_DUMMY;
   }
 
+  if (state->size == 0) {
+    state->free(state->clauses);
+    state->clauses = NULL;
+    state->capacity = 0;
+    return false;
+  }
+
   const BouMS_uint_t oldNumClauses = formula->numClauses;
   const BouMS_uint_t oldNumHardClauses = formula->numHardClauses;
   const BouMS_uint_t oldNumVars = formula->numVariables;

@@ -169,7 +169,7 @@ public:
   // Tests if a MaxSAT formula has a lexicographical optimization criterion.
   bool isBMO(bool cache = true);
 
-  void loadFormula(MaxSATFormula *maxsat) {
+  virtual void loadFormula(MaxSATFormula *maxsat) {
     maxsat_formula = maxsat;
     maxsat_formula->setInitialVars(maxsat_formula->nVars());
 
@@ -241,7 +241,7 @@ public:
   void set_preprocessing_parameters
         (double preprocess_time_limit = 30, std::string pre_techs = "[u]#[uvsrgVGc]",
         bool gate_extraction = false, bool label_matching = true, int skip_technique = 20); 
-  void setup_formula();
+  virtual void setup_formula();
     //replaces the internal maxsat_formula with the preprocessed one 
  void print_statistics();
 

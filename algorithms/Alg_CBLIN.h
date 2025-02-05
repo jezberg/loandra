@@ -41,6 +41,9 @@
 #include "../MaxTypes.h"
 #include "../rustsat/capi/rustsat.h"
 #include "utils/System.h"
+#include "BouMS/BouMS.h"
+#include "BouMS/wcnf.h"
+#include "BouMS/wcnf_util.h"
 #include <map>
 #include <set>
 #include <utility>
@@ -118,6 +121,17 @@ public:
     //Formula is deleted in MaxSAT.cc
     if (solverCad != NULL)
       delete solverCad;
+
+    BouMS_wcnf_util_deleteFormula(&boums_orig_inst, free, NULL);
+    BouMS_wcnf_util_deleteFormula(&boums_inst, free, NULL);
+    if (boums_mem) {
+      free(boums_mem);
+      boums_mem = NULL;
+    }
+    if (boums_assignment) {
+      free(boums_assignment);
+      boums_assignment = NULL;
+    }
   }
 
   StatusCode search(); // WBO search.
@@ -369,6 +383,18 @@ protected:
 
   bool extend_models;
 
+  // Local Search w/ BouMS
+  BouMS_wcnf_t boums_orig_inst = BouMS_wcnf_util_newFormula();
+  BouMS_wcnf_t boums_inst = BouMS_wcnf_util_newFormula();
+  BouMS_memoryReq_t boums_mem_req;
+  BouMS_uint_t boums_bytes = 0;
+  void* boums_mem = NULL;
+  BouMS_params_t boums_params;
+  bool* boums_assignment = NULL;
+  bool boums_broken = false;
+  void updateBouMSInstance(); // return true in case of error
+  virtual void loadFormula(MaxSATFormula *maxsat) override;
+  virtual void setup_formula() override;
 
 };
 } // namespace openwbo

@@ -23,6 +23,7 @@ Released versions can be found on [zenodo](https://zenodo.org/records/14191233).
 
 - Division-by-0 when there are zero-weight soft clauses so that the average soft clause weight is less than 1.
   The solution is to ignore those clauses.
+- Potential double free when adding 0 clauses with batch clause adding.
 
 ## [2.0.0](https://doi.org/10.5281/zenodo.14744890) - 2025-01-27
 
