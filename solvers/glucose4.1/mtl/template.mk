@@ -16,6 +16,8 @@ PREOBJ	   = $(wildcard $(PREPRO_DIR)/src/lib/*.a)
 CADOBJ	   = $(wildcard $(CADICAL_DIR)/build/*.a) 
 
 DPWOBJ	   = $(wildcard $(DPW_DIR)/target/release/*.a) 
+BOUMSRELOBJ = $(BOUMS_DIR)/build/release-nologging/libBouMS.a
+BOUMSDBGOBJ = $(BOUMS_DIR)/build/debug-logverbose/libBouMS.a
 
 PCOBJS     = $(addsuffix p,  $(COBJS))
 DCOBJS     = $(addsuffix d,  $(COBJS))
@@ -32,11 +34,17 @@ LFLAGS    += -lz
 
 .PHONY : s p d r rs clean 
 
-s:	builddeps $(EXEC) 
-p:	builddeps $(EXEC)_profile
-d:	builddeps $(EXEC)_debug
-r:	builddeps $(EXEC)_release
-rs:	builddeps $(EXEC)_static
+s:  BOUMSOBJ=$(BOUMSRELOBJ) 
+p:  BOUMSOBJ=$(BOUMSRELOBJ) 
+d:  BOUMSOBJ=$(BOUMSDBGOBJ) 
+r:  BOUMSOBJ=$(BOUMSRELOBJ) 
+rs:	BOUMSOBJ=$(BOUMSRELOBJ) 
+
+s:  builddeps $(EXEC) 
+p:  builddeps $(EXEC)_profile
+d:  builddeps $(EXEC)_debug 
+r:  builddeps $(EXEC)_release 
+rs: builddeps $(EXEC)_static
 
 libs:	lib$(LIB)_standard.a
 libp:	lib$(LIB)_profile.a
@@ -77,9 +85,11 @@ lib$(LIB)_release.a:	$(filter-out */Main.or, $(RCOBJS))
 ## Linking rules (standard/profile/debug/release)
 $(EXEC) $(EXEC)_profile $(EXEC)_debug $(EXEC)_release $(EXEC)_static: 
 	@echo Linking: "$@ ( $(foreach f,$^,$(subst $(MROOT)/,,$f)) )"
-	@echo preprocessor $(PREOBJ) and DPW $(DPWOBJ) library.
-	@echo @$(CXX) $^ $(DPWOBJ) $(PREOBJ) $(LFLAGS) -o $@  
-	@$(CXX) $^ $(DPWOBJ) $(PREOBJ) $(CADOBJ) $(LFLAGS) -o $@  
+	@echo preprocessor and DPW library: $(DPWOBJ)  $(PREOBJ)
+	@echo CaDiCaL: $(CADOBJ)
+	@echo BouMS library: $(BOUMSOBJ)
+	@echo @$(CXX) $^ $(DPWOBJ) $(PREOBJ) $(BOUMSOBJ) $(LFLAGS) -o $@  
+	@$(CXX) $^ $(DPWOBJ) $(PREOBJ) $(CADOBJ) $(BOUMSOBJ) $(LFLAGS) -o $@  
 
 ## Library rules (standard/profile/debug/release)
 lib$(LIB)_standard.a lib$(LIB)_profile.a lib$(LIB)_release.a lib$(LIB)_debug.a:
@@ -101,7 +111,9 @@ allclean: clean
 clean:
 	rm -f $(EXEC) $(EXEC)_profile $(EXEC)_debug $(EXEC)_release $(EXEC)_static \
 	  $(COBJS) $(PCOBJS) $(DCOBJS) $(RCOBJS) *.core depend.mk
-	
+	$(MAKE) -C $(PREPRO_DIR) clean
+	cd $(DPW_DIR)/capi && cargo clean
+	$(MAKE) -C $(BOUMS_DIR) clean
 
 builddeps:
 	@echo Making MaxPre
@@ -110,6 +122,13 @@ builddeps:
 	cd $(DPW_DIR)/capi && cargo build --release
 	@echo Making cadical
 	$(MAKE) -C $(CADICAL_DIR)
+	if [ $(BOUMSOBJ) = $(BOUMSRELOBJ) ]; then \
+		@echo "Making BouMS (release-nologging)"; \
+		$(MAKE) -C $(BOUMS_DIR) libonly-release-nologging; \
+	else \
+		@echo "Making BouMS (debug-logverbose)"; \
+		$(MAKE) -C $(BOUMS_DIR) libonly-debug-logverbose; \
+	fi
 
 ## Make dependencies
 depend.mk: $(CSRCS) $(CHDRS)

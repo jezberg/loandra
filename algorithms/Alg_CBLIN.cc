@@ -26,6 +26,9 @@
  */
 
 #include "Alg_CBLIN.h"
+#include "BouMS/BouMS.h"
+#include "BouMS/wcnf.h"
+#include "BouMS/wcnf_util.h"
 
 using namespace openwbo;
 
@@ -1409,6 +1412,7 @@ void CBLIN::setPBencodings() {
           }
       }
     }
+  // nRealSoft() = maxsat_formula->nSoft() - num_hardened
   logPrint("there are " , nbCurrentSoft, " of ", nRealSoft(),  " objective lits on this precision with maxcoeff " , max_coeff_nothardened_sis);
   
   auto lambda = [this](Lit l){return literalTrueInModel(l, bestModel);};
@@ -1590,6 +1594,108 @@ void CBLIN::extendBestModel() {
 }
 
 void CBLIN::localsearch(vec<lbool> & sol) {
+    // BouMS: create instance
+    auto boums_inst = BouMS_wcnf_util_newFormula();
+    {
+      BouMS_wcnf_util_batchClauseAddingState_t boums_clause_adder;
+      if (BouMS_wcnf_util_startBatchClauseAdding(maxsat_formula->nHard() + maxsat_formula->nSoft(), realloc, free,
+                                               &boums_clause_adder)) {
+        logPrint("Error initializing BouMS clause adding");
+        return;
+      }
+
+      const auto convert_clause = [](const vec<Lit>& clause, vec<int>& converted) {
+        converted.growTo(clause.size());
+        for (int litIdx = 0; litIdx < clause.size(); ++litIdx) {
+          const auto& lit = clause[litIdx];
+          converted[litIdx] = (sign(lit) ? -1 : 1) * (var(lit) + 1);
+        }
+      };
+      vec<int> converted_clause;
+
+      bool oom = false;
+      for (int clauseIdx = 0; clauseIdx < maxsat_formula->nHard() && !oom; ++clauseIdx) {
+        const auto& clause = maxsat_formula->getHardClause(clauseIdx).clause;
+        convert_clause(clause, converted_clause);
+        if (BouMS_wcnf_util_batchAddClause(&boums_clause_adder, BOUMS_HARD_CLAUSE_WEIGHT, &converted_clause[0],
+                                           clause.size())) {
+          oom = true;
+        }
+      }
+
+      for (int clauseIdx = 0; clauseIdx < maxsat_formula->nSoft() && !oom; ++clauseIdx) {
+        const auto& clause = maxsat_formula->getSoftClause(clauseIdx);
+        convert_clause(clause.clause, converted_clause);
+        if (BouMS_wcnf_util_batchAddClause(&boums_clause_adder, clause.weight, &converted_clause[0],
+                                           clause.clause.size())) {
+          oom = true;
+        }
+      }
+
+      if (oom) {
+        BouMS_wcnf_util_cleanUpBatchClauseAddingAfterError(&boums_clause_adder);
+        logPrint("Error adding clauses to BouMS");
+        return;
+      } else if (BouMS_wcnf_util_finishBatchClauseAdding(&boums_clause_adder, &boums_inst, NULL)) {
+        BouMS_wcnf_util_cleanUpBatchClauseAddingAfterError(&boums_clause_adder);
+        BouMS_wcnf_util_deleteFormula(&boums_inst, free, NULL);
+        logPrint("Error adding clauses to BouMS");
+        return;
+      }
+    }
+  
+    // BouMS: allocate memory for result
+    BouMS_result_t boums_result;
+    boums_result.assignment = new bool[maxsat_formula->nVars()];
+    if (!boums_result.assignment) {
+      BouMS_wcnf_util_deleteFormula(&boums_inst, free, NULL);
+      logPrint("Error allocating memory for BouMS's result assignment");
+      return;
+    }
+  
+    {
+      // BouMS: allocate memory
+      BouMS_memoryReq_t boums_mem_req;
+      const auto boums_req_bytes = BouMS_calcMemoryRequirements(&boums_inst, &boums_mem_req);
+      void* boums_mem = malloc(boums_req_bytes);
+      if (!boums_mem) {
+        delete[] boums_result.assignment;
+        BouMS_wcnf_util_deleteFormula(&boums_inst, free, NULL);
+        logPrint("Error allocating memory for BouMS");
+        return;
+      }
+    
+      // BouMS: set initial assignment
+      bool* boums_init_assign = new bool[maxsat_formula->nVars()];
+      if (!boums_init_assign) {
+        free(boums_mem);
+        delete[] boums_result.assignment;
+        BouMS_wcnf_util_deleteFormula(&boums_inst, free, NULL);
+        logPrint("Error allocating memory for BouMS's initial assignment");
+        return;
+      }
+      for (int i = 0; i < maxsat_formula->nVars(); ++i) {
+        boums_init_assign[i] = sol[i] == l_True ? true : false;
+      }
+
+      // BouMS: determine params
+      BouMS_params_t boums_params;
+      BouMS_params(&boums_inst, &boums_params);
+
+
+      // BouMS: solve
+      const bool boums_stop_dummy = false;
+      BouMS_solve(&boums_inst, &boums_params, boums_mem, &boums_mem_req, &boums_result, boums_init_assign,
+                  boums_params.maxFlips, &boums_stop_dummy);
+
+      // BouMS: free obsolete memory
+      delete[] boums_init_assign;
+      free(boums_mem);
+      BouMS_wcnf_util_deleteFormula(&boums_inst, free, NULL);
+    }
+    
+
+    /*
     NUWLS nuwls_solver;
     nuwls_solver.build_nuwls_clause_structure(maxsat_formula);
     nuwls_solver.build_instance();
@@ -1605,8 +1711,15 @@ void CBLIN::localsearch(vec<lbool> & sol) {
     }
 
     nuwls_solver.init(init_solu);
-    nuwls_solver.local_search(); 
-    vector<int> local_search_best;
+    nuwls_solver.local_search();
+    */
+
+    if (boums_result.status == BOUMS_UNKNOWN || boums_result.status == BOUMS_OPTIMUM_FOUND) {
+      vec<lbool> local_search_best(maxsat_formula->nVars());
+      for (int i = 0; i < maxsat_formula->nVars(); ++i) {
+        local_search_best[i] = boums_result.assignment[i] ? l_True : l_False;
+      }
+    /*
     if (nuwls_solver.best_soln_feasible) {
       vec<lbool> local_search_best;
       for (int i = 0; i < maxsat_formula->nVars(); i++) {
@@ -1617,6 +1730,7 @@ void CBLIN::localsearch(vec<lbool> & sol) {
           local_search_best.push(l_False);
         }
       }
+    */
       auto lambda = [&local_search_best, this](Lit l){return literalTrueInModel(l, local_search_best);};
       uint64_t local_search_cost =  computeCostOfModel(&lambda);
       if (local_search_cost < ubCost) {
@@ -1638,7 +1752,8 @@ void CBLIN::localsearch(vec<lbool> & sol) {
     else {
       logPrint("Local search found no solution");
     }
-    nuwls_solver.free_memory();
+    //nuwls_solver.free_memory();
+    delete[] boums_result.assignment;
 }
 
 void CBLIN::flipValueinBestModel(Lit l) {

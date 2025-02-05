@@ -15,7 +15,9 @@ EXEC       = loandra
 PREPRO_DIR = maxpre2
 CADICAL_DIR = cadical
 DPW_DIR 	= rustsat
-DEPDIR     += mtl utils core
+BOUMS_DIR   = BouMS
+CFLAGS     += -I$(BOUMS_DIR)/inc
+DEPDIR     	+= mtl utils core
 DEPDIR     +=  ../../encodings ../../algorithms ../../graph ../../classifier
 ## potential bug, depdir has  ../../maxpre2
 MROOT      ?= $(PWD)/solvers/$(SOLVERDIR)

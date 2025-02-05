@@ -8,6 +8,8 @@ depend.mk
 *.lo
 *.o
 *.obj
+*.or
+*.od
 
 # Precompiled Headers
 *.gch
@@ -32,3 +34,12 @@ depend.mk
 *.exe
 *.out
 *.app
+loandra
+loandra_static
+loandra_debug
+
+# other
+.cache/
+compile_commands.json
+.vscode/
+BouMS/build/

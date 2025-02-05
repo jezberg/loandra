@@ -1,0 +1,206 @@
+{
+  "version": 3,
+  "cmakeMinimumRequired": {
+    "major": 3,
+    "minor": 21,
+    "patch": 0
+  },
+  "configurePresets": [
+    {
+      "name": "bindir",
+      "hidden": true,
+      "binaryDir": "build/${presetName}"
+    },
+    {
+      "name": "release",
+      "displayName": "Release",
+      "inherits": "bindir",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release"
+      }
+    },
+    {
+      "name": "debug",
+      "displayName": "Debug",
+      "inherits": "bindir",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug"
+      }
+    },
+    {
+      "name": "nologging",
+      "hidden": true,
+      "cacheVariables": {
+        "BOUMS_LOG_LEVEL": "0"
+      }
+    },
+    {
+      "name": "loginfo",
+      "hidden": true,
+      "cacheVariables": {
+        "BOUMS_LOG_LEVEL": "2"
+      }
+    },
+    {
+      "name": "logverbose",
+      "hidden": true,
+      "cacheVariables": {
+        "BOUMS_LOG_LEVEL": "3"
+      }
+    },
+    {
+      "name": "logtrace",
+      "hidden": true,
+      "cacheVariables": {
+        "BOUMS_LOG_LEVEL": "4"
+      }
+    },
+    {
+      "name": "profiling",
+      "hidden": true,
+      "cacheVariables": {
+        "BOUMS_PROFILING": true
+      }
+    },
+    {
+      "name": "noffa",
+      "hidden": true,
+      "cacheVariables": {
+        "BOUMS_NOFFA": true
+      }
+    },
+    {
+      "name": "cadical",
+      "hidden": true,
+      "cacheVariables": {
+        "BOUMS_SATSOLVER_CADICAL": true
+      }
+    },
+    {
+      "name": "release-loginfo",
+      "displayName": "Release w/ info logging",
+      "inherits": [
+        "loginfo",
+        "release"
+      ]
+    },
+    {
+      "name": "release-nologging",
+      "displayName": "Release w/o logging",
+      "inherits": [
+        "release",
+        "nologging"
+      ]
+    },
+    {
+      "name": "release-loginfo-noffa",
+      "displayName": "Release w/ info logging & w/o FFA",
+      "inherits": [
+        "release-loginfo",
+        "noffa"
+      ]
+    },
+    {
+      "name": "release-loginfo-cadical",
+      "displayName": "Release w/ info logging & CaDiCaL",
+      "inherits": [
+        "release-loginfo",
+        "cadical"
+      ]
+    },
+    {
+      "name": "release-logverbose",
+      "displayName": "Release w/ verbose logging",
+      "inherits": [
+        "logverbose",
+        "release"
+      ]
+    },
+    {
+      "name": "release-logtrace",
+      "displayName": "Release w/ trace logging",
+      "inherits": [
+        "logtrace",
+        "release"
+      ]
+    },
+    {
+      "name": "debug-loginfo",
+      "displayName": "Debug w/ info logging",
+      "inherits": [
+        "loginfo",
+        "debug"
+      ]
+    },
+    {
+      "name": "debug-logverbose",
+      "displayName": "Debug w/ verbose logging",
+      "inherits": [
+        "logverbose",
+        "debug"
+      ]
+    },
+    {
+      "name": "debug-logtrace",
+      "displayName": "Debug w/ trace logging",
+      "inherits": [
+        "logtrace",
+        "debug"
+      ]
+    },
+    {
+      "name": "release-profiling",
+      "displayName": "Release w/ profiling",
+      "inherits": [
+        "profiling",
+        "release"
+      ]
+    },
+    {
+      "name": "static",
+      "hidden": true,
+      "environment": {
+        "CFLAGS": "-static"
+      }
+    },
+    {
+      "name": "static-release-nologging",
+      "displayName": "Static release build w/o logging",
+      "inherits": [
+        "release-nologging",
+        "static"
+      ]
+    },
+    {
+      "name": "static-release-logverbose",
+      "displayName": "Build for MSE/StarExec",
+      "inherits": [
+        "release-logverbose",
+        "static"
+      ]
+    }
+  ],
+  "buildPresets": [
+    {
+      "name": "libonly",
+      "hidden": true,
+      "targets": "BouMS"
+    },
+    {
+      "name": "libonly-debug-logverbose",
+      "displayName": "Library only (debug) w/ verbose logging",
+      "configurePreset": "debug-logverbose",
+      "inherits": [
+        "libonly"
+      ]
+    },
+    {
+      "name": "libonly-release-nologging",
+      "displayName": "Library only (release) w/o logging",
+      "configurePreset": "release-nologging",
+      "inherits": [
+        "libonly"
+      ]
+    }
+  ]
+}

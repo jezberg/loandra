@@ -39,7 +39,6 @@
 #include "../MaxSAT.h"
 #include "../SISPropagator.h"
 #include "../MaxTypes.h"
-#include "Alg_NUWLS.h"
 #include "../rustsat/capi/rustsat.h"
 #include "utils/System.h"
 #include <map>
