@@ -38,7 +38,6 @@
 #include "../Encoder.h"
 #include "../MaxSAT.h"
 #include "../MaxTypes.h"
-#include "Alg_NUWLS.h"
 #include "../rustsat/capi/rustsat.h"
 #include "utils/System.h"
 #include <map>
@@ -269,7 +268,30 @@ protected:
 
   
   void addSoftClauseAndAssumptionVar(uint64_t weight, vec<Lit> &clause);
-  uint64_t computeCostOfModel(vec<lbool> &currentModel);
+  template <typename LitVal>
+  uint64_t computeCostOfModel(LitVal* lit_true) { 
+    logPrint("Compute cost ");
+    if (!do_preprocess) {
+        return computeCostOriginalClauses(lit_true);
+    }
+    if (reconstruct_sol && reconstruct_iter) {
+      vec<lbool> model;
+      assert(bestModel.size() > 0);
+      for (int i = 1; i <= bestModel.size(); i++) {
+        Lit l = mkLit(i, true);
+        if ((*lit_true)(l)) model.push(l_True);
+        else if (!(*lit_true)(l)) model.push(l_False);
+        else model.push(l_Undef);
+      }
+      vec<lbool> reconstructed;
+      reconstruct_model_prepro(model, reconstructed); 
+      auto lambda = [this, &reconstructed](Lit l){return literalTrueInModel(l, reconstructed);};
+      return computeCostOriginalClauses(&lambda);
+    }
+    else {
+      return computeCostObjective(lit_true);
+    }
+  }
 
   int nRealSoft();
   bool shouldUpdate();

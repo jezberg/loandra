@@ -159,7 +159,7 @@ void MaxSAT::saveModel(vec<lbool> &currentModel) {
   |    * Assumes that 'currentModel' is not empty.
   |
   |________________________________________________________________________________________________@*/
-uint64_t MaxSAT::computeCostOriginalClauses(vec<lbool> &reconstructed_model) {
+/* uint64_t MaxSAT::computeCostOriginalClauses(vec<lbool> &reconstructed_model) {
   assert(reconstructed_model.size() != 0 || full_original_scla->nSoft() == 0);
   uint64_t currentCost = 0;
 
@@ -200,7 +200,7 @@ uint64_t MaxSAT::computeCostObjective(vec<lbool> &model) {
     currentCost += cost_removed_preprocessing;
   }
   return currentCost;
-}
+} */
 
 
 /*_________________________________________________________________________________________________
@@ -483,7 +483,8 @@ void MaxSAT::printAnswer(int type) {
     model_of_original.clear(); 
 
     reconstruct_model_prepro(model, model_of_original);
-    uint64_t newCost = computeCostOriginalClauses(model_of_original);
+    auto lambda = [this](Lit l){return literalTrueInModel(l,model_of_original);};
+    uint64_t newCost = computeCostOriginalClauses(&lambda);
 
     if (newCost < ubCost) {
       logPrint("cost improved after reconstruction");

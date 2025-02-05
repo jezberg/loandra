@@ -812,14 +812,16 @@ bool OLL_ITER::checkModel() {
    uint64_t labelCost;
   
    
-   labelCost = computeCostObjective(solver->model);
+   auto lambda = [this](Lit l){ return literalTrueInModel(l, solver->model); };
+   labelCost = computeCostObjective(&lambda);
    if (do_preprocess && use_reconstruct) {
       vec<lbool> reconstruct; 
       reconstruct_model_prepro(solver->model, reconstruct);
-      clausecost = computeCostOriginalClauses(reconstruct);
+      auto lambda_orig = [this, &reconstruct](Lit l){ return literalTrueInModel(l, reconstruct); };
+      clausecost = computeCostOriginalClauses(&lambda_orig);
    } 
    else {
-      if (!do_preprocess) clausecost = computeCostOriginalClauses(solver->model);
+      if (!do_preprocess) clausecost = computeCostOriginalClauses(&lambda);
       else clausecost = labelCost;
    }
 

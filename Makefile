@@ -14,6 +14,8 @@ include $(PWD)/solvers/$(SOLVER).mk
 EXEC       	= loandra
 PREPRO_DIR 	= maxpre2
 DPW_DIR 	= rustsat
+BOUMS_DIR   = BouMS
+CFLAGS     += -I$(BOUMS_DIR)/inc
 DEPDIR     	+= mtl utils core
 DEPDIR     +=  ../../encodings ../../algorithms ../../graph ../../classifier
 MROOT      ?= $(PWD)/solvers/$(SOLVERDIR)

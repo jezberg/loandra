@@ -326,8 +326,43 @@ public:
   bool literalTrueInModel(Lit l, vec<lbool> &model);
   void saveModel(vec<lbool> &currentModel); // Saves a Model.
   // Compute the cost of a model.
-  uint64_t computeCostOriginalClauses(vec<lbool> &reconstructed_model); // checks the soft clauses of the input formula reconstructing solutions if needed
-  uint64_t computeCostObjective(vec<lbool> &premodel); // computes cost from the standardized formula or preprocessed formuals objective funciton.
+  template <typename LitVal>
+  uint64_t computeCostObjective(LitVal* lit_true) {
+    uint64_t currentCost = standardization_removed; //this is 0 if preprocessing
+    if (do_preprocess) {
+      currentCost += cost_removed_preprocessing;
+    }
+    for (int i = 0; i < original_labels->nSoft(); i++) {
+      assert(original_labels->getSoftClause(i).clause.size() == 1); 
+      Lit l = original_labels->getSoftClause(i).clause[0];
+      if ((*lit_true)(l)) {
+        continue;
+      }
+      currentCost += original_labels->getSoftClause(i).weight;  
+    } 
+    return currentCost;
+  }
+
+  template <typename LitVal>
+  uint64_t computeCostOriginalClauses(LitVal* lit_true) {
+    uint64_t currentCost = 0;
+    for (int i = 0; i < full_original_scla->nSoft(); i++) {
+      bool unsatisfied = true;
+      for (int j = 0; j < full_original_scla->getSoftClause(i).clause.size(); j++) {
+        Lit l = full_original_scla->getSoftClause(i).clause[j]; 
+        if ((*lit_true)(l)) {
+          unsatisfied = false;
+          break;
+        }
+      }
+      if (unsatisfied) {
+        currentCost += full_original_scla->getSoftClause(i).weight;
+      }
+    }
+    return currentCost;
+  }
+  // checks the soft clauses of the input formula reconstructing solutions if needed
+  //uint64_t computeCostObjective(vec<lbool> &model);
 
   // Utils for printing
   //
