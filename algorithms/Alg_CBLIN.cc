@@ -1047,6 +1047,20 @@ StatusCode CBLIN::linearSearch() {
   }
 
   init_SIS_precision();
+  if (use_local_search && !boums_broken) {
+    // init initial assignment for LS in initializePBConstraints, called by setPBencodings
+    bestModel.copyTo(init_pb_constraint_ls_init_assign);
+    // apply precision to BouMS instance
+    old_sis_precision = maxsat_formula->getMaximumWeight();
+    for (unsigned int cIdx = 0; cIdx < boums_inst.numClauses; ++cIdx) {
+      auto* const clause = boums_inst.clauses + cIdx;
+      if (!BouMS_wcnf_isClauseHard(clause)) {
+        clause->weight /= old_sis_precision;
+      }
+    }
+    // run once so we can later assume the clauses are sorted
+    localsearch(init_pb_constraint_ls_init_assign);
+  }
   setPBencodings();
   
   lbool res = l_True;
@@ -1318,22 +1332,57 @@ void CBLIN::initializePBConstraint(uint64_t rhs) {
 
   uint64_t red_gap = known_gap / maxsat_formula->getMaximumWeight();
 
-  if (minimize_sol) {
-      if (rhs <= red_gap) {
-        logPrint("minimizing in PB initialisation");
-        minimizelinearsolution(bestModel);
-        auto lambda = [this](Lit l){ return literalTrueInModel(l, bestModel); };
-        uint64_t minCost = computeCostReducedWeights(&lambda);
-        if (rhs != minCost) {
-          logPrint("cost miinimized: before " ,rhs, " after " , minCost);
-        }
-        rhs = minCost;
+  if (use_local_search) {
+    /* run local search on reduced objective
+     * check if it found a globally better model, or at least a better one under the reduced objective
+     * merge improving models to get improving, diverse initial assignments
+     */
+
+    const auto cur_prec = maxsat_formula->getMaximumWeight();
+    const auto prec_coeff = old_sis_precision / cur_prec;
+    logPrint("LS prec coeff: ", prec_coeff);
+    if (prec_coeff > 1) { // if precision changed
+      // apply the current precision
+      for (unsigned int cIdx = boums_inst.numHardClauses; cIdx < boums_inst.numClauses; ++cIdx) {
+        auto* const clause = boums_inst.clauses + cIdx;
+        assert(!BouMS_wcnf_isClauseHard(clause));
+        // + 1 b/c most weights are reduced to 0 initially
+        clause->weight = (clause->weight + 1) * prec_coeff;
       }
-      else {
-          logPrint("setting rhs to reduced gap ", red_gap);
-          rhs = red_gap;
-      }
+      old_sis_precision = cur_prec;
+
+      localsearch(init_pb_constraint_ls_init_assign);
+    }
   }
+  const auto lambda = [this](Lit l){return literalTrueInModel(l, bestModel);};
+  uint64_t min_cost = computeCostReducedWeights(&lambda);
+  if (min_cost < rhs) {
+    if (use_local_search && skip_local_search) {
+      /*
+      static const std::function<bool(const lbool& l)> isTrue = [](const lbool& l) -> bool { return l == l_True; };
+      mergeAssignments(init_pb_constraint_ls_init_assign, bestModel, isTrue);
+      logPrint("Merged bestModel into init_pb_constraint_ls_init_assign");
+      */
+      bestModel.copyTo(init_pb_constraint_ls_init_assign);
+      logPrint("LS found better global UB and RHS for PB, old RHS: ", rhs, ", new RHS: ", min_cost);
+    }
+    rhs = min_cost;
+  } else if (use_local_search) {
+    const auto lambda = [this](Lit l) { return boums_assignment[var(l)] != sign(l); };
+    min_cost = computeCostReducedWeights(&lambda);
+    if (min_cost < rhs) {
+      static const std::function<lbool(bool)> tolbool = [](bool b) -> lbool { return b ? l_True : l_False; };
+      mergeAssignments(init_pb_constraint_ls_init_assign, boums_assignment, tolbool);
+      logPrint("LS found better RHS for PB, old RHS: ", rhs, ", new RHS: ", min_cost);
+      rhs = min_cost;
+    }
+  }
+  
+  if (red_gap < rhs) {
+      logPrint("Setting rhs to reduced gap " + std::to_string(red_gap));
+      rhs = red_gap;
+  }    
+  
   
   // if the bound is obtained from preprocessing, we can not set variables in encoding according to a model. 
   bool bound_set_by_prepro = false;
