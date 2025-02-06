@@ -26,6 +26,8 @@
  */
 
 #include "Alg_CBLIN.h"
+#include "BouMS/BouMS.h"
+#include "BouMS/wcnf.h"
 
 using namespace openwbo;
 
@@ -1072,7 +1074,8 @@ StatusCode CBLIN::linearSearch() {
     if (res == l_True) {
       nbSatisfiable++;
       
-      uint64_t new_reduced_cost = computeCostReducedWeights(solver->model);
+      auto lambda = [this](Lit l){ return literalTrueInModel(l, solver->model); };
+      uint64_t new_reduced_cost = computeCostReducedWeights(&lambda);
       bool better = checkModel(false, false);
       
       if (use_DPW && !incremental_DPW && assumptions.size() > 0) {
@@ -1099,7 +1102,8 @@ StatusCode CBLIN::linearSearch() {
         if (minimize_strat == 2) {
           minimize_iteration = false;
         }
-        new_reduced_cost = computeCostReducedWeights(temp); 
+        auto lambda = [this, &temp](Lit l){ return literalTrueInModel(l, temp); };
+        new_reduced_cost = computeCostReducedWeights(&lambda); 
         if ( t != new_reduced_cost )
           logPrint("cost minimized, before: ",  t , " after " , new_reduced_cost);
         assert(t >= new_reduced_cost);
@@ -1298,7 +1302,8 @@ void CBLIN::setPBencodings() {
   // nRealSoft() = maxsat_formula->nSoft() - num_hardened
   logPrint("there are " , nbCurrentSoft, " of ", nRealSoft(),  " objective lits on this precision with maxcoeff " , max_coeff_nothardened_sis);
 
-  uint64_t reduced_cost = computeCostReducedWeights(bestModel); 
+  auto lambda = [this](Lit l){ return literalTrueInModel(l, bestModel); };
+  uint64_t reduced_cost = computeCostReducedWeights(&lambda); 
   if (reduced_cost == 0 && maxsat_formula->getMaximumWeight() > 1) {
       update_SIS_precision();
       setPBencodings(); 
@@ -1317,7 +1322,8 @@ void CBLIN::initializePBConstraint(uint64_t rhs) {
       if (rhs <= red_gap) {
         logPrint("minimizing in PB initialisation");
         minimizelinearsolution(bestModel);
-        uint64_t minCost = computeCostReducedWeights(bestModel);       
+        auto lambda = [this](Lit l){ return literalTrueInModel(l, bestModel); };
+        uint64_t minCost = computeCostReducedWeights(&lambda);
         if (rhs != minCost) {
           logPrint("cost miinimized: before " ,rhs, " after " , minCost);
         }
@@ -1611,31 +1617,6 @@ void CBLIN::minimizelinearsolution(vec<lbool> & sol) {
 
 } 
 
- 
-
-uint64_t CBLIN::computeCostReducedWeights(vec<lbool> &fullModel) {
-  assert(fullModel.size() != 0);
-  assert( maxsat_formula->getSoftClause(maxsat_formula->nSoft() - 1).clause.size() == 1);
-  assert(var(maxsat_formula->getSoftClause(maxsat_formula->nSoft() - 1).clause[0]) < fullModel.size());
-
-  uint64_t tot_reducedCost = 0;
-
-  for (int i = 0; i < maxsat_formula->nSoft(); i++) {
-    assert(maxsat_formula->getSoftClause(i).clause.size() == 1);
-    assert(var(maxsat_formula->getSoftClause(i).clause[0]) < fullModel.size());
-    Lit l = maxsat_formula->getSoftClause(i).clause[0];
-    if (!literalTrueInModel(l, fullModel)) {
-      tot_reducedCost += (maxsat_formula->getSoftClause(i).weight / maxsat_formula->getMaximumWeight());
-    }
-  }
-
-  uint64_t red_gap = known_gap / maxsat_formula->getMaximumWeight();
-
-  logPrint("reduced cost " , tot_reducedCost, " gap ", red_gap);
-  return tot_reducedCost;
-}
-
-
 // Set assumptions on what soft clauses to consider, saves rebuilding the solver; 
 void CBLIN::setAssumptions(vec<Lit> &assumps) {
     nbCurrentSoft = 0;
@@ -1697,6 +1678,54 @@ StatusCode CBLIN::search() {
     return _OPTIMUM_;
   }
   timeLimitCores += (time(NULL) - time_start);
+
+  if (use_local_search) {
+    logPrint("Running LS on preprocessed instance");
+    localsearch(bestModel);
+
+    // use current model as starting point for ls on original
+    vec<lbool>* m;
+    if (do_preprocess) {
+      model_of_original.clear();
+      reconstruct_model_prepro(model, model_of_original);
+      m = &model_of_original;
+    } else {
+      m = &model;
+    }
+
+    // run LS on original input instance to potentially improve UB
+    auto tmp_maxsat_formula = maxsat_formula;
+    maxsat_formula = orig_maxsat_formula;
+    updateBouMSInstance();
+
+    if (!boums_broken) {
+      for (BouMS_uint_t vIdx = 0; vIdx < boums_inst.numVariables; ++vIdx) {
+        boums_assignment[vIdx] = (*m)[vIdx] == l_True;
+      }
+
+      BouMS_result_t res;
+      res.assignment = boums_assignment;
+
+      logPrint("Running LS on original instance");
+      const bool dummy = false;
+      BouMS_solve(&boums_inst, &boums_params, boums_mem, &boums_mem_req, &res, boums_assignment, boums_params.maxFlips,
+                  &dummy);
+      assert(res.status == BOUMS_OPTIMUM_FOUND || res.status == BOUMS_UNKNOWN);
+      if (res.cost < ubCost) {
+        logPrint("LS on original found better UB, old: ", ubCost, ", new: ", res.cost);
+        init_ls_ub_assign = new bool[boums_inst.numVariables];
+        if (init_ls_ub_assign) {
+          memcpy(init_ls_ub_assign, res.assignment, boums_inst.numVariables * sizeof(bool));
+          init_ls_ub = res.cost;
+          printBound(init_ls_ub);
+        } else {
+          logPrint("Could not save LS model, OOM");
+        }
+      }
+    }
+    maxsat_formula = tmp_maxsat_formula;
+    updateBouMSInstance();
+  }
 
   switch (lins) {
     case 0:
@@ -1945,16 +1974,30 @@ void CBLIN::updateBouMSInstance() {
 
 void CBLIN::loadFormula(MaxSATFormula *maxsat) {
   MaxSAT::loadFormula(maxsat);
-  updateBouMSInstance();
-  boums_orig_inst = boums_inst;
-  BouMS_params(&boums_orig_inst, &boums_params);
-  // we always provide an initial assignment that we don't want to replace by a random one ever (?)
-  boums_params.maxTriesWOImprovement = BOUMS_UINT_MAX;
-  boums_inst = BouMS_wcnf_util_newFormula();
-  // don't bother setting up a copy in ls_inst, this is done in setup_formula
+  orig_maxsat_formula = maxsat_formula->copyMaxSATFormula();
 }
 
 void CBLIN::setup_formula() {
   MaxSAT::setup_formula();
   updateBouMSInstance();
+  BouMS_params(&boums_inst, &boums_params);
+  // we always provide an initial assignment that we don't want to replace by a random one ever (?)
+  boums_params.maxTriesWOImprovement = BOUMS_UINT_MAX;
+}
+
+void CBLIN::printAnswer(int type) {
+  if (init_ls_ub < ubCost) {
+    ubCost = init_ls_ub;
+    std::cout << "s SATISFIABLE" << std::endl;
+    printBound(ubCost);
+    std::stringstream s;
+    s << "v ";
+    for (unsigned int vIdx = 0; vIdx < orig_maxsat_formula->nVars(); ++vIdx) {
+      s << (init_ls_ub_assign[vIdx] ? "1" : "0");
+    }
+    s << std::endl;
+    std::cout << s.str();
+  } else {
+    MaxSAT::printAnswer(type);
+  }
 }
