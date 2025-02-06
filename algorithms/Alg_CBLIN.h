@@ -122,7 +122,6 @@ public:
     if (solverCad != NULL)
       delete solverCad;
 
-    BouMS_wcnf_util_deleteFormula(&boums_orig_inst, free, NULL);
     BouMS_wcnf_util_deleteFormula(&boums_inst, free, NULL);
     if (boums_mem) {
       free(boums_mem);
@@ -131,6 +130,14 @@ public:
     if (boums_assignment) {
       free(boums_assignment);
       boums_assignment = NULL;
+    }
+    if (orig_maxsat_formula) {
+      delete orig_maxsat_formula;
+      orig_maxsat_formula = NULL;
+    }
+    if (init_ls_ub_assign) {
+      delete init_ls_ub_assign;
+      init_ls_ub_assign = NULL;
     }
   }
 
@@ -208,19 +215,18 @@ protected:
   template <typename LitVal>
   uint64_t computeCostReducedWeights_prec (LitVal* lit_true, uint64_t precision) {
     logPrint("Computing cost of reduced precision");
-  
-      uint64_t tot_reducedCost = 0;
 
-      for (int i = 0; i < maxsat_formula->nSoft(); i++) {
-        assert(maxsat_formula->getSoftClause(i).clause.size() == 1);
-        Lit l = maxsat_formula->getSoftClause(i).clause[0];
-        if (!(*lit_true)(l)) {
-          tot_reducedCost += (maxsat_formula->getSoftClause(i).weight / precision);
-        }
-
+    uint64_t tot_reducedCost = 0;
+    for (int i = 0; i < maxsat_formula->nSoft(); i++) {
+      assert(maxsat_formula->getSoftClause(i).clause.size() == 1);
+      Lit l = maxsat_formula->getSoftClause(i).clause[0];
+      if (!(*lit_true)(l)) {
+        tot_reducedCost += (maxsat_formula->getSoftClause(i).weight / precision);
       }
-      logPrint("reduced cost " , tot_reducedCost, " gap ", known_gap / precision);
-      return tot_reducedCost;
+
+    }
+    logPrint("reduced cost " , tot_reducedCost, " gap ", known_gap / precision);
+    return tot_reducedCost;
   }
 
   void setPBencodings();
@@ -384,7 +390,9 @@ protected:
   bool extend_models;
 
   // Local Search w/ BouMS
-  BouMS_wcnf_t boums_orig_inst = BouMS_wcnf_util_newFormula();
+  MaxSATFormula* orig_maxsat_formula = NULL;
+  uint64_t init_ls_ub = UINT64_MAX;
+  bool* init_ls_ub_assign = NULL;
   BouMS_wcnf_t boums_inst = BouMS_wcnf_util_newFormula();
   BouMS_memoryReq_t boums_mem_req;
   BouMS_uint_t boums_bytes = 0;
@@ -395,6 +403,7 @@ protected:
   void updateBouMSInstance(); // return true in case of error
   virtual void loadFormula(MaxSATFormula *maxsat) override;
   virtual void setup_formula() override;
+  virtual void printAnswer(int) override;
 
 };
 } // namespace openwbo

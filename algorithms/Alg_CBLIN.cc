@@ -26,6 +26,8 @@
  */
 
 #include "Alg_CBLIN.h"
+#include "BouMS/BouMS.h"
+#include "BouMS/wcnf.h"
 
 using namespace openwbo;
 
@@ -1570,7 +1572,7 @@ void CBLIN::extendBestModel() {
 
  //  logPrint("Debug: extending, current UB: " + std::to_string(ubCost) + " size of best model " + std::to_string(bestModel.size()));
  //   logPrint("Debug: Variables in formula: " + std::to_string(maxsat_formula->nVars()) + " variables in cadical " + std::to_string(solverCad->vars()));
-      
+
     vec<Lit> modelAssumps;
 
     for (int i = 0; i < isSoft.size(); i++ ) {
@@ -1788,6 +1790,54 @@ StatusCode CBLIN::search() {
     printBound(ubCost);
     printAnswer(_OPTIMUM_);
     return _OPTIMUM_;
+  }
+
+  if (use_local_search) {
+    logPrint("Running LS on preprocessed instance");
+    localsearch(bestModel);
+
+    // use current model as starting point for ls on original
+    vec<lbool>* m;
+    if (do_preprocess) {
+      model_of_original.clear();
+      reconstruct_model_prepro(model, model_of_original);
+      m = &model_of_original;
+    } else {
+      m = &model;
+    }
+
+    // run LS on original input instance to potentially improve UB
+    auto tmp_maxsat_formula = maxsat_formula;
+    maxsat_formula = orig_maxsat_formula;
+    updateBouMSInstance();
+
+    if (!boums_broken) {
+      for (BouMS_uint_t vIdx = 0; vIdx < boums_inst.numVariables; ++vIdx) {
+        boums_assignment[vIdx] = (*m)[vIdx] == l_True;
+      }
+
+      BouMS_result_t res;
+      res.assignment = boums_assignment;
+
+      logPrint("Running LS on original instance");
+      const bool dummy = false;
+      BouMS_solve(&boums_inst, &boums_params, boums_mem, &boums_mem_req, &res, boums_assignment, boums_params.maxFlips,
+                  &dummy);
+      assert(res.status == BOUMS_OPTIMUM_FOUND || res.status == BOUMS_UNKNOWN);
+      if (res.cost < ubCost) {
+        logPrint("LS on original found better UB, old: ", ubCost, ", new: ", res.cost);
+        init_ls_ub_assign = new bool[boums_inst.numVariables];
+        if (init_ls_ub_assign) {
+          memcpy(init_ls_ub_assign, res.assignment, boums_inst.numVariables * sizeof(bool));
+          init_ls_ub = res.cost;
+          printBound(init_ls_ub);
+        } else {
+          logPrint("Could not save LS model, OOM");
+        }
+      }
+    }
+    maxsat_formula = tmp_maxsat_formula;
+    updateBouMSInstance();
   }
 
   switch (lins) {
@@ -2108,16 +2158,30 @@ void CBLIN::updateBouMSInstance() {
 
 void CBLIN::loadFormula(MaxSATFormula *maxsat) {
   MaxSAT::loadFormula(maxsat);
-  updateBouMSInstance();
-  boums_orig_inst = boums_inst;
-  BouMS_params(&boums_orig_inst, &boums_params);
-  // we always provide an initial assignment that we don't want to replace by a random one ever (?)
-  boums_params.maxTriesWOImprovement = BOUMS_UINT_MAX;
-  boums_inst = BouMS_wcnf_util_newFormula();
-  // don't bother setting up a copy in ls_inst, this is done in setup_formula
+  orig_maxsat_formula = maxsat_formula->copyMaxSATFormula();
 }
 
 void CBLIN::setup_formula() {
   MaxSAT::setup_formula();
   updateBouMSInstance();
+  BouMS_params(&boums_inst, &boums_params);
+  // we always provide an initial assignment that we don't want to replace by a random one ever (?)
+  boums_params.maxTriesWOImprovement = BOUMS_UINT_MAX;
+}
+
+void CBLIN::printAnswer(int type) {
+  if (init_ls_ub < ubCost) {
+    ubCost = init_ls_ub;
+    std::cout << "s SATISFIABLE" << std::endl;
+    printBound(ubCost);
+    std::stringstream s;
+    s << "v ";
+    for (unsigned int vIdx = 0; vIdx < orig_maxsat_formula->nVars(); ++vIdx) {
+      s << (init_ls_ub_assign[vIdx] ? "1" : "0");
+    }
+    s << std::endl;
+    std::cout << s.str();
+  } else {
+    MaxSAT::printAnswer(type);
+  }
 }
