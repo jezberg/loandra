@@ -1217,7 +1217,11 @@ StatusCode CBLIN::linearSearch() {
         clause->weight /= old_sis_precision;
       }
     }
-    // run once so we can later assume the clauses are sorted
+    /* init run on reduced objective inst that would be skipped in initializePBconstraint
+     * since the precision didn't change (it's the first one)
+     *
+     * also, this way we can assume the clauses are sorted (first hard, then soft) in initializePBconstraint
+     */
     localsearch(init_pb_constraint_ls_init_assign);
   }
   setPBencodings();
@@ -1662,9 +1666,12 @@ void CBLIN::localsearch(vec<lbool> & sol) {
 
     {
       // BouMS: solve
+      const auto num_clauses = boums_inst.numClauses;
       const bool boums_stop_dummy = false;
       BouMS_solve(&boums_inst, &boums_params, boums_mem, &boums_mem_req, &boums_result, boums_assignment,
                   boums_params.maxFlips, &boums_stop_dummy);
+      // make sure we don't lose clauses e.g., when their weights are set to 0
+      boums_inst.numClauses = num_clauses;
     }
 
     if (boums_result.status == BOUMS_UNKNOWN || boums_result.status == BOUMS_OPTIMUM_FOUND) {
