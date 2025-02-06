@@ -49,6 +49,7 @@
 #include <utility>
 #include <iostream>
 #include <stdio.h>
+#include <functional>
 
 
 namespace openwbo {
@@ -136,7 +137,7 @@ public:
       orig_maxsat_formula = NULL;
     }
     if (init_ls_ub_assign) {
-      delete init_ls_ub_assign;
+      delete[] init_ls_ub_assign;
       init_ls_ub_assign = NULL;
     }
   }
@@ -400,7 +401,16 @@ protected:
   BouMS_params_t boums_params;
   bool* boums_assignment = NULL;
   bool boums_broken = false;
+  vec<lbool> init_pb_constraint_ls_init_assign;
+  uint64_t old_sis_precision;
   void updateBouMSInstance(); // return true in case of error
+  template<typename V, typename v> void mergeAssignments(vec<lbool>& dst, const V& src, const std::function<lbool(const v)>& tolbool) {
+    for (unsigned int vIdx = 0; vIdx < dst.size(); ++vIdx) {
+      if (dst[vIdx] != tolbool(src[vIdx])) {
+        dst[vIdx] = bestModel[vIdx];
+      }
+    }
+  }
   virtual void loadFormula(MaxSATFormula *maxsat) override;
   virtual void setup_formula() override;
   virtual void printAnswer(int) override;
