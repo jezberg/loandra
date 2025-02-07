@@ -63,7 +63,8 @@ public:
         int gcLim = -1, bool r2strat = false, bool incrementalV = false, 
         bool reconstruct_sol_ = false, bool minimize_sol_ = true, int m_strat = 0,
         bool dpw_coarse_ = false, bool dpw_inc_ = false, bool extend_models_ = true, bool local_s = false, uint64_t _non_inc_precision = 10 , 
-        bool _harden_in_SIS = false, bool opt_phase_save = false, bool _sis_in_propagator = false) {
+        bool _harden_in_SIS = false, bool opt_phase_save = false, bool _sis_in_propagator = false,
+        int ls_init_level_ = 0, bool ls_in_dyn_res_ = false) {
     
     use_propagator = _sis_in_propagator; 
     solverCad = NULL;
@@ -107,8 +108,11 @@ public:
 
 
     use_local_search = local_s;
-    if (use_local_search)
+    if (use_local_search) {
       minimize_sol = true;
+      ls_init_level = ls_init_level_;
+      ls_in_dyn_res = ls_in_dyn_res_;
+    }
 
     skip_local_search = false;
     harden_in_SIS = _harden_in_SIS;
@@ -390,7 +394,10 @@ protected:
 
   bool extend_models;
 
-  // Local Search w/ BouMS
+  // BEGIN LS w/ BouMS
+  // params
+  int ls_init_level = 0; // 0=disabled, 1=only on preprocessed, 2=on preprocessed then on original
+  bool ls_in_dyn_res = false; // run LS in dynamic resolution, more precisely in initializePBconstraint
   MaxSATFormula* orig_maxsat_formula = NULL;
   uint64_t init_ls_ub = UINT64_MAX;
   bool* init_ls_ub_assign = NULL;
@@ -417,6 +424,7 @@ protected:
   virtual void loadFormula(MaxSATFormula *maxsat) override;
   virtual void setup_formula() override;
   virtual void printAnswer(int) override;
+  // END LS w/ BouMS
 
 };
 } // namespace openwbo

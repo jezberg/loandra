@@ -172,6 +172,9 @@ int main(int argc, char **argv) {
   StringOption prT("PREPROCESS", "pr-tech", "Preprocess techniques used (see MaxPRE documentation for more details).\n", "[u]#[uvsrgVGc]");
   BoolOption preprocess("PREPROCESS", "preprocess", "Preprocess the instance prior to search.\n", true);
 
+  IntOption ls_initLevel("CBLIN", "ls-init-level", "Run local search before core-guided (0=disable, 1=only on preprocessed instance, 2=on preprocessed and original instance).\n", 0);
+  BoolOption ls_inDynRes("CBLIN", "ls-dyn-res", "Run local search in dynamic resolution.\n", false);
+
   
 
     parseOptions(argc, argv, true);
@@ -186,7 +189,8 @@ int main(int argc, char **argv) {
       S = new CBLIN(verbosity, weight, pmreslin, pmreslin_delsol,  
                     pmreslin_cgLim, pmreslin_relax2strat, pmreslin_incvarres, prepro_rec, 
                     prepro_min,prepro_min_strat, pmreslin_dpw_coarse, pmreslin_dpw_inc, extend,  pmreslin_local_search, 
-                    pmreslin_prec, pmreslin_hardenSIS, pmreslin_opt_phase, pmreslin_sis_propagate);
+                    pmreslin_prec, pmreslin_hardenSIS, pmreslin_opt_phase, pmreslin_sis_propagate,
+                    ls_initLevel, ls_inDynRes);
       break;
     
     case _ALGORITHM_OLLITER_:
