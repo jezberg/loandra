@@ -1211,7 +1211,7 @@ StatusCode CBLIN::linearSearch() {
   }
 
   init_SIS_precision();
-  if (ls_in_dyn_res && !boums_broken) {
+  if (ls_dyn_prec && !boums_broken) {
     // init initial assignment for LS in initializePBConstraints, called by setPBencodings
     bestModel.copyTo(init_pb_constraint_ls_init_assign);
     // apply precision to BouMS instance
@@ -1458,7 +1458,7 @@ void CBLIN::initializePBConstraint(uint64_t rhs) {
   uint64_t red_gap = known_gap / maxsat_formula->getMaximumWeight();
 
   bool ls_feasible = false;
-  if (ls_in_dyn_res) {
+  if (ls_dyn_prec) {
     /* run local search on reduced objective
      * check if it found a globally better model, or at least a better one under the reduced objective
      * merge improving models to get improving, diverse initial assignments
@@ -1489,7 +1489,7 @@ void CBLIN::initializePBConstraint(uint64_t rhs) {
   const auto lambda = [this](Lit l){return literalTrueInModel(l, bestModel);};
   uint64_t min_cost = computeCostReducedWeights(&lambda);
   if (min_cost < rhs) {
-    if (ls_in_dyn_res && skip_local_search) {
+    if (ls_dyn_prec && skip_local_search) {
       ls_improved = true;
       logPrint("LS found better global UB and RHS for PB, old RHS: ", rhs, ", new RHS: ", min_cost);
     }

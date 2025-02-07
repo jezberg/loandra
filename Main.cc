@@ -173,7 +173,7 @@ int main(int argc, char **argv) {
   BoolOption preprocess("PREPROCESS", "preprocess", "Preprocess the instance prior to search.\n", true);
 
   IntOption ls_initLevel("CBLIN", "ls-init-level", "Run local search before core-guided (0=disable, 1=only on preprocessed instance, 2=on preprocessed and original instance).\n", 0, IntRange(0, 2));
-  BoolOption ls_inDynRes("CBLIN", "ls-dyn-res", "Run local search in dynamic resolution.\n", false);
+  BoolOption ls_dynprec("CBLIN", "ls-dyn-prec", "Use local search for dynamic precision.\n", false);
 
   
 
@@ -190,7 +190,7 @@ int main(int argc, char **argv) {
                     pmreslin_cgLim, pmreslin_relax2strat, pmreslin_incvarres, prepro_rec, 
                     prepro_min,prepro_min_strat, pmreslin_dpw_coarse, pmreslin_dpw_inc, extend,  pmreslin_local_search, 
                     pmreslin_prec, pmreslin_hardenSIS, pmreslin_opt_phase, pmreslin_sis_propagate,
-                    ls_initLevel, ls_inDynRes);
+                    ls_initLevel, ls_dynprec);
       break;
     
     case _ALGORITHM_OLLITER_:
