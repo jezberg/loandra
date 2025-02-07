@@ -1046,7 +1046,7 @@ StatusCode CBLIN::linearSearch() {
     }
   }
 
-  if (bestModel.size() < maxsat_formula->nVars() || solverCad->status() != 10) {
+  if (bestModel.size() < maxsat_formula->nVars() || solver->okay()) {
       logPrint("Extending best model to full formula");
       extendBestModel();
   }
@@ -1342,7 +1342,7 @@ void CBLIN::initializePBConstraint(uint64_t rhs) {
   uint64_t red_gap = known_gap / maxsat_formula->getMaximumWeight();
 
   bool ls_feasible = false;
-  if (use_local_search) {
+  if (ls_in_dyn_res) {
     /* run local search on reduced objective
      * check if it found a globally better model, or at least a better one under the reduced objective
      * merge improving models to get improving, diverse initial assignments
@@ -1369,7 +1369,7 @@ void CBLIN::initializePBConstraint(uint64_t rhs) {
   const auto lambda = [this](Lit l){return literalTrueInModel(l, bestModel);};
   uint64_t min_cost = computeCostReducedWeights(&lambda);
   if (min_cost < rhs) {
-    if (use_local_search && skip_local_search) {
+    if (ls_in_dyn_res && skip_local_search) {
       ls_improved = true;
       logPrint("LS found better global UB and RHS for PB, old RHS: ", rhs, ", new RHS: ", min_cost);
     }
@@ -1745,7 +1745,7 @@ StatusCode CBLIN::search() {
   }
   timeLimitCores += (time(NULL) - time_start);
 
-  if (use_local_search) {
+  if (ls_init_level > 0) {
     logPrint("Running LS on preprocessed instance");
     localsearch(bestModel);
 
@@ -1759,38 +1759,40 @@ StatusCode CBLIN::search() {
       m = &model;
     }
 
-    // run LS on original input instance to potentially improve UB
-    auto tmp_maxsat_formula = maxsat_formula;
-    maxsat_formula = orig_maxsat_formula;
-    updateBouMSInstance();
+    if (ls_init_level > 1) {
+      // run LS on original input instance to potentially improve UB
+      auto tmp_maxsat_formula = maxsat_formula;
+      maxsat_formula = orig_maxsat_formula;
+      updateBouMSInstance();
 
-    if (!boums_broken) {
-      for (BouMS_uint_t vIdx = 0; vIdx < boums_inst.numVariables; ++vIdx) {
-        boums_assignment[vIdx] = (*m)[vIdx] == l_True;
-      }
+      if (!boums_broken) {
+        for (BouMS_uint_t vIdx = 0; vIdx < boums_inst.numVariables; ++vIdx) {
+          boums_assignment[vIdx] = (*m)[vIdx] == l_True;
+        }
 
-      BouMS_result_t res;
-      res.assignment = boums_assignment;
+        BouMS_result_t res;
+        res.assignment = boums_assignment;
 
-      logPrint("Running LS on original instance");
-      const bool dummy = false;
-      BouMS_solve(&boums_inst, &boums_params, boums_mem, &boums_mem_req, &res, boums_assignment, boums_params.maxFlips,
-                  &dummy);
-      assert(res.status == BOUMS_OPTIMUM_FOUND || res.status == BOUMS_UNKNOWN);
-      if (res.cost < ubCost) {
-        logPrint("LS on original found better UB, old: ", ubCost, ", new: ", res.cost);
-        init_ls_ub_assign = new bool[boums_inst.numVariables];
-        if (init_ls_ub_assign) {
-          memcpy(init_ls_ub_assign, res.assignment, boums_inst.numVariables * sizeof(bool));
-          init_ls_ub = res.cost;
-          printBound(init_ls_ub);
-        } else {
-          logPrint("Could not save LS model, OOM");
+        logPrint("Running LS on original instance");
+        const bool dummy = false;
+        BouMS_solve(&boums_inst, &boums_params, boums_mem, &boums_mem_req, &res, boums_assignment, boums_params.maxFlips,
+                    &dummy);
+        assert(res.status == BOUMS_OPTIMUM_FOUND || res.status == BOUMS_UNKNOWN);
+        if (res.cost < ubCost) {
+          logPrint("LS on original found better UB, old: ", ubCost, ", new: ", res.cost);
+          init_ls_ub_assign = new bool[boums_inst.numVariables];
+          if (init_ls_ub_assign) {
+            memcpy(init_ls_ub_assign, res.assignment, boums_inst.numVariables * sizeof(bool));
+            init_ls_ub = res.cost;
+            printBound(init_ls_ub);
+          } else {
+            logPrint("Could not save LS model, OOM");
+          }
         }
       }
+      maxsat_formula = tmp_maxsat_formula;
+      updateBouMSInstance();
     }
-    maxsat_formula = tmp_maxsat_formula;
-    updateBouMSInstance();
   }
 
   switch (lins) {
