@@ -1052,7 +1052,7 @@ StatusCode CBLIN::linearSearch() {
   }
 
   init_SIS_precision();
-  if (use_local_search && !boums_broken) {
+  if (ls_in_dyn_res && !boums_broken) {
     // init initial assignment for LS in initializePBConstraints, called by setPBencodings
     bestModel.copyTo(init_pb_constraint_ls_init_assign);
     // apply precision to BouMS instance
