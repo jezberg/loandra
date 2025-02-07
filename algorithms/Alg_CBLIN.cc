@@ -1046,6 +1046,11 @@ StatusCode CBLIN::linearSearch() {
     }
   }
 
+  if (bestModel.size() < maxsat_formula->nVars() || solverCad->status() != 10) {
+      logPrint("Extending best model to full formula");
+      extendBestModel();
+  }
+
   init_SIS_precision();
   if (use_local_search && !boums_broken) {
     // init initial assignment for LS in initializePBConstraints, called by setPBencodings
@@ -1336,6 +1341,7 @@ void CBLIN::initializePBConstraint(uint64_t rhs) {
 
   uint64_t red_gap = known_gap / maxsat_formula->getMaximumWeight();
 
+  bool ls_feasible = false;
   if (use_local_search) {
     /* run local search on reduced objective
      * check if it found a globally better model, or at least a better one under the reduced objective
@@ -1355,7 +1361,7 @@ void CBLIN::initializePBConstraint(uint64_t rhs) {
       }
       old_sis_precision = cur_prec;
 
-      localsearch(init_pb_constraint_ls_init_assign);
+      ls_feasible = localsearch(init_pb_constraint_ls_init_assign);
     }
   }
   const auto lambda = [this](Lit l){return literalTrueInModel(l, bestModel);};
@@ -1371,12 +1377,12 @@ void CBLIN::initializePBConstraint(uint64_t rhs) {
       logPrint("LS found better global UB and RHS for PB, old RHS: ", rhs, ", new RHS: ", min_cost);
     }
     rhs = min_cost;
-  } else if (use_local_search) {
+  } else if (ls_feasible) {
     const auto lambda = [this](Lit l) { return boums_assignment[var(l)] != sign(l); };
     min_cost = computeCostReducedWeights(&lambda);
     if (min_cost < rhs) {
-      static const std::function<lbool(bool)> tolbool = [](bool b) -> lbool { return b ? l_True : l_False; };
-      mergeAssignments(init_pb_constraint_ls_init_assign, boums_assignment, tolbool);
+      // static const std::function<lbool(bool)> tolbool = [](bool b) -> lbool { return b ? l_True : l_False; };
+      // mergeAssignments(init_pb_constraint_ls_init_assign, boums_assignment, tolbool);
       logPrint("LS found better RHS for PB, old RHS: ", rhs, ", new RHS: ", min_cost);
       rhs = min_cost;
     }
@@ -1524,10 +1530,10 @@ void CBLIN::extendBestModel() {
     checkModel(false, true);  
 }
 
-void CBLIN::localsearch(vec<lbool> & sol) {
+bool CBLIN::localsearch(vec<lbool> & sol) {
     if (boums_broken) {
       logPrint("BouMS is currently unusable due to a previous error");
-      return;
+      return false;
     }
 
     BouMS_result_t boums_result;
@@ -1574,9 +1580,11 @@ void CBLIN::localsearch(vec<lbool> & sol) {
       solver->setSolutionBasedPhaseSaving(true);
       checkModel(true, true);
       }
+      return true;
     }
     else {
       logPrint("Local search found no solution");
+      return false;
     }
 }
 

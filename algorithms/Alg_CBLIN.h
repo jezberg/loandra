@@ -368,7 +368,7 @@ protected:
  void minimizelinearsolution( vec<lbool> & sol);
  bool use_local_search;
  bool skip_local_search;
- void localsearch(vec<lbool> & sol);
+ bool localsearch(vec<lbool> & sol);
 
   bool extend_models;
 
