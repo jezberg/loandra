@@ -1364,16 +1364,13 @@ void CBLIN::initializePBConstraint(uint64_t rhs) {
       ls_feasible = localsearch(init_pb_constraint_ls_init_assign);
     }
   }
+
+  bool ls_improved = false;
   const auto lambda = [this](Lit l){return literalTrueInModel(l, bestModel);};
   uint64_t min_cost = computeCostReducedWeights(&lambda);
   if (min_cost < rhs) {
     if (use_local_search && skip_local_search) {
-      /*
-      static const std::function<bool(const lbool& l)> isTrue = [](const lbool& l) -> bool { return l == l_True; };
-      mergeAssignments(init_pb_constraint_ls_init_assign, bestModel, isTrue);
-      logPrint("Merged bestModel into init_pb_constraint_ls_init_assign");
-      */
-      bestModel.copyTo(init_pb_constraint_ls_init_assign);
+      ls_improved = true;
       logPrint("LS found better global UB and RHS for PB, old RHS: ", rhs, ", new RHS: ", min_cost);
     }
     rhs = min_cost;
@@ -1381,11 +1378,16 @@ void CBLIN::initializePBConstraint(uint64_t rhs) {
     const auto lambda = [this](Lit l) { return boums_assignment[var(l)] != sign(l); };
     min_cost = computeCostReducedWeights(&lambda);
     if (min_cost < rhs) {
-      // static const std::function<lbool(bool)> tolbool = [](bool b) -> lbool { return b ? l_True : l_False; };
-      // mergeAssignments(init_pb_constraint_ls_init_assign, boums_assignment, tolbool);
+      ls_improved = true;
       logPrint("LS found better RHS for PB, old RHS: ", rhs, ", new RHS: ", min_cost);
       rhs = min_cost;
     }
+  }
+  if (ls_improved) {
+    static const std::function<lbool(bool)> tolbool = [](bool b) -> lbool { return b ? l_True : l_False; };
+    const auto num_disagree = mergeAssignments(init_pb_constraint_ls_init_assign, boums_assignment, tolbool);
+    logPrint("Merged LS assignments, agreeing variables: ", boums_inst.numVariables - num_disagree,
+             ", disagreeing variables: ", num_disagree);
   }
   
   if (red_gap < rhs) {
