@@ -174,7 +174,7 @@ int main(int argc, char **argv) {
   StringOption prT("PREPROCESS", "pr-tech", "Preprocess techniques used (see MaxPRE documentation for more details).\n", "[u]#[uvsrgVGc]");
   BoolOption preprocess("PREPROCESS", "preprocess", "Preprocess the instance prior to search.\n", true);
 
-  IntOption ls_initLevel("CBLIN", "ls-init-level", "Run local search before core-guided (0=disable, 1=only on preprocessed instance, 2=on preprocessed and original instance).\n", 0);
+  IntOption ls_initLevel("CBLIN", "ls-init-level", "Run local search before core-guided (0=disable, 1=only on preprocessed instance, 2=on preprocessed and original instance).\n", 0, IntRange(0, 2));
   BoolOption ls_inDynRes("CBLIN", "ls-dyn-res", "Run local search in dynamic resolution.\n", false);
 
   
