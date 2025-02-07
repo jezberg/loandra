@@ -16,7 +16,7 @@ PREOBJ	   = $(wildcard $(PREPRO_DIR)/src/lib/*.a)
 CADOBJ	   = $(wildcard $(CADICAL_DIR)/build/*.a) 
 
 DPWOBJ	   = $(wildcard $(DPW_DIR)/target/release/*.a) 
-BOUMSRELOBJ = $(BOUMS_DIR)/build/release-nologging/libBouMS.a
+BOUMSRELOBJ = $(BOUMS_DIR)/build/release-logverbose/libBouMS.a
 BOUMSDBGOBJ = $(BOUMS_DIR)/build/debug-logverbose/libBouMS.a
 
 PCOBJS     = $(addsuffix p,  $(COBJS))
@@ -121,8 +121,8 @@ builddeps:
 	@echo Making cadical
 	$(MAKE) -C $(CADICAL_DIR)
 	if [ $(BOUMSOBJ) = $(BOUMSRELOBJ) ]; then \
-		@echo "Making BouMS (release-nologging)"; \
-		$(MAKE) -C $(BOUMS_DIR) libonly-release-nologging; \
+		@echo "Making BouMS (release-logverbose)"; \
+		$(MAKE) -C $(BOUMS_DIR) libonly-release-logverbose; \
 	else \
 		@echo "Making BouMS (debug-logverbose)"; \
 		$(MAKE) -C $(BOUMS_DIR) libonly-debug-logverbose; \
