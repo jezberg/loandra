@@ -1478,6 +1478,10 @@ void CBLIN::initializePBConstraint(uint64_t rhs) {
       old_sis_precision = cur_prec;
 
       ls_feasible = localsearch(init_pb_constraint_ls_init_assign);
+    } else if (prec_coeff == 1){
+      // only happens when we just ran the inital LS run on the first precision,
+      // and this starts from a feasible assignment, so it should stay feasible
+      ls_feasible = true;
     }
   }
 
