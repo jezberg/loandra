@@ -201,6 +201,14 @@
       "inherits": [
         "libonly"
       ]
+    },
+    {
+      "name": "libonly-release-logverbose",
+      "displayName": "Library only (release) w/ verbose logging",
+      "configurePreset": "release-logverbose",
+      "inherits": [
+        "libonly"
+      ]
     }
   ]
 }
