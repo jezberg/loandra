@@ -64,7 +64,8 @@ public:
         bool reconstruct_sol_ = false, bool minimize_sol_ = true, int m_strat = 0,
         bool dpw_coarse_ = false, bool dpw_inc_ = false, bool extend_models_ = true, bool local_s = false, uint64_t _non_inc_precision = 10 , 
         bool _harden_in_SIS = false, bool opt_phase_save = false, bool _sis_in_propagator = false,
-        int ls_init_level_ = 0, bool ls_dyn_prec_ = false) {
+        int ls_init_level_ = 0, bool ls_dyn_prec_ = false, bool ls_sis_ = false, bool ls_merge_assign_ = false,
+        bool ls_min_ = false) {
     
     use_propagator = _sis_in_propagator; 
     solverCad = NULL;
@@ -112,6 +113,9 @@ public:
       minimize_sol = true;
       ls_init_level = ls_init_level_;
       ls_dyn_prec = ls_dyn_prec_;
+      ls_sis = ls_sis_;
+      ls_merge_assign = ls_merge_assign_;
+      ls_min = ls_min_;
     }
 
     skip_local_search = false;
@@ -395,9 +399,11 @@ protected:
   bool extend_models;
 
   // BEGIN LS w/ BouMS
-  // params
   int ls_init_level = 0; // 0=disabled, 1=only on preprocessed, 2=on preprocessed then on original
   bool ls_dyn_prec = false; // run LS in dynamic resolution, more precisely in initializePBconstraint
+  bool ls_sis = false; // run LS in SIS
+  bool ls_merge_assign = false; // use assignment merging for LS in dyn prec and sis
+  bool ls_min = false; // run LS for solution minimization
   MaxSATFormula* orig_maxsat_formula = NULL;
   uint64_t init_ls_ub = UINT64_MAX;
   bool* init_ls_ub_assign = NULL;
@@ -408,7 +414,8 @@ protected:
   BouMS_params_t boums_params;
   bool* boums_assignment = NULL;
   bool boums_broken = false;
-  vec<lbool> init_pb_constraint_ls_init_assign;
+  vec<lbool> ls_merged_assign;
+  vec<lbool>* ls_usual_init_assign = &bestModel;
   uint64_t old_sis_precision;
   void updateBouMSInstance(); // return true in case of error
   template<typename V, typename v> unsigned int mergeAssignments(vec<lbool>& dst, const V& src, const std::function<lbool(const v)>& tolbool) {
@@ -420,6 +427,9 @@ protected:
       }
     }
     return num_disagreements;
+  }
+  static inline lbool tolbool(bool b) {
+    return b ? l_True : l_False;
   }
   virtual void loadFormula(MaxSATFormula *maxsat) override;
   virtual void setup_formula() override;

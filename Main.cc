@@ -160,7 +160,7 @@ int main(int argc, char **argv) {
    BoolOption pmreslin_dpw_coarse("CBLIN", "cb-DPW-coarse", "Only do coarse-convergence with the DPW for resolutions higher than 1.\n", false);
    BoolOption pmreslin_dpw_inc("CBLIN", "cb-DPW-inc", "Use the DPW incrementally.\n", false);
    BoolOption extend("CBLIN", "extend-model", "Extend models to the variables in cardinality constraints.\n", true);
-   BoolOption pmreslin_local_search("CBLIN", "cb-local-search", "Use NuWLS for solution minimization.\n", true);
+   BoolOption pmreslin_local_search("CBLIN", "cb-local-search", "Use local search.\n", true);
   BoolOption pmreslin_opt_phase("CBLIN", "cb-opt-phase", "Optimistic Phase saving.\n", true);
     BoolOption pmreslin_sis_propagate("CBLIN", "cb-sis-propagate", "Do solution improving search in a propagator.\n", false);
 
@@ -174,6 +174,9 @@ int main(int argc, char **argv) {
 
   IntOption ls_initLevel("CBLIN", "ls-init-level", "Run local search before core-guided (0=disable, 1=only on preprocessed instance, 2=on preprocessed and original instance).\n", 0, IntRange(0, 2));
   BoolOption ls_dynprec("CBLIN", "ls-dyn-prec", "Use local search for dynamic precision.\n", false);
+  BoolOption ls_sis("CBLIN", "ls-sis", "Use local search in SIS.\n", false);
+  BoolOption ls_merge_assign("CBLIN", "ls-merge", "Use assignment merging when doing LS (in combination with ls-dyn-prec and/or ls-sis).\n", false);
+  BoolOption ls_min("CBLIN", "ls-min", "Use local search for solution minimization.\n", false);
 
   
 
@@ -190,7 +193,7 @@ int main(int argc, char **argv) {
                     pmreslin_cgLim, pmreslin_relax2strat, pmreslin_incvarres, prepro_rec, 
                     prepro_min,prepro_min_strat, pmreslin_dpw_coarse, pmreslin_dpw_inc, extend,  pmreslin_local_search, 
                     pmreslin_prec, pmreslin_hardenSIS, pmreslin_opt_phase, pmreslin_sis_propagate,
-                    ls_initLevel, ls_dynprec);
+                    ls_initLevel, ls_dynprec, ls_sis, ls_merge_assign, ls_min);
       break;
     
     case _ALGORITHM_OLLITER_:
