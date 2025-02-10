@@ -1051,10 +1051,13 @@ StatusCode CBLIN::linearSearch() {
       extendBestModel();
   }
 
+  if (!boums_broken && (ls_dyn_prec || ls_sis) && ls_merge_assign) {
+    bestModel.copyTo(ls_merged_assign);
+    ls_usual_init_assign = &ls_merged_assign;
+  }
+
   init_SIS_precision();
-  if (ls_dyn_prec && !boums_broken) {
-    // init initial assignment for LS in initializePBConstraints, called by setPBencodings
-    bestModel.copyTo(init_pb_constraint_ls_init_assign);
+  if (!boums_broken && ls_dyn_prec) {
     // apply precision to BouMS instance
     old_sis_precision = maxsat_formula->getMaximumWeight();
     for (unsigned int cIdx = 0; cIdx < boums_inst.numClauses; ++cIdx) {
@@ -1068,7 +1071,7 @@ StatusCode CBLIN::linearSearch() {
      *
      * also, this way we can assume the clauses are sorted (first hard, then soft) in initializePBconstraint
      */
-    localsearch(init_pb_constraint_ls_init_assign);
+    localsearch(*ls_usual_init_assign);
   }
   setPBencodings();
   
@@ -1115,6 +1118,28 @@ StatusCode CBLIN::linearSearch() {
         harden_incremental();
       }
 
+      if (ls_sis && !skip_local_search && new_reduced_cost > 0) {
+        if (ls_merge_assign) {
+          static const std::function<lbool(const lbool&)> lboolid = [](const lbool& b) { return b; };
+          const auto num_disagree = mergeAssignments(ls_merged_assign, solver->model, lboolid);
+          logPrint("Merged SIS SAT solver assignment, agreeing variables: ", boums_inst.numVariables - num_disagree,
+                   ", disagreeing variables: ", num_disagree);
+        }
+
+        localsearch(*ls_usual_init_assign);
+
+        const auto lambda = [this](Lit l) { return boums_assignment[var(l)] != sign(l); };
+        const auto ls_reduced_cost = computeCostReducedWeights(&lambda);
+        if (ls_reduced_cost < new_reduced_cost) {
+          new_reduced_cost = ls_reduced_cost;
+          logPrint("LS found better reduced cost");
+          if (ls_merge_assign) {
+            const auto num_disagree = mergeAssignments<bool*, bool>(ls_merged_assign, boums_assignment, tolbool);
+            logPrint("Merged SIS LS assignment, agreeing variables: ", boums_inst.numVariables - num_disagree,
+                     ", disagreeing variables: ", num_disagree);
+          }
+        }
+      }
       
 
       if (minimize_sol && new_reduced_cost > 0 && minimize_iteration && minimize_strat > 0) {
@@ -1347,7 +1372,6 @@ void CBLIN::initializePBConstraint(uint64_t rhs) {
      * check if it found a globally better model, or at least a better one under the reduced objective
      * merge improving models to get improving, diverse initial assignments
      */
-
     const auto cur_prec = maxsat_formula->getMaximumWeight();
     const auto prec_coeff = old_sis_precision / cur_prec;
     logPrint("LS prec coeff: ", prec_coeff);
@@ -1361,7 +1385,7 @@ void CBLIN::initializePBConstraint(uint64_t rhs) {
       }
       old_sis_precision = cur_prec;
 
-      ls_feasible = localsearch(init_pb_constraint_ls_init_assign);
+      ls_feasible = localsearch(*ls_usual_init_assign);
     } else if (prec_coeff == 1){
       // only happens when we just ran the inital LS run on the first precision,
       // and this starts from a feasible assignment, so it should stay feasible
@@ -1387,10 +1411,9 @@ void CBLIN::initializePBConstraint(uint64_t rhs) {
       rhs = min_cost;
     }
   }
-  if (ls_improved) {
-    static const std::function<lbool(bool)> tolbool = [](bool b) -> lbool { return b ? l_True : l_False; };
-    const auto num_disagree = mergeAssignments(init_pb_constraint_ls_init_assign, boums_assignment, tolbool);
-    logPrint("Merged LS assignments, agreeing variables: ", boums_inst.numVariables - num_disagree,
+  if (ls_improved && ls_merge_assign) {
+    const auto num_disagree = mergeAssignments<bool*, bool>(ls_merged_assign, boums_assignment, tolbool);
+    logPrint("Merged dyn. prec. LS assignment, agreeing variables: ", boums_inst.numVariables - num_disagree,
              ", disagreeing variables: ", num_disagree);
   }
   

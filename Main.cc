@@ -176,6 +176,9 @@ int main(int argc, char **argv) {
 
   IntOption ls_initLevel("CBLIN", "ls-init-level", "Run local search before core-guided (0=disable, 1=only on preprocessed instance, 2=on preprocessed and original instance).\n", 0, IntRange(0, 2));
   BoolOption ls_dynprec("CBLIN", "ls-dyn-prec", "Use local search for dynamic precision.\n", false);
+  BoolOption ls_sis("CBLIN", "ls-sis", "Use local search in SIS.\n", false);
+  BoolOption ls_merge_assign("CBLIN", "ls-merge", "Use assignment merging when doing LS (in combination with ls-dyn-prec and/or ls-sis).\n", false);
+  BoolOption ls_min("CBLIN", "ls-min", "Use local search for solution minimization.\n", false);
 
   
 
@@ -191,7 +194,7 @@ int main(int argc, char **argv) {
       S = new CBLIN(verbosity, weight, pmreslin, pmreslin_delsol,  
                     pmreslin_cgLim, pmreslin_relax2strat, pmreslin_incvarres, prepro_rec, 
                     prepro_min,prepro_min_strat, pmreslin_dpw_coarse, pmreslin_dpw_inc, extend,  pmreslin_local_search, 
-                    pmreslin_prec, pmreslin_hardenSIS, ls_initLevel, ls_dynprec);
+                    pmreslin_prec, pmreslin_hardenSIS, ls_initLevel, ls_dynprec, ls_sis, ls_merge_assign, ls_min);
       break;
     
     case _ALGORITHM_OLLITER_:
