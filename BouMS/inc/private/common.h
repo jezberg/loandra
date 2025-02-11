@@ -14,6 +14,7 @@
 
 #include "BouMS/BouMS.h"
 #include "BouMS/common.h"
+#include "BouMS/cores.h"
 #include "BouMS/wcnf.h"
 #include "private/fixedprec.h"
 #include "private/types.h"
@@ -34,8 +35,11 @@ void initVars(const BouMS_wcnf_t* formula, const BouMS_result_t* result, const b
  * @param formula
  * @param mem
  * @param cost
+ * @param map
+ * @param cores
  */
-void initAlgo(const BouMS_wcnf_t* formula, BouMS_memory_t* mem, BouMS_uint_t* cost);
+void initAlgo(const BouMS_wcnf_t* formula, BouMS_memory_t* mem, BouMS_uint_t* cost, const BouMS_clauseMap_t* map,
+              BouMS_cores_mem_t* cores);
 
 /**
  * @brief Selects a variable to flip; also updates weights if no decreasing variable is found
@@ -53,8 +57,11 @@ BouMS_wcnf_variable_t* selectVariable(const BouMS_wcnf_t* formula, const BouMS_p
  * @param formula
  * @param mem
  * @param cost
+ * @param map
+ * @param cores
  */
-void flipVariable(BouMS_wcnf_variable_t* variable, const BouMS_wcnf_t* formula, BouMS_memory_t* mem, BouMS_uint_t* cost);
+void flipVariable(BouMS_wcnf_variable_t* variable, const BouMS_wcnf_t* formula, BouMS_memory_t* mem, BouMS_uint_t* cost,
+                  const BouMS_clauseMap_t* map, BouMS_cores_mem_t* cores);
 
 /**
  * @brief Updates the scores of variables after the weight of the given clause has been increased
@@ -229,8 +236,10 @@ static inline void fixLitToClausePtrs(const BouMS_wcnf_clause_t* clause) {
  * @param clauseIdx
  * @param clauses
  * @param numClauses
+ * @param map
  */
-static inline void removeClause(BouMS_uint_t clauseIdx, BouMS_wcnf_clause_t* clauses, BouMS_uint_t numClauses) {
+static inline void removeClause(BouMS_uint_t clauseIdx, BouMS_wcnf_clause_t* clauses, BouMS_uint_t numClauses,
+                                BouMS_clauseMap_t* map) {
   const BouMS_uint_t lastClauseIdx = numClauses - 1;
 
   {
@@ -241,6 +250,15 @@ static inline void removeClause(BouMS_uint_t clauseIdx, BouMS_wcnf_clause_t* cla
 
   fixLitToClausePtrs(clauses + clauseIdx);
   fixLitToClausePtrs(clauses + lastClauseIdx);
+
+  if (map) {
+    const BouMS_uint_t toRemEx = map->in2Ex[clauseIdx];
+    const BouMS_uint_t toMovEx = map->in2Ex[lastClauseIdx];
+    map->ex2In[toRemEx] = lastClauseIdx;
+    map->ex2In[toMovEx] = clauseIdx;
+    map->in2Ex[clauseIdx] = toMovEx;
+    map->in2Ex[lastClauseIdx] = toRemEx;
+  }
 }
 
 #endif

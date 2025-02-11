@@ -13,6 +13,8 @@
 
 #include "BouMS/BouMS.h"
 #include "BouMS/common.h"
+#include "BouMS/cores.h"
+#include "BouMS/map.h"
 #include "BouMS/wcnf.h"
 #include "private/fixedprec.h"
 #include "private/logging.h"
@@ -51,6 +53,15 @@ static void onLiteralFalsified(BouMS_uint_t numSatLiterals, const BouMS_wcnf_t* 
                                const BouMS_wcnf_clause_t* clause, BouMS_uint_t clauseIdx,
                                unsigned_fixedprec_t clauseWeight, BouMS_uint_t* cost, BouMS_memory_t* mem);
 
+/**
+ * @param var
+ * @param mem
+ * @param cores
+ * @param map
+ */
+static unsigned_fixedprec_t coreVarWeight(BouMS_uint_t var, const BouMS_memory_t* mem, const BouMS_clauseMap_t* map,
+                                          const BouMS_cores_mem_t* cores);
+
 void initVars(const BouMS_wcnf_t* formula, const BouMS_result_t* result, const bool* initModel, bool forceRandom) {
   const BouMS_uint_t nVars = formula->numVariables;
   BouMS_wcnf_variable_t* const vars = formula->variables;
@@ -68,7 +79,8 @@ void initVars(const BouMS_wcnf_t* formula, const BouMS_result_t* result, const b
   }
 }
 
-void initAlgo(const BouMS_wcnf_t* formula, BouMS_memory_t* mem, BouMS_uint_t* cost) {
+void initAlgo(const BouMS_wcnf_t* formula, BouMS_memory_t* mem, BouMS_uint_t* cost, const BouMS_clauseMap_t* map,
+              BouMS_cores_mem_t* cores) {
   // zero all memory that we write to (by adding) later
   *cost = 0;
   mem->numDecreasingVars = 0;
@@ -123,6 +135,40 @@ void initAlgo(const BouMS_wcnf_t* formula, BouMS_memory_t* mem, BouMS_uint_t* co
         *cost += clause->weight;
       }
     }
+  }
+
+  if (cores && map) {
+    for (BouMS_uint_t cIdx = 0; cIdx < cores->numCores; ++cIdx) {
+      BouMS_uint_t* const numSatLits = cores->coreToSatLits + cIdx;
+      *numSatLits = 0;
+
+      const BouMS_cores_core_t* const core = cores->cores + cIdx;
+      for (BouMS_uint_t lIdx = 0; lIdx < core->numLiterals; ++lIdx) {
+        if (BouMS_isLiteralSatisfied(formula, core->literals[lIdx])) {
+          ++*numSatLits;
+        }
+      }
+
+      cores->coreToSatLits[cIdx] = *numSatLits;
+
+      for (BouMS_uint_t lIdx = 0; lIdx < core->numLiterals; ++lIdx) {
+        const BouMS_literal_t lit = core->literals[lIdx];
+        const BouMS_uint_t var = BouMS_var(lit);
+        const unsigned_fixedprec_t weight = coreVarWeight(var, mem, map, cores);
+        const unsigned_fixedprec_t invWeight =
+            weight.value != 0 ? fixedprec_udiv(fixedprec_uto(1, mem->fixedprecShift), weight, mem->fixedprecShift)
+                              : mem->zeroWeightCoreWeight;
+        if (*numSatLits == 0) {
+          mem->scores[var] = fixedprec_sadd(mem->scores[var], fixedprec_utos(invWeight));
+        } else {
+          const unsigned_fixedprec_t mulWeight =
+              fixedprec_umul(invWeight, fixedprec_uto(*numSatLits, mem->fixedprecShift), mem->fixedprecShift);
+          mem->scores[var] = fixedprec_ssub(mem->scores[var], fixedprec_utos(mulWeight));
+        }
+      }
+    }
+  } else if (cores) {
+    LOG_WARN("c Using cores requires a clause map, but none was given!");
   }
 
   // now that initial scores for all variables are calculated, filter those that are decreasing
@@ -218,7 +264,8 @@ BouMS_wcnf_variable_t* selectVariable(const BouMS_wcnf_t* formula, const BouMS_p
   return formula->variables + selectedVarIdx;
 }
 
-void flipVariable(BouMS_wcnf_variable_t* variable, const BouMS_wcnf_t* formula, BouMS_memory_t* mem, BouMS_uint_t* cost) {
+void flipVariable(BouMS_wcnf_variable_t* variable, const BouMS_wcnf_t* formula, BouMS_memory_t* mem, BouMS_uint_t* cost,
+                  const BouMS_clauseMap_t* map, BouMS_cores_mem_t* cores) {
   // first things first, flip the variable
   variable->value = !variable->value;
   // and update its flip count
@@ -250,6 +297,56 @@ void flipVariable(BouMS_wcnf_variable_t* variable, const BouMS_wcnf_t* formula, 
     } else {
       *numSatLiterals -= 1;
       onLiteralFalsified(*numSatLiterals, formula, clause, clauseIdx, clauseWeight, cost, mem);
+    }
+  }
+
+  if (cores && map && cores->varToCores[varIdx]) {
+    LOG_TRACE("c flipped var " BOUMS_UINT_FORMAT " which is in a core\n", varIdx);
+    const BouMS_cores_list_t* const coreList = cores->varToCores[varIdx];
+
+    for (BouMS_uint_t coreIdx = 0; coreIdx < coreList->numCores; ++coreIdx) {
+      const BouMS_cores_core_t* const core = coreList->cores[coreIdx];
+
+      for (BouMS_uint_t coreLitIdx = 0; coreLitIdx < core->numLiterals; ++coreLitIdx) {
+        const BouMS_literal_t coreLit = core->literals[coreLitIdx];
+        const BouMS_uint_t coreLitVar = BouMS_var(coreLit);
+
+        BouMS_uint_t* const coreSatLits = cores->coreToSatLits + (core - cores->cores);
+        bool moreLitsSat = false;
+
+        if (coreLitVar == varIdx) {
+          if (BouMS_isLiteralSatisfied(formula, coreLit)) {
+            *coreSatLits += 1;
+            moreLitsSat = true;
+          } else {
+            *coreSatLits -= 1;
+          }
+          LOG_TRACE("c a core var " BOUMS_UINT_FORMAT " appears in now has " BOUMS_UINT_FORMAT " sat lits\n", varIdx,
+                    *coreSatLits);
+
+          for (BouMS_uint_t coreLitIdx2 = 0; coreLitIdx2 < core->numLiterals; ++coreLitIdx2) {
+            const BouMS_uint_t var = BouMS_var(core->literals[coreLitIdx2]);
+            const unsigned_fixedprec_t weight = coreVarWeight(var, mem, map, cores);
+            const unsigned_fixedprec_t invWeight =
+                weight.value != 0 ? fixedprec_udiv(fixedprec_uto(1, mem->fixedprecShift), weight, mem->fixedprecShift)
+                                  : mem->zeroWeightCoreWeight;
+            const signed_fixedprec_t sWeight = fixedprec_utos(invWeight);
+            if (*coreSatLits == 0) {
+              mem->scores[var] = fixedprec_sadd(mem->scores[var], sWeight);
+              mem->scores[var] = fixedprec_sadd(mem->scores[var], sWeight);
+            } else if (*coreSatLits == 1 && moreLitsSat) {
+              mem->scores[var] = fixedprec_ssub(mem->scores[var], sWeight);
+              mem->scores[var] = fixedprec_ssub(mem->scores[var], sWeight);
+            } else if (moreLitsSat) {
+              mem->scores[var] = fixedprec_ssub(mem->scores[var], sWeight);
+            } else {
+              mem->scores[var] = fixedprec_sadd(mem->scores[var], sWeight);
+            }
+          }
+
+          break;
+        }
+      }
     }
   }
 }
@@ -355,4 +452,13 @@ static void onLiteralFalsified(BouMS_uint_t numSatLiterals, const BouMS_wcnf_t* 
       addClause(clauseIdx, &mem->numFalsifiedSoftClauses, mem->falsifiedSoftClauses, mem->falsifiedSoftClausesIdx);
     }
   }
+}
+static unsigned_fixedprec_t coreVarWeight(BouMS_uint_t var, const BouMS_memory_t* mem, const BouMS_clauseMap_t* map,
+                                          const BouMS_cores_mem_t* cores) {
+  const BouMS_uint_t litClauseExIdx = cores->varToClause[var];
+  const BouMS_uint_t litClauseInIdx = map->ex2In[litClauseExIdx];
+  const unsigned_fixedprec_t weight = mem->tunedWeights[litClauseInIdx];
+  const unsigned_fixedprec_t f = fixedprec_uto(2, mem->fixedprecShift);
+  const unsigned_fixedprec_t weightdf = fixedprec_udiv(weight, f, mem->fixedprecShift);
+  return weightdf;
 }

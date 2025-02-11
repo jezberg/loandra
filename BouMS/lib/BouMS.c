@@ -14,6 +14,8 @@
 #include <stdint.h>
 
 #include "BouMS/common.h"
+#include "BouMS/cores.h"
+#include "BouMS/map.h"
 #include "BouMS/preprocessing.h"
 #include "BouMS/wcnf.h"
 #include "private/align.h"
@@ -40,9 +42,10 @@ static void calcMemoryReq(const BouMS_wcnf_t* formula, BouMS_memoryReq_t* out);
  * @param cfg
  * @param mem
  * @param avgSoftClauseWeight
+ * @param cores
  */
 static void initWeights(const BouMS_wcnf_t* formula, const BouMS_params_t* cfg, BouMS_memory_t* mem,
-                        unsigned_fixedprec_t avgSoftClauseWeight);
+                        unsigned_fixedprec_t avgSoftClauseWeight, bool cores);
 
 /**
  * @brief Updates the algorithm's output
@@ -65,19 +68,23 @@ typedef bool (*clausePredicate_t)(const BouMS_wcnf_clause_t*);
  *
  * @param formula
  * @param clausePredicate
+ * @param map
  * @param stop
  * @return The number of clauses fulfilling the predicate
  */
-static BouMS_uint_t moveClausesFirst(const BouMS_wcnf_t* formula, clausePredicate_t clausePredicate, const bool* stop);
+static BouMS_uint_t moveClausesFirst(const BouMS_wcnf_t* formula, clausePredicate_t clausePredicate,
+                                     BouMS_clauseMap_t* map, const bool* stop);
 
 /**
  * @brief Move hard clauses to the front of the array
  *
  * @param formula
  * @param cfg
+ * @param map
  * @param stop
  */
-static void moveHardClausesFirst(BouMS_wcnf_t* formula, const BouMS_params_t* cfg, const bool* stop);
+static void moveHardClausesFirst(BouMS_wcnf_t* formula, const BouMS_params_t* cfg, BouMS_clauseMap_t* map,
+                                 const bool* stop);
 
 /**
  * @brief Preprocesses the formula for solving
@@ -88,10 +95,11 @@ static void moveHardClausesFirst(BouMS_wcnf_t* formula, const BouMS_params_t* cf
  * Removes 0-weight clauses
  *
  * @param formula
+ * @param map
  * @param stop
  * @return true if the formula  has empty hard clauses, false otherwise or stop flag was set
  */
-static bool prepare(BouMS_wcnf_t* formula, const bool* stop);
+static bool prepare(BouMS_wcnf_t* formula, BouMS_clauseMap_t* map, const bool* stop);
 
 /**
  * @brief Analyzes hard clauses to determine the total weight of empty soft clauses, the average soft clause weight, and
@@ -141,18 +149,24 @@ BouMS_uint_t BouMS_calcMemoryRequirements(const BouMS_wcnf_t* formula, BouMS_mem
 }
 
 void BouMS_solve(BouMS_wcnf_t* formula, const BouMS_params_t* cfg, void* memory, const BouMS_memoryReq_t* memReq,
-                 BouMS_result_t* result, const bool* initModel, const BouMS_uint_t maxNonImprovingFlips,
-                 const bool* stop) {
+                 BouMS_result_t* result, const bool* initModel, BouMS_clauseMap_t* map,
+                 const BouMS_uint_t maxNonImprovingFlips, const bool* stop) {
+  BouMS_cores_solve(formula, NULL, cfg, memory, memReq, result, initModel, map, maxNonImprovingFlips, stop);
+}
+
+void BouMS_cores_solve(BouMS_wcnf_t* formula, BouMS_cores_mem_t* cores, const BouMS_params_t* cfg, void* memory,
+                       const BouMS_memoryReq_t* memReq, BouMS_result_t* result, const bool* initModel,
+                       BouMS_clauseMap_t* map, BouMS_uint_t maxNonImprovingFlips, const bool* stop) {
   INIT_DURATION_MEAS();
 
   START_DURATION_MEAS();
-  if (prepare(formula, stop)) {
+  if (prepare(formula, map, stop)) {
     result->status = BOUMS_UNSAT;
     return;
   }
   LOG_VERBOSE_WITH_DURATION("c prepared formula");
 
-  moveHardClausesFirst(formula, cfg, stop);
+  moveHardClausesFirst(formula, cfg, map, stop);
 
   BouMS_memory_t mem;
   BouMS_initMemory(memory, memReq, formula, &mem);
@@ -205,11 +219,11 @@ void BouMS_solve(BouMS_wcnf_t* formula, const BouMS_params_t* cfg, void* memory,
       LOG_TRACE_WITH_DURATION("c performed decimation");
 
       START_DURATION_MEAS();
-      initWeights(formula, cfg, &mem, avgSoftClauseWeight);
+      initWeights(formula, cfg, &mem, avgSoftClauseWeight, cores);
       LOG_TRACE_WITH_DURATION("c initialized weights");
 
       START_DURATION_MEAS();
-      initAlgo(formula, &mem, &cost);
+      initAlgo(formula, &mem, &cost, map, cores);
       cost += totalWeightOfEmptySoftClauses;
       LOG_TRACE_WITH_DURATION("c initialized algorithm");
     } else {
@@ -230,7 +244,7 @@ void BouMS_solve(BouMS_wcnf_t* formula, const BouMS_params_t* cfg, void* memory,
       // LOG_TRACE("c current cost is " BouMS_UINT_FORMAT " (%s)\n", cost, infeasible ? "infeasible" : "feasible");
 
       BouMS_wcnf_variable_t* variableToFlip = selectVariable(formula, cfg, &mem);
-      flipVariable(variableToFlip, formula, &mem, &cost);
+      flipVariable(variableToFlip, formula, &mem, &cost, map, cores);
       ++flipsWOImprovement;
     }
 
@@ -248,7 +262,6 @@ void BouMS_solve(BouMS_wcnf_t* formula, const BouMS_params_t* cfg, void* memory,
 
   formula->numClauses += numEmptySoftClauses;
 }
-
 void BouMS_params(const BouMS_wcnf_t* formula, BouMS_params_t* params) {
   params->maxTries = BOUMS_UINT_MAX;
   params->fixedPrecSafetyBits = 32;  // NOLINT(readability-magic-numbers)
@@ -319,6 +332,8 @@ void BouMS_params(const BouMS_wcnf_t* formula, BouMS_params_t* params) {
       params->sWeightBoundOffset = 0;  // NOLINT(readability-magic-numbers)
     }
   }
+
+  params->zeroWeightCoreFactor = 3;
 }
 
 static void calcMemoryReq(const BouMS_wcnf_t* formula, BouMS_memoryReq_t* out) {
@@ -390,7 +405,7 @@ void BouMS_initMemory(void* mem, const BouMS_memoryReq_t* memReq, const BouMS_wc
 }
 
 static void initWeights(const BouMS_wcnf_t* formula, const BouMS_params_t* cfg, BouMS_memory_t* mem,
-                        unsigned_fixedprec_t avgSoftClauseWeight) {
+                        unsigned_fixedprec_t avgSoftClauseWeight, bool cores) {
   if (cfg->isPartial && cfg->isWeighted) {
     pw_initWeights(formula, cfg, mem, avgSoftClauseWeight);
   } else if (cfg->isPartial) {
@@ -399,6 +414,18 @@ static void initWeights(const BouMS_wcnf_t* formula, const BouMS_params_t* cfg, 
     npw_initWeights(formula, cfg, mem, avgSoftClauseWeight);
   } else {
     npuw_initWeights(formula, cfg, mem);
+  }
+
+  if (cores) {
+    fixedprec_orig_t maxTunedWeightVal = 0;
+    for (BouMS_uint_t cIdx = formula->numHardClauses; cIdx < formula->numClauses; ++cIdx) {
+      const BouMS_uint_t tunedWeightValue = mem->tunedWeights[cIdx].value;
+      if (tunedWeightValue > maxTunedWeightVal) {
+        maxTunedWeightVal = tunedWeightValue;
+      }
+    }
+    mem->zeroWeightCoreWeight.value = cfg->zeroWeightCoreFactor * maxTunedWeightVal;
+    LOG_VERBOSE("c maxTunedWeight is %f\n", maxTunedWeightVal);
   }
 }
 
@@ -414,7 +441,8 @@ static bool updateResult(BouMS_result_t* result, const BouMS_wcnf_variable_t* va
   return false;
 }
 
-static BouMS_uint_t moveClausesFirst(const BouMS_wcnf_t* formula, clausePredicate_t clausePredicate, const bool* stop) {
+static BouMS_uint_t moveClausesFirst(const BouMS_wcnf_t* formula, clausePredicate_t clausePredicate,
+                                     BouMS_clauseMap_t* map, const bool* stop) {
   // in-place sorting clauses to beginning of array
   BouMS_uint_t numClauses = 0;
   BouMS_uint_t lastClauseIdx = 0;
@@ -452,31 +480,43 @@ static BouMS_uint_t moveClausesFirst(const BouMS_wcnf_t* formula, clausePredicat
     fixLitToClausePtrs(clause);
     fixLitToClausePtrs(nextClause);
 
+    if (map) {
+      const BouMS_uint_t toFrontIdx = nextClause - formula->clauses;
+      const BouMS_uint_t toBackIdx = clause - formula->clauses;
+      const BouMS_uint_t toFrontEx = map->in2Ex[toFrontIdx];
+      const BouMS_uint_t toBackEx = map->in2Ex[toBackIdx];
+      map->ex2In[toFrontEx] = toBackIdx;
+      map->ex2In[toBackEx] = toFrontIdx;
+      map->in2Ex[toFrontIdx] = toBackEx;
+      map->in2Ex[toBackIdx] = toFrontEx;
+    }
+
     numClauses += 1;
   }
 
   return numClauses;
 }
 
-static void moveHardClausesFirst(BouMS_wcnf_t* formula, const BouMS_params_t* cfg, const bool* stop) {
+static void moveHardClausesFirst(BouMS_wcnf_t* formula, const BouMS_params_t* cfg, BouMS_clauseMap_t* map,
+                                 const bool* stop) {
   INIT_DURATION_MEAS();
 
   if (cfg->isPartial) {
     START_DURATION_MEAS();
-    const BouMS_uint_t numHardClauses = moveClausesFirst(formula, BouMS_wcnf_isClauseHard, stop);
+    const BouMS_uint_t numHardClauses = moveClausesFirst(formula, BouMS_wcnf_isClauseHard, map, stop);
     LOG_VERBOSE_WITH_DURATION("c separated hard and soft clauses");
     assert(numHardClauses == formula->numHardClauses);
     ((void)numHardClauses);  // suppress -Wunused-variable
   }
 }
 
-static bool prepare(BouMS_wcnf_t* formula, const bool* stop) {
+static bool prepare(BouMS_wcnf_t* formula, BouMS_clauseMap_t* map, const bool* stop) {
   for (BouMS_uint_t clauseIdx = 0; clauseIdx < formula->numClauses && !*stop; ++clauseIdx) {
     BouMS_wcnf_clause_t* const clause = formula->clauses + clauseIdx;
     const bool isHard = BouMS_wcnf_isClauseHard(clause);
 
     if (BouMS_wcnf_cleanClause(formula, clause) || clause->weight == 0) {
-      removeClause(clauseIdx--, formula->clauses, formula->numClauses--);
+      removeClause(clauseIdx--, formula->clauses, formula->numClauses--, map);
       if (isHard) {
         formula->numHardClauses -= 1;
       }

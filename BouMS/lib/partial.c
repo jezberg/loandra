@@ -10,6 +10,7 @@
 
 #include <assert.h>
 #include <stdbool.h>
+#include <stdlib.h>
 
 #include "BouMS/BouMS.h"
 #include "BouMS/common.h"
@@ -33,9 +34,9 @@
  * @param reuseDecimation
  * @param stop
  */
-static void solveHard(BouMS_wcnf_t* formula, const BouMS_params_t* cfg, BouMS_memory_t* mem, const BouMS_memoryReq_t* memReq,
-                      const BouMS_result_t* result, const bool* initModel, bool forceRandom, bool* reuseDecimation,
-                      const bool* stop);
+static void solveHard(BouMS_wcnf_t* formula, const BouMS_params_t* cfg, BouMS_memory_t* mem,
+                      const BouMS_memoryReq_t* memReq, const BouMS_result_t* result, const bool* initModel,
+                      bool forceRandom, bool* reuseDecimation, const bool* stop);
 
 /**
  * @brief
@@ -120,6 +121,7 @@ void puw_initWeights(const BouMS_wcnf_t* formula, const BouMS_params_t* cfg, Bou
 
   for (BouMS_uint_t clauseIdx = formula->numHardClauses; clauseIdx < formula->numClauses; ++clauseIdx) {
     mem->weights[clauseIdx] = UFIXEDPREC(0);
+    mem->tunedWeights[clauseIdx] = fixedprec_uto(1, mem->fixedprecShift);
   }
 }
 
@@ -134,9 +136,9 @@ void p_updateWeights(const BouMS_wcnf_t* formula, const BouMS_params_t* cfg, Bou
   }
 }
 
-static void solveHard(BouMS_wcnf_t* formula, const BouMS_params_t* cfg, BouMS_memory_t* mem, const BouMS_memoryReq_t* memReq,
-                      const BouMS_result_t* result, const bool* initModel, bool forceRandom, bool* reuseDecimation,
-                      const bool* stop) {
+static void solveHard(BouMS_wcnf_t* formula, const BouMS_params_t* cfg, BouMS_memory_t* mem,
+                      const BouMS_memoryReq_t* memReq, const BouMS_result_t* result, const bool* initModel,
+                      bool forceRandom, bool* reuseDecimation, const bool* stop) {
   INIT_DURATION_MEAS();
   START_DURATION_MEAS();
 
@@ -151,11 +153,11 @@ static void solveHard(BouMS_wcnf_t* formula, const BouMS_params_t* cfg, BouMS_me
     puw_initWeights(formula, cfg, mem);
 
     BouMS_uint_t cost;
-    initAlgo(formula, mem, &cost);
+    initAlgo(formula, mem, &cost, NULL, NULL);
 
     for (BouMS_uint_t flip = 0; flip < cfg->maxFlips && !done(mem, result) && !*stop; ++flip) {
       BouMS_wcnf_variable_t* variableToFlip = selectVariable(formula, cfg, mem);
-      flipVariable(variableToFlip, formula, mem, &cost);
+      flipVariable(variableToFlip, formula, mem, &cost, NULL, NULL);
     }
   }
 

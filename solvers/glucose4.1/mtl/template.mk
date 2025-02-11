@@ -17,6 +17,7 @@ CADOBJ	   = $(wildcard $(CADICAL_DIR)/build/*.a)
 
 DPWOBJ	   = $(wildcard $(DPW_DIR)/target/release/*.a) 
 BOUMSRELOBJ = $(BOUMS_DIR)/build/release-logverbose/libBouMS.a
+# BOUMSRELOBJ = $(BOUMS_DIR)/build/release-logtrace/libBouMS.a
 BOUMSDBGOBJ = $(BOUMS_DIR)/build/debug-logverbose/libBouMS.a
 
 PCOBJS     = $(addsuffix p,  $(COBJS))
@@ -83,7 +84,7 @@ lib$(LIB)_release.a:	$(filter-out */Main.or, $(RCOBJS))
 	@$(CXX) $(CFLAGS) -c -o $@ $<
 
 ## Linking rules (standard/profile/debug/release)
-$(EXEC) $(EXEC)_profile $(EXEC)_debug $(EXEC)_release $(EXEC)_static: 
+$(EXEC) $(EXEC)_profile $(EXEC)_debug $(EXEC)_release $(EXEC)_static: $(DPWOBJ) $(PREOBJ) $(CADOBJ) $(BOUMSOBJ)
 	@echo Linking: "$@ ( $(foreach f,$^,$(subst $(MROOT)/,,$f)) )"
 	@echo preprocessor and DPW library: $(DPWOBJ)  $(PREOBJ)
 	@echo CaDiCaL: $(CADOBJ)
@@ -121,10 +122,12 @@ builddeps:
 	@echo Making cadical
 	$(MAKE) -C $(CADICAL_DIR)
 	if [ $(BOUMSOBJ) = $(BOUMSRELOBJ) ]; then \
-		@echo "Making BouMS (release-logverbose)"; \
+		echo "Making BouMS (release-logverbose)"; \
 		$(MAKE) -C $(BOUMS_DIR) libonly-release-logverbose; \
+		# echo "Making BouMS (release-logtrace)"; \
+		# $(MAKE) -C $(BOUMS_DIR) libonly-release-logtrace; \
 	else \
-		@echo "Making BouMS (debug-logverbose)"; \
+		echo "Making BouMS (debug-logverbose)"; \
 		$(MAKE) -C $(BOUMS_DIR) libonly-debug-logverbose; \
 	fi
 

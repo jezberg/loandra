@@ -209,6 +209,14 @@
       "inherits": [
         "libonly"
       ]
+    },
+    {
+      "name": "libonly-release-logtrace",
+      "displayName": "Library only (release) w/ trace logging",
+      "configurePreset": "release-logtrace",
+      "inherits": [
+        "libonly"
+      ]
     }
   ]
 }

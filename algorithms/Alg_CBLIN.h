@@ -42,6 +42,7 @@
 #include "../rustsat/capi/rustsat.h"
 #include "utils/System.h"
 #include "BouMS/BouMS.h"
+#include "BouMS/cores.h"
 #include "BouMS/wcnf.h"
 #include "BouMS/wcnf_util.h"
 #include <map>
@@ -65,7 +66,7 @@ public:
         bool dpw_coarse_ = false, bool dpw_inc_ = false, bool extend_models_ = true, bool local_s = false, uint64_t _non_inc_precision = 10 , 
         bool _harden_in_SIS = false, bool opt_phase_save = false, bool _sis_in_propagator = false,
         int ls_init_level_ = 0, bool ls_dyn_prec_ = false, bool ls_sis_ = false, bool ls_merge_assign_ = false,
-        bool ls_min_ = false) {
+        bool ls_min_ = false, bool ls_cores_ = false, double zero_weight_core_fact_ = 3) {
     
     use_propagator = _sis_in_propagator; 
     solverCad = NULL;
@@ -116,6 +117,8 @@ public:
       ls_sis = ls_sis_;
       ls_merge_assign = ls_merge_assign_;
       ls_min = ls_min_;
+      ls_cores = ls_cores_;
+      zero_weight_core_fact = zero_weight_core_fact_;
     }
 
     skip_local_search = false;
@@ -131,14 +134,31 @@ public:
     if (solverCad != NULL)
       delete solverCad;
 
+    if (boums_cores) {
+      BouMS_cores_free(&boums_inst, boums_cores, free);
+      delete boums_cores;
+      boums_cores = NULL;
+    }
+    if (core_var_to_clause) {
+      delete[] core_var_to_clause;
+      core_var_to_clause = NULL;
+    }
     BouMS_wcnf_util_deleteFormula(&boums_inst, free, NULL);
     if (boums_mem) {
       free(boums_mem);
       boums_mem = NULL;
     }
     if (boums_assignment) {
-      free(boums_assignment);
+      delete[] boums_assignment;
       boums_assignment = NULL;
+    }
+    if (boums_clause_map.ex2In) {
+      delete[] boums_clause_map.ex2In;
+      boums_clause_map.ex2In = NULL;
+    }
+    if (boums_clause_map.in2Ex) {
+      delete[] boums_clause_map.in2Ex;
+      boums_clause_map.in2Ex = NULL;
     }
     if (orig_maxsat_formula) {
       delete orig_maxsat_formula;
@@ -404,6 +424,8 @@ protected:
   bool ls_sis = false; // run LS in SIS
   bool ls_merge_assign = false; // use assignment merging for LS in dyn prec and sis
   bool ls_min = false; // run LS for solution minimization
+  bool ls_cores = false; // use cores in LS
+  double zero_weight_core_fact = 3;
   MaxSATFormula* orig_maxsat_formula = NULL;
   uint64_t init_ls_ub = UINT64_MAX;
   bool* init_ls_ub_assign = NULL;
@@ -413,10 +435,14 @@ protected:
   void* boums_mem = NULL;
   BouMS_params_t boums_params;
   bool* boums_assignment = NULL;
+  BouMS_clauseMap_t boums_clause_map = { .ex2In = NULL, .in2Ex = NULL };
   bool boums_broken = false;
   vec<lbool> ls_merged_assign;
   vec<lbool>* ls_usual_init_assign = &bestModel;
   uint64_t old_sis_precision;
+  std::vector<BouMS_cores_core_t> cores;
+  BouMS_cores_mem_t* boums_cores = NULL;
+  BouMS_uint_t* core_var_to_clause = NULL;
   void updateBouMSInstance(); // return true in case of error
   template<typename V, typename v> unsigned int mergeAssignments(vec<lbool>& dst, const V& src, const std::function<lbool(const v)>& tolbool) {
     unsigned int num_disagreements = 0;

@@ -27,6 +27,7 @@
 
 #include "Alg_CBLIN.h"
 #include "BouMS/BouMS.h"
+#include "BouMS/cores.h"
 #include "BouMS/wcnf.h"
 
 using namespace openwbo;
@@ -589,6 +590,31 @@ void CBLIN::relaxCore(vec<Lit> &core, uint64_t weightCore) {
   }
   encodeMaxRes(core, weightCore);
   sumSizeCores += core.size();
+
+  if (ls_cores) {
+    if (!core_var_to_clause) {
+      core_var_to_clause = new BouMS_uint_t[boums_inst.numVariables];
+      if (!core_var_to_clause) {
+        logPrint("Failed to allocate memory for core var to clause mapping!");
+        return;
+      }
+    }
+    BouMS_cores_core_t c;
+    c.numLiterals = core.size();
+    c.literals = new BouMS_literal_t[c.numLiterals];
+    if (!c.literals) {
+      logPrint("Failed to allocate memory for a BouMS core!");
+    } else {
+      for (unsigned int lIdx = 0; lIdx < c.numLiterals; ++lIdx) {
+        const auto lit = core[lIdx];
+        // hard clauses are added first in updateBouMSInstance
+        core_var_to_clause[var(lit)] = boums_inst.numHardClauses + coreMapping[lit];
+        c.literals[lIdx] = BouMS_mkLit(var(lit), sign(lit));
+      }
+      cores.push_back(c);
+      logPrint("Added core of length ", c.numLiterals, " to BouMS's core list");
+    }
+  }
 }
 
 /*_________________________________________________________________________________________________
@@ -1215,6 +1241,36 @@ StatusCode CBLIN::linearSearch() {
     ls_usual_init_assign = &ls_merged_assign;
   }
 
+  if (!boums_broken && ls_cores && cores.size() > 0 && core_var_to_clause) {
+    bool deleteCores = false;
+
+    boums_cores = new BouMS_cores_mem_t;
+    if (boums_cores) {
+      boums_cores->varToCores = NULL;
+      boums_cores->coreToSatLits = NULL;
+      if (BouMS_cores_init(&boums_inst, cores.data(), cores.size(), core_var_to_clause, boums_cores, realloc, free)) {
+        deleteCores = true;
+      }
+    } else {
+      deleteCores = true;
+    }
+
+    if (deleteCores) {
+      logPrint("Could not allocate memory for BouMS cores!");
+
+      if (boums_cores) {
+        delete boums_cores;
+      }
+
+      for (auto& c : cores) {
+        delete[] c.literals;
+      }
+      cores.clear();
+    } else {
+      logPrint("Added ", cores.size(), " cores to BouMS!");
+    }
+  }
+
   init_SIS_precision();
   if (!boums_broken && ls_dyn_prec) {
     // apply precision to BouMS instance
@@ -1290,17 +1346,17 @@ StatusCode CBLIN::linearSearch() {
                    ", disagreeing variables: ", num_disagree);
         }
 
-        localsearch(*ls_usual_init_assign);
-
-        const auto lambda = [this](Lit l) { return boums_assignment[var(l)] != sign(l); };
-        const auto ls_reduced_cost = computeCostReducedWeights(&lambda);
-        if (ls_reduced_cost < new_reduced_cost) {
-          new_reduced_cost = ls_reduced_cost;
-          logPrint("LS found better reduced cost");
-          if (ls_merge_assign) {
-            const auto num_disagree = mergeAssignments<bool*, bool>(ls_merged_assign, boums_assignment, tolbool);
-            logPrint("Merged SIS LS assignment, agreeing variables: ", boums_inst.numVariables - num_disagree,
-                     ", disagreeing variables: ", num_disagree);
+        if (localsearch(*ls_usual_init_assign)) {
+          const auto lambda = [this](Lit l) { return boums_assignment[var(l)] != sign(l); };
+          const auto ls_reduced_cost = computeCostReducedWeights(&lambda);
+          if (ls_reduced_cost < new_reduced_cost) {
+            new_reduced_cost = ls_reduced_cost;
+            logPrint("LS found better reduced cost");
+            if (ls_merge_assign) {
+              const auto num_disagree = mergeAssignments<bool*, bool>(ls_merged_assign, boums_assignment, tolbool);
+              logPrint("Merged SIS LS assignment, agreeing variables: ", boums_inst.numVariables - num_disagree,
+                       ", disagreeing variables: ", num_disagree);
+            }
           }
         }
       }
@@ -1704,8 +1760,8 @@ bool CBLIN::localsearch(vec<lbool> & sol) {
       // BouMS: solve
       const auto num_clauses = boums_inst.numClauses;
       const bool boums_stop_dummy = false;
-      BouMS_solve(&boums_inst, &boums_params, boums_mem, &boums_mem_req, &boums_result, boums_assignment,
-                  boums_params.maxFlips, &boums_stop_dummy);
+      BouMS_cores_solve(&boums_inst, boums_cores, &boums_params, boums_mem, &boums_mem_req, &boums_result,
+                        boums_assignment, &boums_clause_map, boums_params.maxFlips, &boums_stop_dummy);
       // make sure we don't lose clauses e.g., when their weights are set to 0
       boums_inst.numClauses = num_clauses;
     }
@@ -1918,8 +1974,8 @@ StatusCode CBLIN::search() {
 
         logPrint("Running LS on original instance");
         const bool dummy = false;
-        BouMS_solve(&boums_inst, &boums_params, boums_mem, &boums_mem_req, &res, boums_assignment, boums_params.maxFlips,
-                    &dummy);
+        BouMS_solve(&boums_inst, &boums_params, boums_mem, &boums_mem_req, &res, boums_assignment, &boums_clause_map,
+                    boums_params.maxFlips, &dummy);
         assert(res.status == BOUMS_OPTIMUM_FOUND || res.status == BOUMS_UNKNOWN);
         if (res.cost < ubCost) {
           logPrint("LS on original found better UB, old: ", ubCost, ", new: ", res.cost);
@@ -2172,6 +2228,7 @@ void CBLIN::updateBouMSInstance() {
   boums_broken = false;
 
   const auto oldNumVars = boums_inst.numVariables;
+  const auto oldNumClauses = boums_inst.numClauses;
   BouMS_wcnf_util_deleteFormula(&boums_inst, free, NULL);
   boums_inst.numClauses = 0;
   boums_inst.numHardClauses = 0;
@@ -2229,29 +2286,64 @@ void CBLIN::updateBouMSInstance() {
   const auto new_boums_bytes = BouMS_calcMemoryRequirements(&boums_inst, &boums_mem_req);
   if (new_boums_bytes > boums_bytes || boums_mem == NULL) {
     boums_bytes = new_boums_bytes;
-    void* const new_boums_mem = realloc(boums_mem, boums_bytes);
-    if (!new_boums_mem) {
+    free(boums_mem);
+    boums_mem = malloc(boums_bytes);
+    if (!boums_mem) {
       boums_broken = true;
-      free(boums_mem);
-      boums_mem = NULL;
+      BouMS_wcnf_util_deleteFormula(&boums_inst, free, NULL);
       logPrint("Error allocating memory for BouMS");
       return;
     }
-    boums_mem = new_boums_mem;
   }
 
   if (oldNumVars < boums_inst.numVariables || boums_assignment == NULL) {
-    bool* const new_boums_assignment =
-      static_cast<bool*>(realloc(boums_assignment, boums_inst.numVariables * sizeof(bool)));
-    if (!new_boums_assignment) {
+    delete[] boums_assignment;
+    boums_assignment = new bool[boums_inst.numVariables];
+    if (!boums_assignment) {
       boums_broken = true;
-      free(boums_assignment);
-      boums_assignment = NULL;
+      free(boums_mem);
+      BouMS_wcnf_util_deleteFormula(&boums_inst, free, NULL);
       logPrint("Error allocating memory for BouMS' assignment");
       return;
     }
-    boums_assignment = new_boums_assignment;
   }
+
+  if (oldNumClauses < boums_inst.numClauses ||  boums_clause_map.ex2In == NULL || boums_clause_map.in2Ex == NULL) {
+    if (boums_clause_map.ex2In != NULL) {
+      delete[] boums_clause_map.ex2In;
+      boums_clause_map.ex2In = NULL;
+    }
+    if (boums_clause_map.in2Ex != NULL) {
+      delete[] boums_clause_map.in2Ex;
+      boums_clause_map.in2Ex = NULL;
+    }
+
+    boums_clause_map.ex2In = new BouMS_uint_t[boums_inst.numClauses];
+    boums_clause_map.in2Ex = new BouMS_uint_t[boums_inst.numClauses];
+
+    if (boums_clause_map.ex2In == NULL || boums_clause_map.in2Ex == NULL) {
+      boums_broken = true;
+      if (boums_clause_map.ex2In != NULL) {
+        delete[] boums_clause_map.ex2In;
+        boums_clause_map.ex2In = NULL;
+      }
+      if (boums_clause_map.in2Ex != NULL) {
+        delete[] boums_clause_map.in2Ex;
+        boums_clause_map.in2Ex = NULL;
+      }
+      delete[] boums_assignment;
+      free(boums_mem);
+      BouMS_wcnf_util_deleteFormula(&boums_inst, free, NULL);
+      logPrint("Error allocating memory for BouMS' clause map");
+      return;
+    }
+
+    for (unsigned int cIdx = 0; cIdx < boums_inst.numClauses; ++cIdx) {
+      boums_clause_map.ex2In[cIdx] = cIdx;
+      boums_clause_map.in2Ex[cIdx] = cIdx;
+    }
+  }
+
 }
 
 void CBLIN::loadFormula(MaxSATFormula *maxsat) {
@@ -2265,6 +2357,7 @@ void CBLIN::setup_formula() {
   BouMS_params(&boums_inst, &boums_params);
   // we always provide an initial assignment that we don't want to replace by a random one ever (?)
   boums_params.maxTriesWOImprovement = BOUMS_UINT_MAX;
+  boums_params.zeroWeightCoreFactor = zero_weight_core_fact;
 }
 
 void CBLIN::printAnswer(int type) {

@@ -13,6 +13,7 @@
 #include <stdbool.h>
 
 #include "BouMS/common.h"
+#include "BouMS/map.h"
 #include "BouMS/preprocessing.h"
 #include "BouMS/wcnf.h"
 
@@ -67,6 +68,7 @@ typedef struct {
 
   bool isPartial;  /*!< True if there are hard clauses, false otherwise */
   bool isWeighted; /*!< False if all soft clauses have weight 1, true otherwise */
+  double zeroWeightCoreFactor;
 } BouMS_params_t;
 
 /**
@@ -104,11 +106,13 @@ BouMS_uint_t BouMS_calcMemoryRequirements(const BouMS_wcnf_t* formula, BouMS_mem
  * @param memReq @see BouMS_memoryReq_t
  * @param result @see BouMS_result_t
  * @param initModel Pointer to a model from which local search should start or NULL
+ * @param map
  * @param maxNonImprovingFlips Stop when no better assignment was found within this number of flips
  * @param stop Pointer to a Boolean value that, when set to true, causes the procedure to terminate asap
  */
 void BouMS_solve(BouMS_wcnf_t* formula, const BouMS_params_t* cfg, void* memory, const BouMS_memoryReq_t* memReq,
-                 BouMS_result_t* result, const bool* initModel, BouMS_uint_t maxNonImprovingFlips, const bool* stop);
+                 BouMS_result_t* result, const bool* initModel, BouMS_clauseMap_t* map,
+                 BouMS_uint_t maxNonImprovingFlips, const bool* stop);
 
 /**
  * @brief Calculates default parameters based on the given formula
