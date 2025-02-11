@@ -1564,6 +1564,8 @@ void CBLIN::initializePBConstraint(uint64_t rhs) {
       // and this starts from a feasible assignment, so it should stay feasible
       ls_feasible = true;
     }
+  } else if (use_local_search) {
+    localsearch(bestModel);
   }
 
   bool ls_improved = false;
