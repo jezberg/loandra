@@ -1,0 +1,10 @@
+---
+BasedOnStyle: Google
+
+AllowShortFunctionsOnASingleLine: Empty
+AllowShortBlocksOnASingleLine: Never
+DerivePointerAlignment: false
+PointerAlignment: Left
+ColumnLimit: 120
+IndentPPDirectives: AfterHash
+AlignConsecutiveMacros: true

@@ -48,6 +48,14 @@ static inline BouMS_literal_t BouMS_mkLit(BouMS_uint_t varIdx, bool sign) {
   return (varIdx << 1) | sign;
 }
 
+static inline BouMS_uint_t BouMS_var(BouMS_literal_t lit) {
+  return lit >> 1;
+}
+
+static inline bool BouMS_sign(BouMS_literal_t lit) {
+  return lit & 1;
+}
+
 /**
  * @brief A literal, i.e., a possibly negated variable, in a BouMS_wcnf_clause_t struct
  *
@@ -63,7 +71,7 @@ typedef struct BouMS_wcnf_literal_s {
  * @param lit
  */
 static inline BouMS_uint_t BouMS_wcnf_var(const BouMS_wcnf_literal_t* lit) {
-  return lit->lit >> 1;
+  return BouMS_var(lit->lit);
 }
 
 /**
@@ -72,7 +80,7 @@ static inline BouMS_uint_t BouMS_wcnf_var(const BouMS_wcnf_literal_t* lit) {
  * @param lit
  */
 static inline bool BouMS_wcnf_sign(const BouMS_wcnf_literal_t* lit) {
-  return lit->lit & 1;
+  return BouMS_sign(lit->lit);
 }
 
 /**
@@ -119,6 +127,10 @@ typedef struct {
   BouMS_wcnf_clause_t* clauses;      ///< Array which holds the clauses
 } BouMS_wcnf_t;
 
+static inline bool BouMS_isLiteralSatisfied(const BouMS_wcnf_t* formula, BouMS_literal_t lit) {
+  return formula->variables[BouMS_var(lit)].value != BouMS_sign(lit);
+}
+
 /**
  * @brief Checks whether a literal is satisfied
  *
@@ -128,7 +140,7 @@ typedef struct {
  * @return false Otherwise
  */
 static inline bool BouMS_wcnf_isLiteralSatisfied(const BouMS_wcnf_t* formula, const BouMS_wcnf_literal_t* literal) {
-  return formula->variables[BouMS_wcnf_var(literal)].value != BouMS_wcnf_sign(literal);
+  return BouMS_isLiteralSatisfied(formula, literal->lit);
 }
 
 /**

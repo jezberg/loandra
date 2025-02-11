@@ -23,6 +23,7 @@ static-release-logverbose \
 libonly-debug-logverbose \
 libonly-release-nologging \
 libonly-release-logverbose \
+libonly-release-logtrace \
 :
 	cmake -S . --preset=$(subst libonly-,,$@)
 	$(update_compile_commands)
@@ -46,4 +47,5 @@ static-release-logverbose \
 libonly-debug-logverbose \
 libonly-release-nologging \
 libonly-release-logverbose \
+libonly-release-logtrace \
 clean

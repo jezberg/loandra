@@ -38,6 +38,9 @@ if(DOXYGEN_FOUND)
     inc/BouMS/BouMS.h
     inc/BouMS/preprocessing.h
     inc/BouMS/wcnf_util.h
+    inc/BouMS/dynmem.h
+    inc/BouMS/cores.h
+    inc/BouMS/map.h
     ALL
     USE_STAMP_FILE
 )
@@ -81,6 +84,7 @@ add_library(BouMS
   lib/nonpartial.c
   lib/partial.c
   lib/wcnf_util.c
+  lib/cores.c
 )
 target_include_directories(BouMS
   PUBLIC inc

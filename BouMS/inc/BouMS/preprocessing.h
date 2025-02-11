@@ -12,6 +12,7 @@
 #include <stdbool.h>
 
 #include "BouMS/common.h"
+#include "BouMS/map.h"
 #include "BouMS/wcnf.h"
 
 #ifdef __cplusplus
@@ -55,10 +56,12 @@ void BouMS_decimation(const BouMS_wcnf_t* formula, void* memory, const BouMS_dec
  * @param numClauses The length of the clauses array
  * @param predicates The predicate functions; if a predicate returns true for a clause, the clause is removed
  * @param numPredicates The length of the predicates array
+ * @param map
  * @return BouMS_uint_t The number of removed clauses
  */
 BouMS_uint_t BouMS_filterClauses(BouMS_wcnf_clause_t* clauses, BouMS_uint_t numClauses,
-                                 const BouMS_clause_predicate_t* predicates, BouMS_uint_t numPredicates);
+                                 const BouMS_clause_predicate_t* predicates, BouMS_uint_t numPredicates,
+                                 BouMS_clauseMap_t* map);
 
 #ifdef __cplusplus
 }

@@ -10,7 +10,7 @@
 #ifndef FIXEDPREC_H
 #define FIXEDPREC_H
 
-// #define FIXEDPREC_FLOATING
+#define FIXEDPREC_FLOATING
 
 #ifndef FIXEDPREC_FLOATING
 #  include <assert.h>

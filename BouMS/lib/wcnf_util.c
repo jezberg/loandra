@@ -11,6 +11,7 @@
 #include <stdlib.h>
 
 #include "BouMS/common.h"
+#include "BouMS/dynmem.h"
 #include "BouMS/wcnf.h"
 #include "private/common.h"
 
@@ -26,7 +27,7 @@
  * @return true In case of error or stop
  * @return false Otherwise
  */
-static inline bool ensureClauses(BouMS_wcnf_t* formula, BouMS_uint_t numClauses, BouMS_wcnf_util_realloc_t realloc,
+static inline bool ensureClauses(BouMS_wcnf_t* formula, BouMS_uint_t numClauses, BouMS_dynmem_realloc_t realloc,
                                  const bool* stop);
 
 /**
@@ -41,7 +42,7 @@ static inline bool ensureClauses(BouMS_wcnf_t* formula, BouMS_uint_t numClauses,
  * @return true In case of error or stop
  * @return false Otherwise
  */
-static inline bool ensureVariables(BouMS_wcnf_t* formula, BouMS_uint_t numVariables, BouMS_wcnf_util_realloc_t realloc,
+static inline bool ensureVariables(BouMS_wcnf_t* formula, BouMS_uint_t numVariables, BouMS_dynmem_realloc_t realloc,
                                    const bool* stop);
 
 /**
@@ -54,7 +55,7 @@ static inline bool ensureVariables(BouMS_wcnf_t* formula, BouMS_uint_t numVariab
  * @param realloc
  */
 static inline bool ensureLitPtrs(BouMS_wcnf_variable_t* variable, BouMS_uint_t numLitPtrs,
-                                 BouMS_wcnf_util_realloc_t realloc);
+                                 BouMS_dynmem_realloc_t realloc);
 
 /** @brief Counts the number of literals for each variable in numClauses clauses, starting with firstClause
  *
@@ -67,8 +68,8 @@ static inline bool ensureLitPtrs(BouMS_wcnf_variable_t* variable, BouMS_uint_t n
  * @return NULL in case of error or stop
  */
 static inline BouMS_uint_t* countLitsPerVar(const BouMS_wcnf_t* formula, BouMS_uint_t firstClause,
-                                            BouMS_uint_t numClauses, BouMS_wcnf_util_realloc_t realloc,
-                                            BouMS_wcnf_util_free_t free, const bool* stop);
+                                            BouMS_uint_t numClauses, BouMS_dynmem_realloc_t realloc,
+                                            BouMS_dynmem_free_t free, const bool* stop);
 
 /**
  * @brief Add pointers from variables to their occurences in clauses for newNumClauses, starting at newClausesStart
@@ -83,9 +84,9 @@ static inline BouMS_uint_t* countLitsPerVar(const BouMS_wcnf_t* formula, BouMS_u
  * @return false Otherwise
  */
 static inline bool addVarToLitPtrs(BouMS_wcnf_t* formula, BouMS_uint_t newClausesStart, BouMS_uint_t numNewClauses,
-                                   BouMS_wcnf_util_realloc_t realloc, BouMS_wcnf_util_free_t free, const bool* stop);
+                                   BouMS_dynmem_realloc_t realloc, BouMS_dynmem_free_t free, const bool* stop);
 
-void BouMS_wcnf_util_deleteFormula(BouMS_wcnf_t* formula, BouMS_wcnf_util_free_t free, const bool* stop) {
+void BouMS_wcnf_util_deleteFormula(BouMS_wcnf_t* formula, BouMS_dynmem_free_t free, const bool* stop) {
   static const bool STOP_DUMMY = false;
   if (stop == NULL) {
     stop = &STOP_DUMMY;
@@ -121,8 +122,7 @@ void BouMS_wcnf_util_deleteFormula(BouMS_wcnf_t* formula, BouMS_wcnf_util_free_t
 }
 
 bool BouMS_wcnf_util_addClause(BouMS_wcnf_t* formula, BouMS_uint_t weight, const int* literals,
-                               BouMS_uint_t numLiterals, BouMS_wcnf_util_realloc_t realloc,
-                               BouMS_wcnf_util_free_t free) {
+                               BouMS_uint_t numLiterals, BouMS_dynmem_realloc_t realloc, BouMS_dynmem_free_t free) {
   static const bool STOP_DUMMY = false;
 
   if (ensureClauses(formula, formula->numClauses + 1, realloc, &STOP_DUMMY)) {
@@ -185,9 +185,8 @@ bool BouMS_wcnf_util_addClause(BouMS_wcnf_t* formula, BouMS_uint_t weight, const
   return false;
 }
 
-bool BouMS_wcnf_util_startBatchClauseAdding(BouMS_uint_t expectedNumClauses, BouMS_wcnf_util_realloc_t realloc,
-                                            BouMS_wcnf_util_free_t free,
-                                            BouMS_wcnf_util_batchClauseAddingState_t* state) {
+bool BouMS_wcnf_util_startBatchClauseAdding(BouMS_uint_t expectedNumClauses, BouMS_dynmem_realloc_t realloc,
+                                            BouMS_dynmem_free_t free, BouMS_wcnf_util_batchClauseAddingState_t* state) {
   *state = (BouMS_wcnf_util_batchClauseAddingState_t){
       .capacity = 0, .size = 0, .clauses = NULL, .maxVar = 0, .realloc = realloc, .free = free};
 
@@ -297,7 +296,7 @@ void BouMS_wcnf_util_cleanUpBatchClauseAddingAfterError(BouMS_wcnf_util_batchCla
   state->size = 0;
 }
 
-static inline bool ensureClauses(BouMS_wcnf_t* formula, BouMS_uint_t numClauses, BouMS_wcnf_util_realloc_t realloc,
+static inline bool ensureClauses(BouMS_wcnf_t* formula, BouMS_uint_t numClauses, BouMS_dynmem_realloc_t realloc,
                                  const bool* stop) {
   if (numClauses > formula->numClauses) {
     BouMS_wcnf_clause_t* const newClauses = realloc(formula->clauses, numClauses * sizeof(BouMS_wcnf_clause_t));
@@ -316,7 +315,7 @@ static inline bool ensureClauses(BouMS_wcnf_t* formula, BouMS_uint_t numClauses,
   return *stop;
 }
 
-static inline bool ensureVariables(BouMS_wcnf_t* formula, BouMS_uint_t numVariables, BouMS_wcnf_util_realloc_t realloc,
+static inline bool ensureVariables(BouMS_wcnf_t* formula, BouMS_uint_t numVariables, BouMS_dynmem_realloc_t realloc,
                                    const bool* stop) {
   if (numVariables > formula->numVariables) {
     BouMS_wcnf_variable_t* const newVars = realloc(formula->variables, numVariables * sizeof(BouMS_wcnf_variable_t));
@@ -336,7 +335,7 @@ static inline bool ensureVariables(BouMS_wcnf_t* formula, BouMS_uint_t numVariab
 }
 
 static inline bool ensureLitPtrs(BouMS_wcnf_variable_t* variable, BouMS_uint_t numLitPtrs,
-                                 BouMS_wcnf_util_realloc_t realloc) {
+                                 BouMS_dynmem_realloc_t realloc) {
   if (numLitPtrs > variable->numLiterals) {
     const BouMS_wcnf_literal_t** const newLits =
         (const BouMS_wcnf_literal_t**)realloc((void*)variable->literals, numLitPtrs * sizeof(BouMS_wcnf_literal_t*));
@@ -349,8 +348,8 @@ static inline bool ensureLitPtrs(BouMS_wcnf_variable_t* variable, BouMS_uint_t n
 }
 
 static inline BouMS_uint_t* countLitsPerVar(const BouMS_wcnf_t* formula, BouMS_uint_t firstClause,
-                                            BouMS_uint_t numClauses, BouMS_wcnf_util_realloc_t realloc,
-                                            BouMS_wcnf_util_free_t free, const bool* stop) {
+                                            BouMS_uint_t numClauses, BouMS_dynmem_realloc_t realloc,
+                                            BouMS_dynmem_free_t free, const bool* stop) {
   BouMS_uint_t* newLitsPerVar = realloc(NULL, formula->numVariables * sizeof(BouMS_uint_t));
   if (!newLitsPerVar) {
     return NULL;
@@ -375,7 +374,7 @@ static inline BouMS_uint_t* countLitsPerVar(const BouMS_wcnf_t* formula, BouMS_u
 }
 
 static inline bool addVarToLitPtrs(BouMS_wcnf_t* formula, BouMS_uint_t newClausesStart, BouMS_uint_t numNewClauses,
-                                   BouMS_wcnf_util_realloc_t realloc, BouMS_wcnf_util_free_t free, const bool* stop) {
+                                   BouMS_dynmem_realloc_t realloc, BouMS_dynmem_free_t free, const bool* stop) {
   // count the number of new literals per variable (to reduce need for reallocating)
   {
     BouMS_uint_t* newLitsPerVar = countLitsPerVar(formula, newClausesStart, numNewClauses, realloc, free, stop);

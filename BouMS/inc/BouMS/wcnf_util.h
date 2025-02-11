@@ -10,24 +10,14 @@
 #define BOUMS_WCNF_UTIL
 
 #include <stdbool.h>
-#include <stdlib.h>
 
 #include "BouMS/common.h"
+#include "BouMS/dynmem.h"
 #include "BouMS/wcnf.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-/**
- * @brief Type of realloc
- */
-typedef void* (*BouMS_wcnf_util_realloc_t)(void*, size_t);
-
-/**
- * @brief Type of free
- */
-typedef void (*BouMS_wcnf_util_free_t)(void*);
 
 /**
  * @brief Create a literal from MSE style input
@@ -59,7 +49,7 @@ static inline BouMS_wcnf_t BouMS_wcnf_util_newFormula(void) {
  * @param free Pointer to free function
  * @param stop NULL or pointer to flag to stop early (i.e., some memory will not be cleaned up)
  */
-void BouMS_wcnf_util_deleteFormula(BouMS_wcnf_t* formula, BouMS_wcnf_util_free_t free, const bool* stop);
+void BouMS_wcnf_util_deleteFormula(BouMS_wcnf_t* formula, BouMS_dynmem_free_t free, const bool* stop);
 
 /**
  * @brief Add a clause from MSE style input
@@ -78,8 +68,8 @@ void BouMS_wcnf_util_deleteFormula(BouMS_wcnf_t* formula, BouMS_wcnf_util_free_t
  * @return false Otherwise
  */
 bool BouMS_wcnf_util_addClause(BouMS_wcnf_t* formula, BouMS_uint_t weight, const int* literals,
-                               BouMS_uint_t numLiterals, BouMS_wcnf_util_realloc_t realloc,
-                               BouMS_wcnf_util_free_t free);
+                               BouMS_uint_t numLiterals, BouMS_dynmem_realloc_t realloc,
+                               BouMS_dynmem_free_t free);
 
 /**
  * @brief Struct that holds data for batch clause adding
@@ -89,8 +79,8 @@ typedef struct {
   BouMS_uint_t size;                  ///< The number of clauses in the buffer
   BouMS_wcnf_clause_t* clauses;       ///< The clause buffer
   BouMS_uint_t maxVar;                ///< The highest variable number encountered during adding
-  BouMS_wcnf_util_realloc_t realloc;  ///< realloc function
-  BouMS_wcnf_util_free_t free;        ///< free function
+  BouMS_dynmem_realloc_t realloc;  ///< realloc function
+  BouMS_dynmem_free_t free;        ///< free function
 } BouMS_wcnf_util_batchClauseAddingState_t;
 
 /**
@@ -103,8 +93,8 @@ typedef struct {
  * @return true In case of error (e.g., out of memory)
  * @return false Otherwise
  */
-bool BouMS_wcnf_util_startBatchClauseAdding(BouMS_uint_t expectedNumClauses, BouMS_wcnf_util_realloc_t realloc,
-                                            BouMS_wcnf_util_free_t free,
+bool BouMS_wcnf_util_startBatchClauseAdding(BouMS_uint_t expectedNumClauses, BouMS_dynmem_realloc_t realloc,
+                                            BouMS_dynmem_free_t free,
                                             BouMS_wcnf_util_batchClauseAddingState_t* state);
 
 /**

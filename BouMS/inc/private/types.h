@@ -49,6 +49,7 @@ typedef struct {
   BouMS_uint_t numSoftClauses;  ///< the number of soft clauses
 
   fixedprec_shift_t fixedprecShift;  ///< shift value for fixed precision arithmetic
+  unsigned_fixedprec_t zeroWeightCoreWeight;
 } BouMS_memory_t;
 
 typedef void (*variable_initializer_t)(BouMS_wcnf_t* formula, const BouMS_params_t* cfg, BouMS_memory_t* mem,
