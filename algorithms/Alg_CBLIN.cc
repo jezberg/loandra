@@ -1272,22 +1272,6 @@ StatusCode CBLIN::linearSearch() {
   }
 
   init_SIS_precision();
-  if (!boums_broken && ls_dyn_prec) {
-    // apply precision to BouMS instance
-    old_sis_precision = maxsat_formula->getMaximumWeight();
-    for (unsigned int cIdx = 0; cIdx < boums_inst.numClauses; ++cIdx) {
-      auto* const clause = boums_inst.clauses + cIdx;
-      if (!BouMS_wcnf_isClauseHard(clause)) {
-        clause->weight /= old_sis_precision;
-      }
-    }
-    /* init run on reduced objective inst that would be skipped in initializePBconstraint
-     * since the precision didn't change (it's the first one)
-     *
-     * also, this way we can assume the clauses are sorted (first hard, then soft) in initializePBconstraint
-     */
-    localsearch(*ls_usual_init_assign);
-  }
   setPBencodings();
   
   lbool res = l_True;
@@ -1541,43 +1525,27 @@ void CBLIN::initializePBConstraint(uint64_t rhs) {
 
   bool ls_feasible = false;
   if (ls_dyn_prec) {
-    /* run local search on reduced objective
-     * check if it found a globally better model, or at least a better one under the reduced objective
-     * merge improving models to get improving, diverse initial assignments
-     */
-    const auto cur_prec = maxsat_formula->getMaximumWeight();
-    const auto prec_coeff = old_sis_precision / cur_prec;
-    logPrint("LS prec coeff: ", prec_coeff);
-    if (prec_coeff > 1) { // if precision changed
-      // apply the current precision
-      for (unsigned int cIdx = boums_inst.numHardClauses; cIdx < boums_inst.numClauses; ++cIdx) {
-        auto* const clause = boums_inst.clauses + cIdx;
-        assert(!BouMS_wcnf_isClauseHard(clause));
-        // + 1 b/c most weights are reduced to 0 initially
-        clause->weight = (clause->weight + 1) * prec_coeff;
-      }
-      old_sis_precision = cur_prec;
-
-      ls_feasible = localsearch(*ls_usual_init_assign);
-    } else if (prec_coeff == 1){
-      // only happens when we just ran the inital LS run on the first precision,
-      // and this starts from a feasible assignment, so it should stay feasible
-      ls_feasible = true;
+    for (unsigned int scIdx = 0; scIdx < maxsat_formula->nSoft(); ++scIdx) {
+      const auto boumsIdx = boums_clause_map.ex2In[boums_inst.numHardClauses + scIdx]; // hard clauses were added first
+      boums_inst.clauses[boumsIdx].weight =
+        maxsat_formula->getSoftClause(scIdx).weight / maxsat_formula->getMaximumWeight();
     }
-  } else if (use_local_search) {
-    localsearch(bestModel);
+
+    ls_feasible = localsearch(*ls_usual_init_assign);
+  } else if (use_local_search && !skip_local_search) {
+    ls_feasible = localsearch(bestModel);
   }
 
   bool ls_improved = false;
   const auto lambda = [this](Lit l){return literalTrueInModel(l, bestModel);};
   uint64_t min_cost = computeCostReducedWeights(&lambda);
   if (min_cost < rhs) {
-    if (ls_dyn_prec && skip_local_search) {
+    if (ls_feasible && skip_local_search) {
       ls_improved = true;
       logPrint("LS found better global UB and RHS for PB, old RHS: ", rhs, ", new RHS: ", min_cost);
     }
     rhs = min_cost;
-  } else if (ls_feasible) {
+  } else if (ls_feasible && ls_dyn_prec) {
     const auto lambda = [this](Lit l) { return boums_assignment[var(l)] != sign(l); };
     min_cost = computeCostReducedWeights(&lambda);
     if (min_cost < rhs) {

@@ -439,7 +439,6 @@ protected:
   bool boums_broken = false;
   vec<lbool> ls_merged_assign;
   vec<lbool>* ls_usual_init_assign = &bestModel;
-  uint64_t old_sis_precision;
   std::vector<BouMS_cores_core_t> cores;
   BouMS_cores_mem_t* boums_cores = NULL;
   BouMS_uint_t* core_var_to_clause = NULL;
