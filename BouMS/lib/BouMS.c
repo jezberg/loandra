@@ -435,7 +435,7 @@ static bool updateResult(BouMS_result_t* result, const BouMS_wcnf_variable_t* va
     saveAssignment(numVariables, variables, result->assignment);  // save currently best assignment
     result->cost = cost;
     result->status = cost == 0 ? BOUMS_OPTIMUM_FOUND : BOUMS_UNKNOWN;
-    LOG_VERBOSE("o " BOUMS_UINT_FORMAT "\n", result->cost);
+    LOG_VERBOSE("c o " BOUMS_UINT_FORMAT "\n", result->cost);
     return true;
   }
   return false;
