@@ -1072,16 +1072,6 @@ StatusCode CBLIN::linearSearch() {
     }
   }
 
-  if (bestModel.size() < maxsat_formula->nVars() || solver->okay()) {
-      logPrint("Extending best model to full formula");
-      extendBestModel();
-  }
-
-  if (!boums_broken && (ls_dyn_prec || ls_sis) && ls_merge_assign) {
-    bestModel.copyTo(ls_merged_assign);
-    ls_usual_init_assign = &ls_merged_assign;
-  }
-
   if (!boums_broken && ls_cores && cores.size() > 0 && core_var_to_clause) {
     bool deleteCores = false;
 
@@ -1110,6 +1100,16 @@ StatusCode CBLIN::linearSearch() {
     } else {
       logPrint("Added ", cores.size(), " cores to BouMS!");
     }
+  }
+
+  if (bestModel.size() < maxsat_formula->nVars() || !solver->okay() ) {
+      logPrint("Extending best model to full formula");
+      extendBestModel();
+  }
+
+  if (!boums_broken && (ls_dyn_prec || ls_sis) && ls_merge_assign) {
+    bestModel.copyTo(ls_merged_assign);
+    ls_usual_init_assign = &ls_merged_assign;
   }
 
   init_SIS_precision();
@@ -1581,6 +1581,8 @@ void CBLIN::extendBestModel() {
     assert(res == l_True);
     solver->setSolutionBasedPhaseSaving(true);  
     checkModel(false, true);  
+    localsearch(bestModel);
+  //  logPrint("Debug: after extending, current UB: " + std::to_string(ubCost) + " size of best model " + std::to_string(bestModel.size()));
 }
 
 bool CBLIN::localsearch(vec<lbool> & sol) {
@@ -1986,8 +1988,8 @@ bool CBLIN::shouldUpdate() {
         checkGap();
         skip_local_search = from_local_search;
     }
-    if ( improve_better && (modelCost == ubCost) && solver->model.size() >= bestModel.size()) {
-      logPrint("found same cost model over at least as many vars");
+  else if (improve_better && (modelCost == ubCost) && solver->nVars() >= bestModel.size()) {
+      logPrint("Found same cost model covering more or the same amount of variables");
       saveModel(solver->model);
       bestModel.clear();
       solver->model.copyTo(bestModel);
