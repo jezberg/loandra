@@ -923,6 +923,9 @@ StatusCode CBLIN::coreGuidedLinearSearch() {
   inLinSearch = false;
   timer->start_timer();
   solverCad->connect_terminator(timer);
+  if (ls_learn_clauses) {
+    solverCad->connect_learner(&small_clause_learner);
+  }
   for (;;) {
     StatusCode us = weightDisjointCores(); 
     if (us == _OPTIMUM_) {
@@ -1268,6 +1271,16 @@ StatusCode CBLIN::linearSearch() {
       cores.clear();
     } else {
       logPrint("Added ", cores.size(), " cores to BouMS!");
+    }
+  }
+
+  if (ls_learn_clauses) {
+    solverCad->disconnect_learner();
+    learned_clauses = small_clause_learner.extract_clauses();
+    if (learned_clauses.size() > 0) {
+      updateBouMSInstance();
+    } else {
+      logPrint("Did not learn any clauses for LS?!");
     }
   }
 
@@ -2244,6 +2257,25 @@ void CBLIN::updateBouMSInstance() {
     }
   }
 
+  const auto numLearnedClauses = learned_clauses.size();
+  if (numLearnedClauses > 0) {
+    size_t maxClauseSize = 0;
+    for (int clauseIdx = 0; clauseIdx < numLearnedClauses && !oom; ++ clauseIdx) {
+      const auto& clause = learned_clauses.at(clauseIdx);
+      const auto clauseSize = clause.size();
+      if (clauseSize > maxClauseSize) {
+        maxClauseSize = clauseSize;
+      }
+      if (BouMS_wcnf_util_batchAddClause(&boums_clause_adder, BOUMS_HARD_CLAUSE_WEIGHT, clause.data(), clauseSize)) {
+        oom = true;
+      }
+    }
+    if (!oom) {
+      logPrint("Added ", numLearnedClauses, " learned clauses to BouMS (max ", small_clause_learner.max_num_clauses,
+               "), max clause size = ", maxClauseSize);
+    }
+  }
+
   if (oom) {
     boums_broken = true;
     BouMS_wcnf_util_cleanUpBatchClauseAddingAfterError(&boums_clause_adder);
@@ -2323,6 +2355,7 @@ void CBLIN::updateBouMSInstance() {
 void CBLIN::loadFormula(MaxSATFormula *maxsat) {
   MaxSAT::loadFormula(maxsat);
   orig_maxsat_formula = maxsat_formula->copyMaxSATFormula();
+  small_clause_learner.max_num_clauses = ls_learn_clauses_fact * orig_maxsat_formula->nHard();
 }
 
 void CBLIN::setup_formula() {
@@ -2349,4 +2382,43 @@ void CBLIN::printAnswer(int type) {
   } else {
     MaxSAT::printAnswer(type);
   }
+}
+
+CBLIN::SmallClauseLearner::SmallClauseLearner(size_t max_num_clauses)
+  : max_num_clauses(max_num_clauses)
+  , clauses()
+  , current_clause()
+{}
+
+bool CBLIN::SmallClauseLearner::learning(int size) {
+  return clauses.size() < max_num_clauses || size <= clauses.top().size();
+}
+
+void CBLIN::SmallClauseLearner::learn(int lit) {
+  if (lit != 0) {
+    current_clause.push_back(lit);
+    return;
+  }
+
+  if (current_clause.size() > 0) {
+    if (clauses.size() == max_num_clauses) {
+      clauses.pop();
+    }
+    clauses.push(std::move(current_clause));
+    current_clause.clear();
+  }
+}
+
+CBLIN::SmallClauseLearner::container_type CBLIN::SmallClauseLearner::extract_clauses() {
+  container_type c;
+  c.reserve(clauses.size());
+  while (!clauses.empty()) {
+    c.push_back(std::move(clauses.top()));
+    clauses.pop();
+  }
+  return c;
+}
+
+size_t CBLIN::SmallClauseLearner::size() const {
+  return clauses.size();
 }

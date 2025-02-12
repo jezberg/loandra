@@ -51,6 +51,7 @@
 #include <iostream>
 #include <stdio.h>
 #include <functional>
+#include <queue>
 
 
 namespace openwbo {
@@ -66,7 +67,9 @@ public:
         bool dpw_coarse_ = false, bool dpw_inc_ = false, bool extend_models_ = true, uint64_t _non_inc_precision = 10 , 
         bool _harden_in_SIS = false, bool opt_phase_save = false, bool _sis_in_propagator = false,
         int ls_init_level_ = 0, bool ls_dyn_prec_ = false, bool ls_sis_ = false, bool ls_merge_assign_ = false,
-        bool ls_min_ = false, bool ls_cores_ = false, double zero_weight_core_fact_ = 3) {
+        bool ls_min_ = false, bool ls_cores_ = false, double zero_weight_core_fact_ = 3, bool ls_learn_clauses_ = false,
+        double ls_learn_clauses_fact_ = 1)
+    : small_clause_learner(0) {
     
     use_propagator = _sis_in_propagator; 
     solverCad = NULL;
@@ -119,6 +122,8 @@ public:
     }
     ls_cores = ls_cores_;
     zero_weight_core_fact = zero_weight_core_fact_;
+    ls_learn_clauses = ls_learn_clauses_;
+    ls_learn_clauses_fact = ls_learn_clauses_fact_;
 
     skip_local_search = false;
     harden_in_SIS = _harden_in_SIS;
@@ -424,6 +429,8 @@ protected:
   bool ls_min = false; // run LS for solution minimization
   bool ls_cores = false; // use cores in LS
   double zero_weight_core_fact = 3;
+  bool ls_learn_clauses = false; // learn clauses during CG to feed to LS
+  double ls_learn_clauses_fact = 1;
   MaxSATFormula* orig_maxsat_formula = NULL;
   uint64_t init_ls_ub = UINT64_MAX;
   bool* init_ls_ub_assign = NULL;
@@ -441,7 +448,8 @@ protected:
   BouMS_cores_mem_t* boums_cores = NULL;
   BouMS_uint_t* core_var_to_clause = NULL;
   void updateBouMSInstance(); // return true in case of error
-  template<typename V, typename v> unsigned int mergeAssignments(vec<lbool>& dst, const V& src, const std::function<lbool(const v)>& tolbool) {
+  template<typename V, typename v>
+  unsigned int mergeAssignments(vec<lbool>& dst, const V& src, const std::function<lbool(const v)>& tolbool) {
     unsigned int num_disagreements = 0;
     for (unsigned int vIdx = 0; vIdx < dst.size(); ++vIdx) {
       if (dst[vIdx] != tolbool(src[vIdx])) {
@@ -454,6 +462,26 @@ protected:
   static inline lbool tolbool(bool b) {
     return b ? l_True : l_False;
   }
+  class SmallClauseLearner : public CaDiCaL::Learner {
+  public:
+    using lit_type = int;
+    using clause_type = std::vector<lit_type>;
+    using container_type = std::vector<clause_type>;
+
+    SmallClauseLearner(size_t max_num_clauses/*, size_t max_clause_size*/);
+    virtual bool learning(int size) override;
+    virtual void learn(int lit) override;
+    
+    container_type extract_clauses();
+    size_t size() const;
+
+    size_t max_num_clauses;
+
+  protected:
+    std::priority_queue<clause_type, container_type> clauses;
+    clause_type current_clause;
+  } small_clause_learner;
+  SmallClauseLearner::container_type learned_clauses;
   virtual void loadFormula(MaxSATFormula *maxsat) override;
   virtual void setup_formula() override;
   virtual void printAnswer(int) override;
