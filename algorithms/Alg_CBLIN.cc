@@ -268,7 +268,7 @@ void CBLIN::flipValueinBest(Lit l) {
         logPrint("can not harden based on reduced cost with incremental DPW");
         return; 
       }
-      if (solverCad->state() != 10) {
+      if (solverCad->status() != 10) {
         logPrint("Solver not in satisfiable state");
         return;
       }
@@ -1234,16 +1234,6 @@ StatusCode CBLIN::linearSearch() {
     }
   }
 
-  if (bestModel.size() < maxsat_formula->nVars() || solverCad->status() != 10) {
-      logPrint("Extending best model to full formula");
-      extendBestModel();
-  }
-
-  if (!boums_broken && (ls_dyn_prec || ls_sis) && ls_merge_assign) {
-    bestModel.copyTo(ls_merged_assign);
-    ls_usual_init_assign = &ls_merged_assign;
-  }
-
   if (!boums_broken && ls_cores && cores.size() > 0 && core_var_to_clause) {
     bool deleteCores = false;
 
@@ -1282,6 +1272,16 @@ StatusCode CBLIN::linearSearch() {
     } else {
       logPrint("Did not learn any clauses for LS?!");
     }
+  }
+
+  if (bestModel.size() < maxsat_formula->nVars() || solverCad->status() != 10) {
+      logPrint("Extending best model to full formula");
+      extendBestModel();
+  }
+
+  if (!boums_broken && (ls_dyn_prec || ls_sis) && ls_merge_assign) {
+    bestModel.copyTo(ls_merged_assign);
+    ls_usual_init_assign = &ls_merged_assign;
   }
 
   init_SIS_precision();
@@ -1720,6 +1720,7 @@ void CBLIN::extendBestModel() {
     assert(solverCad->status() == 10);
     assert(res == l_True);
     checkModel(false, true);
+    localsearch(bestModel);
   //  logPrint("Debug: after extending, current UB: " + std::to_string(ubCost) + " size of best model " + std::to_string(bestModel.size()));
 }
 
@@ -2174,10 +2175,10 @@ bool CBLIN::checkModel(bool from_local_search, bool improve_better) {
         checkGap();
         skip_local_search = from_local_search;
     }
-  if (improve_better && (modelCost == ubCost) && solverCad->vars() > bestModel.size()) {
+  else if (improve_better && (modelCost == ubCost) && solverCad->vars() >= bestModel.size()) {
       vec<lbool> cadModel; 
       ICadical::getModel(solverCad, cadModel);
-      logPrint("Found same cost model covering more variables");
+      logPrint("Found same cost model covering more or the same amount of variables");
       saveModel(cadModel);
       bestModel.clear();
       cadModel.copyTo(bestModel);
@@ -2356,6 +2357,9 @@ void CBLIN::loadFormula(MaxSATFormula *maxsat) {
   MaxSAT::loadFormula(maxsat);
   orig_maxsat_formula = maxsat_formula->copyMaxSATFormula();
   small_clause_learner.max_num_clauses = ls_learn_clauses_fact * orig_maxsat_formula->nHard();
+  if (small_clause_learner.max_num_clauses == 0) {
+    small_clause_learner.max_num_clauses = 1;
+  }
 }
 
 void CBLIN::setup_formula() {
