@@ -110,17 +110,16 @@ public:
       assert(use_DPW);
     }
 
-    use_local_search = local_s;
-    if (use_local_search) {
+    ls_init_level = ls_init_level_;
+    ls_dyn_prec = ls_dyn_prec_;
+    ls_sis = ls_sis_;
+    ls_merge_assign = ls_merge_assign_;
+    ls_min = ls_min_;
+    if (ls_min) {
       minimize_sol = true;
-      ls_init_level = ls_init_level_;
-      ls_dyn_prec = ls_dyn_prec_;
-      ls_sis = ls_sis_;
-      ls_merge_assign = ls_merge_assign_;
-      ls_min = ls_min_;
-      ls_cores = ls_cores_;
-      zero_weight_core_fact = zero_weight_core_fact_;
     }
+    ls_cores = ls_cores_;
+    zero_weight_core_fact = zero_weight_core_fact_;
 
     skip_local_search = false;
     harden_in_SIS = _harden_in_SIS;
@@ -397,7 +396,6 @@ protected:
  bool minimize_sol;
  int  minimize_strat;
  void minimizelinearsolution( vec<lbool> & sol);
- bool use_local_search;
  bool skip_local_search;
  bool localsearch(vec<lbool> & sol);
 

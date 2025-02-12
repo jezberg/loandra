@@ -176,7 +176,7 @@ int main(int argc, char **argv) {
   BoolOption preprocess("PREPROCESS", "preprocess", "Preprocess the instance prior to search.\n", true);
 
   IntOption ls_initLevel("CBLIN", "ls-init-level", "Run local search before core-guided (0=disable, 1=only on preprocessed instance, 2=on preprocessed and original instance).\n", 0, IntRange(0, 2));
-  BoolOption ls_dynprec("CBLIN", "ls-dyn-prec", "Use local search for dynamic precision.\n", false);
+  BoolOption ls_dynprec("CBLIN", "ls-dyn-prec", "Run local search with dynamically reduced precision.\n", false);
   BoolOption ls_sis("CBLIN", "ls-sis", "Use local search in SIS.\n", false);
   BoolOption ls_merge_assign("CBLIN", "ls-merge", "Use assignment merging when doing LS (in combination with ls-dyn-prec and/or ls-sis).\n", false);
   BoolOption ls_min("CBLIN", "ls-min", "Use local search for solution minimization.\n", false);
