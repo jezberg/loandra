@@ -63,7 +63,7 @@ public:
         int linear = 0, bool delsol = false, 
         int gcLim = -1, bool r2strat = false, bool incrementalV = false, 
         bool reconstruct_sol_ = false, bool minimize_sol_ = true, int m_strat = 0,
-        bool dpw_coarse_ = false, bool dpw_inc_ = false, bool extend_models_ = true, bool local_s = false, uint64_t _non_inc_precision = 10 , 
+        bool dpw_coarse_ = false, bool dpw_inc_ = false, bool extend_models_ = true, uint64_t _non_inc_precision = 10 , 
         bool _harden_in_SIS = false, bool opt_phase_save = false, bool _sis_in_propagator = false,
         int ls_init_level_ = 0, bool ls_dyn_prec_ = false, bool ls_sis_ = false, bool ls_merge_assign_ = false,
         bool ls_min_ = false, bool ls_cores_ = false, double zero_weight_core_fact_ = 3) {
@@ -109,17 +109,16 @@ public:
     weight_map_setup = false;
 
 
-    use_local_search = local_s;
-    if (use_local_search) {
+    ls_init_level = ls_init_level_;
+    ls_dyn_prec = ls_dyn_prec_;
+    ls_sis = ls_sis_;
+    ls_merge_assign = ls_merge_assign_;
+    ls_min = ls_min_;
+    if (ls_min) {
       minimize_sol = true;
-      ls_init_level = ls_init_level_;
-      ls_dyn_prec = ls_dyn_prec_;
-      ls_sis = ls_sis_;
-      ls_merge_assign = ls_merge_assign_;
-      ls_min = ls_min_;
-      ls_cores = ls_cores_;
-      zero_weight_core_fact = zero_weight_core_fact_;
     }
+    ls_cores = ls_cores_;
+    zero_weight_core_fact = zero_weight_core_fact_;
 
     skip_local_search = false;
     harden_in_SIS = _harden_in_SIS;
@@ -412,7 +411,6 @@ protected:
  // Timer
  Timer* timer;
 
- bool use_local_search;
  bool skip_local_search;
  bool localsearch(vec<lbool> & sol);
 

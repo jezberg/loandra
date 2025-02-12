@@ -1072,7 +1072,7 @@ uint64_t CBLIN::compute_ub_red_cost(uint64_t precision) {
       reduced_cost = red_gap;
   } 
 
-  if (use_local_search) {
+  if (ls_min) {
     //TODO maybe with reduced objective?
     localsearch(bestModel);
     auto lambda = [this](Lit l){return literalTrueInModel(l, bestModel);};
@@ -1532,8 +1532,6 @@ void CBLIN::initializePBConstraint(uint64_t rhs) {
     }
 
     ls_feasible = localsearch(*ls_usual_init_assign);
-  } else if (use_local_search && !skip_local_search) {
-    ls_feasible = localsearch(bestModel);
   }
 
   bool ls_improved = false;
@@ -1885,7 +1883,6 @@ StatusCode CBLIN::search() {
   }
   logPrint("parameters");
   logPrint("linear_strat=", lins);
-  logPrint("use_local_search=", use_local_search);
   logPrint("relax_before_strat=", relaxBeforeStrat);
   logPrint("incremental_varying_res_GTE=", incrementalVarres);
   logPrint("precision_varres=" , non_inc_precision);
@@ -1893,6 +1890,13 @@ StatusCode CBLIN::search() {
   logPrint("dpw_coarse=" , dpw_coarse);
   logPrint("minimize_sol=" , minimize_sol);
   logPrint("minimize_strat=" , minimize_strat);
+  logPrint("ls_init_level=", ls_init_level);
+  logPrint("ls_min=", ls_min);
+  logPrint("ls_dyn_prec=", ls_dyn_prec);
+  logPrint("ls_sis=", ls_sis);
+  logPrint("ls_merge_assign=", ls_merge_assign);
+  logPrint("ls_cores=", ls_cores);
+  logPrint("zero_weight_core_fact=", zero_weight_core_fact);
 
   logPrint("Before search: UB ", ubCost, " LB ", lbCost, " off_set ", off_set, 
             " standardization_removed ", standardization_removed, " preprocessing_removed ", 
