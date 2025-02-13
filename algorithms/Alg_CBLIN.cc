@@ -1587,7 +1587,9 @@ void CBLIN::extendBestModel() {
     assert(res == l_True);
     solver->setSolutionBasedPhaseSaving(true);  
     checkModel(false, true);  
-    localsearch(bestModel);
+    if (ls_extend) {
+      localsearch(bestModel);
+    }
   //  logPrint("Debug: after extending, current UB: " + std::to_string(ubCost) + " size of best model " + std::to_string(bestModel.size()));
 }
 

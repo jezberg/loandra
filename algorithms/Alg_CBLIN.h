@@ -64,7 +64,8 @@ public:
         bool reconstruct_sol_ = false, bool minimize_sol_ = true, int m_strat = 0, bool use_dpw = false, 
         bool dpw_coarse_ = false, bool dpw_inc_ = false, bool extend_models_ = true, bool local_s = false, uint64_t _non_inc_precision = 10 , 
         bool _harden_in_SIS = false, int ls_init_level_ = 0, bool ls_dyn_prec_ = false, bool ls_sis_ = false,
-        bool ls_merge_assign_ = false, bool ls_min_ = false, int ls_cores_ = 0, double zero_weight_core_fact_ = 3)
+        bool ls_merge_assign_ = false, bool ls_min_ = false, int ls_cores_ = 0, double zero_weight_core_fact_ = 3,
+        bool ls_extend_ = false)
   {
     
     solver = NULL;
@@ -120,6 +121,7 @@ public:
     }
     ls_cores = ls_cores_;
     zero_weight_core_fact = zero_weight_core_fact_;
+    ls_extend = ls_extend_;
 
     skip_local_search = false;
     harden_in_SIS = _harden_in_SIS;
@@ -409,6 +411,7 @@ protected:
   bool ls_min = false; // run LS for solution minimization
   int ls_cores = 0; // use cores in LS, 0=off, 1=clauses, 2=weighting scheme
   double zero_weight_core_fact = 3;
+  bool ls_extend = false;
   MaxSATFormula* orig_maxsat_formula = NULL;
   uint64_t init_ls_ub = UINT64_MAX;
   bool* init_ls_ub_assign = NULL;
