@@ -242,9 +242,6 @@ uint64_t CBLIN::findNextWeightDiversity(uint64_t weight) {
       ICadical::addClause(solverCad, clause);
       maxsat_formula->addHardClause(clause); 
     }
-    if (toAdd.size() > 0) {
-      updateBouMSInstance();
-    }
 		logPrint("Hardened in total: " + std::to_string(num_hardened_round) + " clauses");
     logPrint("Hardening again at gap " + std::to_string(maxw_nothardened));
    }
@@ -541,8 +538,6 @@ void CBLIN::encodeMaxRes(vec<Lit> &core, uint64_t weightCore)
 		clause.push(~dVars[i]);
 		addSoftClauseAndAssumptionVar(weightCore, clause);
 	}
-
-  updateBouMSInstance();
 }
 
 /*_________________________________________________________________________________________________
@@ -592,13 +587,6 @@ void CBLIN::relaxCore(vec<Lit> &core, uint64_t weightCore) {
   sumSizeCores += core.size();
 
   if (ls_cores) {
-    if (!core_var_to_clause) {
-      core_var_to_clause = new BouMS_uint_t[boums_inst.numVariables];
-      if (!core_var_to_clause) {
-        logPrint("Failed to allocate memory for core var to clause mapping!");
-        return;
-      }
-    }
     BouMS_cores_core_t c;
     c.numLiterals = core.size();
     c.literals = new BouMS_literal_t[c.numLiterals];
@@ -607,8 +595,6 @@ void CBLIN::relaxCore(vec<Lit> &core, uint64_t weightCore) {
     } else {
       for (unsigned int lIdx = 0; lIdx < c.numLiterals; ++lIdx) {
         const auto lit = core[lIdx];
-        // hard clauses are added first in updateBouMSInstance
-        core_var_to_clause[var(lit)] = boums_inst.numHardClauses + coreMapping[lit];
         c.literals[lIdx] = BouMS_mkLit(var(lit), sign(lit));
       }
       cores.push_back(c);
@@ -1234,43 +1220,57 @@ StatusCode CBLIN::linearSearch() {
     }
   }
 
-  if (!boums_broken && ls_cores && cores.size() > 0 && core_var_to_clause) {
-    bool deleteCores = false;
-
-    boums_cores = new BouMS_cores_mem_t;
-    if (boums_cores) {
-      boums_cores->varToCores = NULL;
-      boums_cores->coreToSatLits = NULL;
-      if (BouMS_cores_init(&boums_inst, cores.data(), cores.size(), core_var_to_clause, boums_cores, realloc, free)) {
-        deleteCores = true;
-      }
-    } else {
-      deleteCores = true;
-    }
-
-    if (deleteCores) {
-      logPrint("Could not allocate memory for BouMS cores!");
-
-      if (boums_cores) {
-        delete boums_cores;
-      }
-
-      for (auto& c : cores) {
-        delete[] c.literals;
-      }
-      cores.clear();
-    } else {
-      logPrint("Added ", cores.size(), " cores to BouMS!");
-    }
-  }
-
   if (ls_learn_clauses) {
     solverCad->disconnect_learner();
     learned_clauses = small_clause_learner.extract_clauses();
-    if (learned_clauses.size() > 0) {
-      updateBouMSInstance();
-    } else {
+    if (learned_clauses.size() == 0) {
       logPrint("Did not learn any clauses for LS?!");
+    }  
+  }
+
+  updateBouMSInstance();
+
+  if (ls_cores > 1 && !boums_broken && cores.size() > 0) {
+    bool deleteCores = false;
+
+    core_var_to_clause = new BouMS_uint_t[boums_inst.numVariables];
+    if (core_var_to_clause) {
+      for (BouMS_uint_t coreIdx = 0; coreIdx < cores.size(); ++coreIdx) {
+        const auto& core = cores[coreIdx];
+        for (BouMS_uint_t litIdx = 0; litIdx < core.numLiterals; ++litIdx) {
+          const auto lit = core.literals[litIdx];
+          core_var_to_clause[BouMS_var(lit)] =
+            maxsat_formula->nHard() + coreMapping[mkLit(BouMS_var(lit), BouMS_sign(lit))];
+        }
+      }
+
+      boums_cores = new BouMS_cores_mem_t;
+      if (boums_cores) {
+        boums_cores->varToCores = NULL;
+        boums_cores->coreToSatLits = NULL;
+        if (BouMS_cores_init(&boums_inst, cores.data(), cores.size(), core_var_to_clause, boums_cores, realloc, free)) {
+          deleteCores = true;
+        }
+      } else {
+        deleteCores = true;
+      }
+
+      if (deleteCores) {
+        logPrint("Could not allocate memory for BouMS cores!");
+
+        if (boums_cores) {
+          delete boums_cores;
+        }
+
+        for (auto& c : cores) {
+          delete[] c.literals;
+        }
+        cores.clear();
+      } else {
+        logPrint("Added ", cores.size(), " cores to BouMS!");
+      }
+    } else {
+      logPrint("Failed to allocate memory for BouMS' core variable to clause mapping");
     }
   }
 
@@ -1539,7 +1539,8 @@ void CBLIN::initializePBConstraint(uint64_t rhs) {
   bool ls_feasible = false;
   if (ls_dyn_prec) {
     for (unsigned int scIdx = 0; scIdx < maxsat_formula->nSoft(); ++scIdx) {
-      const auto boumsIdx = boums_clause_map.ex2In[boums_inst.numHardClauses + scIdx]; // hard clauses were added first
+      const auto boumsIdx = boums_clause_map.ex2In[maxsat_formula->nHard() + scIdx]; // hard clauses were added first
+      assert(!BouMS_wcnf_isClauseHard(boums_inst.clauses + boumsIdx));
       boums_inst.clauses[boumsIdx].weight =
         maxsat_formula->getSoftClause(scIdx).weight / maxsat_formula->getMaximumWeight();
     }
@@ -2255,6 +2256,28 @@ void CBLIN::updateBouMSInstance() {
     if (BouMS_wcnf_util_batchAddClause(&boums_clause_adder, clause.weight, &converted_clause[0],
                                        clause.clause.size())) {
       oom = true;
+    }
+  }
+
+  const auto numCores = cores.size();
+  if (ls_cores == 1) {
+    for (int coreIdx = 0; coreIdx < numCores && !oom; ++coreIdx) {
+      const auto& core = cores.at(coreIdx);
+      const auto coreSize = core.numLiterals;
+      std::vector<int> copy;
+      copy.reserve(coreSize);
+      for (int lIdx = 0; lIdx < coreSize; ++lIdx) {
+        const auto lit = core.literals[lIdx];
+        const int var = BouMS_var(lit) + 1;
+        const bool sign = BouMS_sign(lit);
+        copy.push_back(sign ? -var : var);
+      }
+      if (BouMS_wcnf_util_batchAddClause(&boums_clause_adder, BOUMS_HARD_CLAUSE_WEIGHT, copy.data(), copy.size())) {
+        oom = true;
+      }
+    }
+    if (!oom) {
+      logPrint("Added ", numCores, " cores clauses to BouMS");
     }
   }
 
