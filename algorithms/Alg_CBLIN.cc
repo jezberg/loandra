@@ -1789,6 +1789,9 @@ StatusCode CBLIN::search() {
   logPrint("ls_merge_assign=", ls_merge_assign);
   logPrint("ls_cores=", ls_cores);
   logPrint("zero_weight_core_fact=", zero_weight_core_fact);
+  logPrint("ls_learn_clauses=", ls_learn_clauses);
+  logPrint("ls_learn_clauses_fact=", ls_learn_clauses_fact);
+  logPrint("ls_extend=", ls_extend);
 
   logPrint("Before search: UB ", ubCost, " LB ", lbCost, " off_set ", off_set, 
             " standarddization_removed ", standardization_removed, " preprocessing_removed ", 
@@ -2067,7 +2070,7 @@ void CBLIN::updateBouMSInstance() {
   }
 
   const auto numCores = cores.size();
-  if (ls_cores == 1) {
+  if (numCores > 0 && ls_cores == 1) {
     for (int coreIdx = 0; coreIdx < numCores && !oom; ++coreIdx) {
       const auto& core = cores.at(coreIdx);
       const auto coreSize = core.numLiterals;
@@ -2084,7 +2087,7 @@ void CBLIN::updateBouMSInstance() {
       }
     }
     if (!oom) {
-      logPrint("Added ", numCores, " cores clauses to BouMS");
+      logPrint("Added ", numCores, " core clauses to BouMS");
     }
   }
 
