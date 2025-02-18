@@ -2397,6 +2397,13 @@ void CBLIN::setup_formula() {
   // we always provide an initial assignment that we don't want to replace by a random one ever (?)
   boums_params.maxTriesWOImprovement = BOUMS_UINT_MAX;
   boums_params.zeroWeightCoreFactor = zero_weight_core_fact;
+  if (ls_cores) {
+    if (ls_cores == 2) {
+      boums_params.coreWeightingMode = 0;
+    } else if (ls_cores == 3) {
+      boums_params.coreWeightingMode = 1;
+    }
+  }
 }
 
 void CBLIN::printAnswer(int type) {

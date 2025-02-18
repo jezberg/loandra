@@ -153,11 +153,11 @@ static void solveHard(BouMS_wcnf_t* formula, const BouMS_params_t* cfg, BouMS_me
     puw_initWeights(formula, cfg, mem);
 
     BouMS_uint_t cost;
-    initAlgo(formula, mem, &cost, NULL, NULL);
+    initAlgo(formula, mem, cfg, &cost, NULL, NULL);
 
     for (BouMS_uint_t flip = 0; flip < cfg->maxFlips && !done(mem, result) && !*stop; ++flip) {
       BouMS_wcnf_variable_t* variableToFlip = selectVariable(formula, cfg, mem);
-      flipVariable(variableToFlip, formula, mem, &cost, NULL, NULL);
+      flipVariable(variableToFlip, formula, cfg, mem, &cost, NULL, NULL);
     }
   }
 

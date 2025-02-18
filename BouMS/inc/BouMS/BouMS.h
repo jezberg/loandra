@@ -69,6 +69,7 @@ typedef struct {
   bool isPartial;  /*!< True if there are hard clauses, false otherwise */
   bool isWeighted; /*!< False if all soft clauses have weight 1, true otherwise */
   double zeroWeightCoreFactor;
+  unsigned int coreWeightingMode;
 } BouMS_params_t;
 
 /**

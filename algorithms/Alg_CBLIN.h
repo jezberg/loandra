@@ -428,7 +428,7 @@ protected:
   bool ls_sis = false; // run LS in SIS
   bool ls_merge_assign = false; // use assignment merging for LS in dyn prec and sis
   bool ls_min = false; // run LS for solution minimization
-  int ls_cores = 0; // use cores in LS, 0=off, 1=clauses, 2=weighting scheme
+  int ls_cores = 0; // use cores in LS, 0=off, 1=clauses, 2=weighting scheme, 3=better(?) weighting scheme
   double zero_weight_core_fact = 3;
   bool ls_learn_clauses = false; // learn clauses during CG to feed to LS
   double ls_learn_clauses_fact = 1;

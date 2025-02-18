@@ -223,7 +223,7 @@ void BouMS_cores_solve(BouMS_wcnf_t* formula, BouMS_cores_mem_t* cores, const Bo
       LOG_TRACE_WITH_DURATION("c initialized weights");
 
       START_DURATION_MEAS();
-      initAlgo(formula, &mem, &cost, map, cores);
+      initAlgo(formula, &mem, cfg, &cost, map, cores);
       cost += totalWeightOfEmptySoftClauses;
       LOG_TRACE_WITH_DURATION("c initialized algorithm");
     } else {
@@ -244,7 +244,7 @@ void BouMS_cores_solve(BouMS_wcnf_t* formula, BouMS_cores_mem_t* cores, const Bo
       // LOG_TRACE("c current cost is " BouMS_UINT_FORMAT " (%s)\n", cost, infeasible ? "infeasible" : "feasible");
 
       BouMS_wcnf_variable_t* variableToFlip = selectVariable(formula, cfg, &mem);
-      flipVariable(variableToFlip, formula, &mem, &cost, map, cores);
+      flipVariable(variableToFlip, formula, cfg, &mem, &cost, map, cores);
       ++flipsWOImprovement;
     }
 
@@ -334,6 +334,7 @@ void BouMS_params(const BouMS_wcnf_t* formula, BouMS_params_t* params) {
   }
 
   params->zeroWeightCoreFactor = 3;
+  params->coreWeightingMode = 0;
 }
 
 static void calcMemoryReq(const BouMS_wcnf_t* formula, BouMS_memoryReq_t* out) {
