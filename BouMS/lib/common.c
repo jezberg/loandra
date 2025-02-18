@@ -79,8 +79,8 @@ void initVars(const BouMS_wcnf_t* formula, const BouMS_result_t* result, const b
   }
 }
 
-void initAlgo(const BouMS_wcnf_t* formula, BouMS_memory_t* mem, BouMS_uint_t* cost, const BouMS_clauseMap_t* map,
-              BouMS_cores_mem_t* cores) {
+void initAlgo(const BouMS_wcnf_t* formula, BouMS_memory_t* mem, const BouMS_params_t* cfg, BouMS_uint_t* cost,
+              const BouMS_clauseMap_t* map, BouMS_cores_mem_t* cores) {
   // zero all memory that we write to (by adding) later
   *cost = 0;
   mem->numDecreasingVars = 0;
@@ -160,10 +160,21 @@ void initAlgo(const BouMS_wcnf_t* formula, BouMS_memory_t* mem, BouMS_uint_t* co
                               : mem->zeroWeightCoreWeight;
         if (*numSatLits == 0) {
           mem->scores[var] = fixedprec_sadd(mem->scores[var], fixedprec_utos(invWeight));
+        } else if (cfg->coreWeightingMode && *numSatLits == 1) {
+          mem->scores[var] = fixedprec_ssub(mem->scores[var], fixedprec_utos(weight));
         } else {
-          const unsigned_fixedprec_t mulWeight =
-              fixedprec_umul(invWeight, fixedprec_uto(*numSatLits, mem->fixedprecShift), mem->fixedprecShift);
-          mem->scores[var] = fixedprec_ssub(mem->scores[var], fixedprec_utos(mulWeight));
+          if (!cfg->coreWeightingMode) {
+            const unsigned_fixedprec_t mulWeight =
+                fixedprec_umul(invWeight, fixedprec_uto(*numSatLits, mem->fixedprecShift), mem->fixedprecShift);
+            mem->scores[var] = fixedprec_ssub(mem->scores[var], fixedprec_utos(mulWeight));
+          } else {
+            const bool litSat = formula->variables[var].value = BouMS_sign(lit);
+            if (litSat) {
+              mem->scores[var] = fixedprec_sadd(mem->scores[var], fixedprec_utos(weight));
+            } else {
+              mem->scores[var] = fixedprec_ssub(mem->scores[var], fixedprec_utos(weight));
+            }
+          }
         }
       }
     }
@@ -264,8 +275,8 @@ BouMS_wcnf_variable_t* selectVariable(const BouMS_wcnf_t* formula, const BouMS_p
   return formula->variables + selectedVarIdx;
 }
 
-void flipVariable(BouMS_wcnf_variable_t* variable, const BouMS_wcnf_t* formula, BouMS_memory_t* mem, BouMS_uint_t* cost,
-                  const BouMS_clauseMap_t* map, BouMS_cores_mem_t* cores) {
+void flipVariable(BouMS_wcnf_variable_t* variable, const BouMS_wcnf_t* formula, const BouMS_params_t* cfg,
+                  BouMS_memory_t* mem, BouMS_uint_t* cost, const BouMS_clauseMap_t* map, BouMS_cores_mem_t* cores) {
   // first things first, flip the variable
   variable->value = !variable->value;
   // and update its flip count
@@ -327,20 +338,55 @@ void flipVariable(BouMS_wcnf_variable_t* variable, const BouMS_wcnf_t* formula, 
           for (BouMS_uint_t coreLitIdx2 = 0; coreLitIdx2 < core->numLiterals; ++coreLitIdx2) {
             const BouMS_uint_t var = BouMS_var(core->literals[coreLitIdx2]);
             const unsigned_fixedprec_t weight = coreVarWeight(var, mem, map, cores);
+            const signed_fixedprec_t sWeight = fixedprec_utos(weight);
             const unsigned_fixedprec_t invWeight =
                 weight.value != 0 ? fixedprec_udiv(fixedprec_uto(1, mem->fixedprecShift), weight, mem->fixedprecShift)
                                   : mem->zeroWeightCoreWeight;
-            const signed_fixedprec_t sWeight = fixedprec_utos(invWeight);
-            if (*coreSatLits == 0) {
-              mem->scores[var] = fixedprec_sadd(mem->scores[var], sWeight);
-              mem->scores[var] = fixedprec_sadd(mem->scores[var], sWeight);
-            } else if (*coreSatLits == 1 && moreLitsSat) {
-              mem->scores[var] = fixedprec_ssub(mem->scores[var], sWeight);
-              mem->scores[var] = fixedprec_ssub(mem->scores[var], sWeight);
-            } else if (moreLitsSat) {
-              mem->scores[var] = fixedprec_ssub(mem->scores[var], sWeight);
+            const signed_fixedprec_t sInvWeight = fixedprec_utos(invWeight);
+            if (!cfg->coreWeightingMode) {
+              if (*coreSatLits == 0) {
+                mem->scores[var] = fixedprec_sadd(mem->scores[var], sInvWeight);
+                mem->scores[var] = fixedprec_sadd(mem->scores[var], sInvWeight);
+              } else if (*coreSatLits == 1 && moreLitsSat) {
+                mem->scores[var] = fixedprec_ssub(mem->scores[var], sInvWeight);
+                mem->scores[var] = fixedprec_ssub(mem->scores[var], sInvWeight);
+              } else if (moreLitsSat) {
+                mem->scores[var] = fixedprec_ssub(mem->scores[var], sInvWeight);
+              } else {
+                mem->scores[var] = fixedprec_sadd(mem->scores[var], sInvWeight);
+              }
             } else {
-              mem->scores[var] = fixedprec_sadd(mem->scores[var], sWeight);
+              const bool litSat = formula->variables[var].value != BouMS_sign(core->literals[coreLitIdx2]);
+              if (*coreSatLits == 0) {
+                mem->scores[var] = fixedprec_sadd(mem->scores[var], sWeight);
+                mem->scores[var] = fixedprec_sadd(mem->scores[var], sInvWeight);
+              } else if (*coreSatLits == 1 && moreLitsSat) {
+                mem->scores[var] = fixedprec_ssub(mem->scores[var], sInvWeight);
+                mem->scores[var] = fixedprec_ssub(mem->scores[var], sWeight);
+              } else if (*coreSatLits == 1 && !moreLitsSat) {
+                if (var == varIdx) {  // the var that was just flipped
+                  mem->scores[var] = fixedprec_ssub(mem->scores[var], sWeight);
+                  mem->scores[var] = fixedprec_ssub(mem->scores[var], sWeight);
+                } else if (litSat) {  // only sat lit
+                  mem->scores[var] = fixedprec_ssub(mem->scores[var], sWeight);
+                  mem->scores[var] = fixedprec_ssub(mem->scores[var], sWeight);
+                }
+              } else if (*coreSatLits == 2 && moreLitsSat) {
+                if (litSat) {
+                  mem->scores[var] = fixedprec_sadd(mem->scores[var], sWeight);
+                  mem->scores[var] = fixedprec_sadd(mem->scores[var], sWeight);
+                }
+              } else {
+                if (var == varIdx) {
+                  if (litSat) {
+                    mem->scores[var] = fixedprec_sadd(mem->scores[var], sWeight);
+                    mem->scores[var] = fixedprec_sadd(mem->scores[var], sWeight);
+                  } else {
+                    mem->scores[var] = fixedprec_ssub(mem->scores[var], sWeight);
+                    mem->scores[var] = fixedprec_ssub(mem->scores[var], sWeight);
+                  }
+                }
+              }
             }
           }
 
@@ -458,7 +504,5 @@ static unsigned_fixedprec_t coreVarWeight(BouMS_uint_t var, const BouMS_memory_t
   const BouMS_uint_t litClauseExIdx = cores->varToClause[var];
   const BouMS_uint_t litClauseInIdx = map->ex2In[litClauseExIdx];
   const unsigned_fixedprec_t weight = mem->tunedWeights[litClauseInIdx];
-  const unsigned_fixedprec_t f = fixedprec_uto(2, mem->fixedprecShift);
-  const unsigned_fixedprec_t weightdf = fixedprec_udiv(weight, f, mem->fixedprecShift);
-  return weightdf;
+  return weight;
 }

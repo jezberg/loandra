@@ -180,7 +180,7 @@ int main(int argc, char **argv) {
   BoolOption ls_sis("CBLIN", "ls-sis", "Use local search in SIS.\n", false);
   BoolOption ls_merge_assign("CBLIN", "ls-merge", "Use assignment merging when doing LS (in combination with ls-dyn-prec and/or ls-sis).\n", false);
   BoolOption ls_min("CBLIN", "ls-min", "Use local search for solution minimization.\n", false);
-  IntOption ls_cores("CBLIN", "ls-cores", "Use cores in local search, 0=off, 1=clauses, 2=weighting scheme.\n", 0, IntRange(0, 2));
+  IntOption ls_cores("CBLIN", "ls-cores", "Use cores in local search, 0=off, 1=clauses, 2=weighting scheme, 3=better(?) weighting scheme.\n", 0, IntRange(0, 3));
   NSPACE::DoubleOption ls_zero_weight_core_fact("CBLIN", "ls-cores-factor", "Weighting factor when using cores with LS.\n", 3, NSPACE::DoubleRange(0, false, DBL_MAX, false));
   BoolOption ls_extend("CBLIN", "ls-extend", "Run LS when extending the current best model.\n", false);
 

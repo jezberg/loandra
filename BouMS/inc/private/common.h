@@ -34,12 +34,13 @@ void initVars(const BouMS_wcnf_t* formula, const BouMS_result_t* result, const b
  *
  * @param formula
  * @param mem
+ * @param cfg
  * @param cost
  * @param map
  * @param cores
  */
-void initAlgo(const BouMS_wcnf_t* formula, BouMS_memory_t* mem, BouMS_uint_t* cost, const BouMS_clauseMap_t* map,
-              BouMS_cores_mem_t* cores);
+void initAlgo(const BouMS_wcnf_t* formula, BouMS_memory_t* mem, const BouMS_params_t* cfg, BouMS_uint_t* cost,
+              const BouMS_clauseMap_t* map, BouMS_cores_mem_t* cores);
 
 /**
  * @brief Selects a variable to flip; also updates weights if no decreasing variable is found
@@ -56,12 +57,13 @@ BouMS_wcnf_variable_t* selectVariable(const BouMS_wcnf_t* formula, const BouMS_p
  * @param variable
  * @param formula
  * @param mem
+ * @param cfg
  * @param cost
  * @param map
  * @param cores
  */
-void flipVariable(BouMS_wcnf_variable_t* variable, const BouMS_wcnf_t* formula, BouMS_memory_t* mem, BouMS_uint_t* cost,
-                  const BouMS_clauseMap_t* map, BouMS_cores_mem_t* cores);
+void flipVariable(BouMS_wcnf_variable_t* variable, const BouMS_wcnf_t* formula, const BouMS_params_t* cfg,
+                  BouMS_memory_t* mem, BouMS_uint_t* cost, const BouMS_clauseMap_t* map, BouMS_cores_mem_t* cores);
 
 /**
  * @brief Updates the scores of variables after the weight of the given clause has been increased
