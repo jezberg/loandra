@@ -1744,11 +1744,13 @@ bool CBLIN::localsearch(vec<lbool> & sol) {
     {
       // BouMS: solve
       const auto num_clauses = boums_inst.numClauses;
+      const auto num_hard_clauses = boums_inst.numHardClauses;
       const bool boums_stop_dummy = false;
       BouMS_cores_solve(&boums_inst, boums_cores, &boums_params, boums_mem, &boums_mem_req, &boums_result,
                         boums_assignment, &boums_clause_map, boums_params.maxFlips, &boums_stop_dummy);
       // make sure we don't lose clauses e.g., when their weights are set to 0
       boums_inst.numClauses = num_clauses;
+      boums_inst.numHardClauses = num_hard_clauses;
     }
 
     if (boums_result.status == BOUMS_UNKNOWN || boums_result.status == BOUMS_OPTIMUM_FOUND) {
