@@ -168,7 +168,7 @@ void initAlgo(const BouMS_wcnf_t* formula, BouMS_memory_t* mem, const BouMS_para
                 fixedprec_umul(invWeight, fixedprec_uto(*numSatLits, mem->fixedprecShift), mem->fixedprecShift);
             mem->scores[var] = fixedprec_ssub(mem->scores[var], fixedprec_utos(mulWeight));
           } else {
-            const bool litSat = formula->variables[var].value = BouMS_sign(lit);
+            const bool litSat = formula->variables[var].value != BouMS_sign(lit);
             if (litSat) {
               mem->scores[var] = fixedprec_sadd(mem->scores[var], fixedprec_utos(weight));
             } else {
