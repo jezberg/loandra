@@ -388,6 +388,14 @@ void flipVariable(BouMS_wcnf_variable_t* variable, const BouMS_wcnf_t* formula, 
                 }
               }
             }
+
+            /* depending on what the above score updates did, add or remove the var from the decreasing vars list
+             * these functions take care of the necessary checks, i.e.,
+             *   is the variable in the list or not?
+             *   is the score positive or negative?
+             */
+            addDecreasingVar(var, mem);
+            remDecreasingVar(var, mem);
           }
 
           break;
