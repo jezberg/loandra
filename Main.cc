@@ -197,7 +197,7 @@ int main(int argc, char **argv) {
     case _ALGORITHM_CBLIN_:
       S = new CBLIN(verbosity, weight, pmreslin, pmreslin_delsol,  
                     pmreslin_cgLim, pmreslin_relax2strat, pmreslin_incvarres, prepro_rec, 
-                    prepro_min,prepro_min_strat, pmreslin_dpw_coarse, pmreslin_dpw_inc, extend,
+                    prepro_min,prepro_min_strat, pmreslin_dpw, pmreslin_dpw_coarse, pmreslin_dpw_inc, extend,
                     pmreslin_prec, pmreslin_hardenSIS, ls_initLevel, ls_dynprec, ls_sis, ls_merge_assign, ls_min,
                     ls_cores, ls_zero_weight_core_fact, ls_extend);
       break;

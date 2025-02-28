@@ -62,7 +62,7 @@ public:
         int linear = 0, bool delsol = false, 
         int gcLim = -1, bool r2strat = false, bool incrementalV = false, 
         bool reconstruct_sol_ = false, bool minimize_sol_ = true, int m_strat = 0, bool use_dpw = false, 
-        bool dpw_coarse_ = false, bool dpw_inc_ = false, bool extend_models_ = true, bool local_s = false, uint64_t _non_inc_precision = 10 , 
+        bool dpw_coarse_ = false, bool dpw_inc_ = false, bool extend_models_ = true, uint64_t _non_inc_precision = 10 , 
         bool _harden_in_SIS = false, int ls_init_level_ = 0, bool ls_dyn_prec_ = false, bool ls_sis_ = false,
         bool ls_merge_assign_ = false, bool ls_min_ = false, int ls_cores_ = 0, double zero_weight_core_fact_ = 3,
         bool ls_extend_ = false)
