@@ -14,7 +14,7 @@ CHDRS      = $(wildcard $(PWD)/*.h)
 COBJS      = $(CSRCS:.cc=.o) $(DSRCS:.cc=.o)
 PREOBJ	   = $(wildcard $(PREPRO_DIR)/src/lib/*.a) 
 DPWOBJ	   = $(wildcard $(DPW_DIR)/target/release/*.a) 
-BOUMSRELOBJ = $(BOUMS_DIR)/build/release-logverbose/libBouMS.a
+BOUMSRELOBJ = $(BOUMS_DIR)/build/release-nologging/libBouMS.a
 # BOUMSRELOBJ = $(BOUMS_DIR)/build/release-logtrace/libBouMS.a
 BOUMSDBGOBJ = $(BOUMS_DIR)/build/debug-logverbose/libBouMS.a
 
@@ -117,8 +117,8 @@ builddeps:
 	@echo Making RustSAT
 	cd $(DPW_DIR)/capi && cargo build --release
 	if [ $(BOUMSOBJ) = $(BOUMSRELOBJ) ]; then \
-		echo "Making BouMS (release-logverbose)"; \
-		$(MAKE) -C $(BOUMS_DIR) libonly-release-logverbose; \
+		echo "Making BouMS (release-nologging)"; \
+		$(MAKE) -C $(BOUMS_DIR) libonly-release-nologging; \
 		# echo "Making BouMS (release-logtrace)"; \
 		# $(MAKE) -C $(BOUMS_DIR) libonly-release-logtrace; \
 	else \
