@@ -1274,6 +1274,20 @@ StatusCode CBLIN::linearSearch() {
     }
   }
 
+  if (ls_replace_sis) {
+    boums_params.maxTries = 1;
+
+    localsearch(bestModel);
+
+    if (ubCost == lbCost) {
+      logPrint("LB = UB");
+      printAnswer(_OPTIMUM_);
+      return _OPTIMUM_;
+    }
+
+    return _SATISFIABLE_;
+  }
+
   if (bestModel.size() < maxsat_formula->nVars() || solverCad->status() != 10) {
       logPrint("Extending best model to full formula");
       extendBestModel();
@@ -1919,6 +1933,7 @@ StatusCode CBLIN::search() {
   logPrint("ls_learn_clauses=", ls_learn_clauses);
   logPrint("ls_learn_clauses_fact=", ls_learn_clauses_fact);
   logPrint("ls_extend=", ls_extend);
+  logPrint("ls_replace_sis=", ls_replace_sis);
 
   logPrint("Before search: UB ", ubCost, " LB ", lbCost, " off_set ", off_set, 
             " standardization_removed ", standardization_removed, " preprocessing_removed ", 

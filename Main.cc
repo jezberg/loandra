@@ -182,6 +182,7 @@ int main(int argc, char **argv) {
   BoolOption ls_learn_clauses("CBLIN", "ls-learn-clauses", "Learn clauses during CG to then feed to LS.\n", false);
   NSPACE::DoubleOption ls_learn_clauses_fact("CBLIN", "ls-learn-clauses-factor", "Learn at most factor * orig. #hard clauses clauses.\n", 1, NSPACE::DoubleRange(0, false, DBL_MAX, false));
   BoolOption ls_extend("CBLIN", "ls-extend", "Run LS when extending the current best model.\n", false);
+  BoolOption ls_replace_sis("CBLIN", "ls-replace-sis", "Replace SIS by running SLS once, then terminate.\n", false);
 
   
 
@@ -199,7 +200,7 @@ int main(int argc, char **argv) {
                     prepro_min,prepro_min_strat, pmreslin_dpw_coarse, pmreslin_dpw_inc, extend,
                     pmreslin_prec, pmreslin_hardenSIS, pmreslin_opt_phase, pmreslin_sis_propagate,
                     ls_initLevel, ls_dynprec, ls_sis, ls_merge_assign, ls_min, ls_cores, ls_zero_weight_core_fact,
-                    ls_learn_clauses, ls_learn_clauses_fact, ls_extend);
+                    ls_learn_clauses, ls_learn_clauses_fact, ls_extend, ls_replace_sis);
       break;
     
     case _ALGORITHM_OLLITER_:

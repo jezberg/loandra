@@ -68,7 +68,7 @@ public:
         bool _harden_in_SIS = false, bool opt_phase_save = false, bool _sis_in_propagator = false,
         int ls_init_level_ = 0, bool ls_dyn_prec_ = false, bool ls_sis_ = false, bool ls_merge_assign_ = false,
         bool ls_min_ = false, int ls_cores_ = 0, double zero_weight_core_fact_ = 3, bool ls_learn_clauses_ = false,
-        double ls_learn_clauses_fact_ = 1, bool ls_extend_ = false)
+        double ls_learn_clauses_fact_ = 1, bool ls_extend_ = false, bool ls_replace_sis_ = false)
     : small_clause_learner(0) {
     
     use_propagator = _sis_in_propagator; 
@@ -125,6 +125,7 @@ public:
     ls_learn_clauses = ls_learn_clauses_;
     ls_learn_clauses_fact = ls_learn_clauses_fact_;
     ls_extend = ls_extend_;
+    ls_replace_sis = ls_replace_sis_;
 
     skip_local_search = false;
     harden_in_SIS = _harden_in_SIS;
@@ -433,6 +434,7 @@ protected:
   bool ls_learn_clauses = false; // learn clauses during CG to feed to LS
   double ls_learn_clauses_fact = 1;
   bool ls_extend = false;
+  bool ls_replace_sis = false; // instead of SIS, just run SLS once after CG (including cores, if any and activated), then terminate
   MaxSATFormula* orig_maxsat_formula = NULL;
   uint64_t init_ls_ub = UINT64_MAX;
   bool* init_ls_ub_assign = NULL;
