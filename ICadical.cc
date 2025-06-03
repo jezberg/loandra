@@ -29,6 +29,21 @@
 
 using namespace openwbo;
 
+bool ICadical::sat_mode(CaDiCaL::Solver * solver) {
+    assert(solver->is_valid_configuration("sat"));
+    return solver->configure("sat");
+}
+
+bool ICadical::unsat_mode(CaDiCaL::Solver * solver) {
+    assert(solver->is_valid_configuration("unsat"));
+    return solver->configure("unsat");
+}
+
+bool ICadical::default_mode(CaDiCaL::Solver * solver) {
+    assert(solver->is_valid_configuration("default"));
+    return solver->configure("default");
+}
+
 lbool ICadical::searchSATSolver(CaDiCaL::Solver * solver, vec<Lit> & assumptions) {
     for (int i = 0; i < assumptions.size(); i++) {
         Lit l = assumptions[i];

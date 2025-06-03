@@ -55,7 +55,22 @@ class ICadical {
         static void getCore(CaDiCaL::Solver * solver, vec<Lit> & assumptions, vec<Lit> & core_out);
         static void getModel(CaDiCaL::Solver * solver, vec<lbool> & model_out);
         static CaDiCaL::Solver * newSATSolver();
-          
+
+        bool sat_mode(CaDiCaL::Solver * solver);
+        bool unsat_mode(CaDiCaL::Solver * solver);
+        bool default_mode(CaDiCaL::Solver * solver);
+
+        bool set_mode(int mode, CaDiCaL::Solver * solver) {
+            if (mode == 0) {
+                return default_mode(solver);
+            }
+            if (mode == 1) {
+                return unsat_mode(solver);
+            }
+            if (mode == 2) {
+                return sat_mode(solver);
+            }
+        }//  0 default 1 unsat 2 sat
 
     protected:
         static int lit2Int(Lit l);

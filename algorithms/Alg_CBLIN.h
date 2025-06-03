@@ -68,7 +68,7 @@ public:
         bool _harden_in_SIS = false, bool opt_phase_save = false, bool _sis_in_propagator = false,
         int ls_init_level_ = 0, bool ls_dyn_prec_ = false, bool ls_sis_ = false, bool ls_merge_assign_ = false,
         bool ls_min_ = false, int ls_cores_ = 0, double zero_weight_core_fact_ = 3, bool ls_learn_clauses_ = false,
-        double ls_learn_clauses_fact_ = 1, bool ls_extend_ = false, bool ls_replace_sis_ = false)
+        double ls_learn_clauses_fact_ = 1, bool ls_extend_ = false, bool ls_replace_sis_ = false, bool cadical_dynamic_ = false)
     : small_clause_learner(0) {
     
     use_propagator = _sis_in_propagator; 
@@ -132,6 +132,8 @@ public:
 
     non_inc_precision = _non_inc_precision;
     optimistic = opt_phase_save;
+
+    dynamic_cadical = cadical_dynamic_;
 
   }
 
@@ -212,7 +214,7 @@ protected:
   void hardenClauses();
   bool harden_in_SIS; 
   void hardenClausesSIS(uint64_t reduced_cost);
-  void resetSolver();
+  void resetSolver(int mode = 0);  // 0 default 1 unsat 2 sat
   uint64_t maxw_nothardened;
   uint64_t max_coeff_nothardened_sis;
 
@@ -422,6 +424,7 @@ protected:
  bool localsearch(vec<lbool> & sol);
 
   bool extend_models;
+  bool dynamic_cadical;
 
   // BEGIN LS w/ BouMS
   int ls_init_level = 0; // 0=disabled, 1=only on preprocessed, 2=on preprocessed then on original

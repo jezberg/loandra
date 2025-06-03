@@ -806,13 +806,22 @@ StatusCode CBLIN::unsatSearch() {
       initAssumptions();  
       
       solverCad = ICadical::newSATSolver();
+
+      if (dynamic_cadical) {
+        ICadical::sat_mode(solverCad);
+      }
+
       StatusCode rs = unsatSearch();
       if (rs == _UNSATISFIABLE_) return rs;
       
       //Here we know that the formula is SAT
       if (maxsat_formula->nSoft() == 0 || ubCost == lbCost) {
           return _OPTIMUM_; //Solved by preprocessing
-      }        
+      }    
+      
+      if (dynamic_cadical) {
+       resetSolver(1); // 0 default 1 unsat 2 sat
+      }
 
       updateCurrentWeight(weightStrategy);
       
@@ -1194,7 +1203,7 @@ StatusCode CBLIN::linearSearch() {
 
   
   if(delete_before_lin) {
-    resetSolver();
+    resetSolver(2); 
   }
    
   if (incremental_DPW) {
@@ -1415,7 +1424,7 @@ StatusCode CBLIN::linearSearch() {
           minimize_iteration = true;
           reconstruct_iter = true;
           if (!(incrementalVarres || incremental_DPW)) {  
-            resetSolver(); 
+            resetSolver(2); 
           }
           update_SIS_precision();
           setPBencodings();
@@ -1442,7 +1451,7 @@ StatusCode CBLIN::linearSearch() {
         else {
           logPrint("Rebuilding after UNSAT");
           if (!(incrementalVarres || incremental_DPW)) {
-            resetSolver();
+            resetSolver(2);
           }
           minimize_iteration = true;
           reconstruct_iter = true;
@@ -2089,11 +2098,16 @@ int CBLIN::nRealSoft() {
   return maxsat_formula->nSoft() - num_hardened;
 }  
 
-void CBLIN::resetSolver() {
+
+void CBLIN::resetSolver(int mode) { //  0 default 1 unsat 2 sat
     logPrint("Deleting solver");
     delete solverCad;
 
     solverCad = ICadical::newSATSolver();
+
+    if (dynamic_cadical) {
+      ICadical::set_mode(mode, solverCad);
+    }
 
     clauses_added = 0;
     softs_added = 0;

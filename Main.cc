@@ -184,6 +184,8 @@ int main(int argc, char **argv) {
   BoolOption ls_extend("CBLIN", "ls-extend", "Run LS when extending the current best model.\n", false);
   BoolOption ls_replace_sis("CBLIN", "ls-replace-sis", "Replace SIS by running SLS once, then terminate.\n", false);
 
+  BoolOption cadical_dynamic("CBLIN", "cadical-dynamic", "Set cadical phases during search.\n", false);
+
   
 
     parseOptions(argc, argv, true);
