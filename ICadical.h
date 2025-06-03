@@ -56,11 +56,11 @@ class ICadical {
         static void getModel(CaDiCaL::Solver * solver, vec<lbool> & model_out);
         static CaDiCaL::Solver * newSATSolver();
 
-        bool sat_mode(CaDiCaL::Solver * solver);
-        bool unsat_mode(CaDiCaL::Solver * solver);
-        bool default_mode(CaDiCaL::Solver * solver);
+        static bool sat_mode(CaDiCaL::Solver * solver);
+        static bool unsat_mode(CaDiCaL::Solver * solver);
+        static bool default_mode(CaDiCaL::Solver * solver);
 
-        bool set_mode(int mode, CaDiCaL::Solver * solver) {
+        static bool set_mode(int mode, CaDiCaL::Solver * solver) {
             if (mode == 0) {
                 return default_mode(solver);
             }
