@@ -820,7 +820,7 @@ StatusCode CBLIN::unsatSearch() {
       }    
       
       if (dynamic_cadical) {
-       resetSolver(1); // 0 default 1 unsat 2 sat
+       resetSolver(0); // 0 default 1 unsat 2 sat
       }
 
       updateCurrentWeight(weightStrategy);
