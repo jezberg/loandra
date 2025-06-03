@@ -2,4 +2,4 @@
 	echo "Configuring Cadical" 
 	(cd cadical && ./configure)
     echo "MaxPre2"
-	(cd maxpre2 && make lib)
+	(cd maxpre2 && make lib with_zlib=false)
