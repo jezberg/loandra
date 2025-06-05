@@ -1707,6 +1707,8 @@ void CBLIN::setCardVars(bool prepro_bound) {
         
       }
     }
+    logPrint("assumps - done");
+
     lbool res = ICadical::searchSATSolver(solverCad, cardAssumps);
     has_flipped = false;
 
