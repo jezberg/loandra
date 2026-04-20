@@ -14,6 +14,8 @@ First ensure you have [Rust installed](https://www.rust-lang.org/tools/install).
 Clone this repo with submodules. This can be done using `git clone --recurse-submodules https://github.com/jezberg/loandra.git`.
 Alternatively, make sure to go to the `maxpre2` and rustsat folders, and run the `git submodule init` and `git submodule update`.
 
+BRANCHES USING BOUMS: Next you need to build BouMS following the instructions in the BouMS subfolders Readme. 
+
 
 Afterwards, run make in the base folder.
 
