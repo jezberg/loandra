@@ -610,10 +610,10 @@ MaxSATFormula* MaxSAT::standardized_formula() {
   for (auto iter = existing_units.begin(); iter != existing_units.end(); iter++ ) {
     int lit = iter->first;
     int negation = lit * (-1);
-    if appears_in_a_non_unit_soft_clause.find(lit) != appears_in_a_non_unit_soft_clause.end()) {
+    if (appears_in_a_non_unit_soft_clause.find(lit) != appears_in_a_non_unit_soft_clause.end()) {
       to_be_removed.insert(lit);
     }
-    if appears_in_a_non_unit_soft_clause.find(negation) != appears_in_a_non_unit_soft_clause.end()) {
+    if (appears_in_a_non_unit_soft_clause.find(negation) != appears_in_a_non_unit_soft_clause.end()) {
       to_be_removed.insert(lit);
     }
   }
