@@ -1727,8 +1727,8 @@ void CBLIN::setCardVars(bool prepro_bound) {
 
 void CBLIN::extendBestModel() {
 
- //  logPrint("Debug: extending, current UB: " + std::to_string(ubCost) + " size of best model " + std::to_string(bestModel.size()));
- //   logPrint("Debug: Variables in formula: " + std::to_string(maxsat_formula->nVars()) + " variables in cadical " + std::to_string(solverCad->vars()));
+   logPrint("Debug: extending, current UB: " + std::to_string(ubCost) + " size of best model " + std::to_string(bestModel.size()));
+   logPrint("Debug: Variables in formula: " + std::to_string(maxsat_formula->nVars()) + " variables in cadical " + std::to_string(solverCad->vars()));
 
     vec<Lit> modelAssumps;
 
@@ -1746,13 +1746,13 @@ void CBLIN::extendBestModel() {
     }
     lbool res =  ICadical::searchSATSolver(solverCad, modelAssumps);
     has_flipped = false;
-    assert(solverCad->status() == 10);
     assert(res == l_True);
+    assert(solverCad->status() == 10);
     checkModel(false, true);
     if (ls_extend) {
       localsearch(bestModel);
     }
-  //  logPrint("Debug: after extending, current UB: " + std::to_string(ubCost) + " size of best model " + std::to_string(bestModel.size()));
+    logPrint("Debug: after extending, current UB: " + std::to_string(ubCost) + " size of best model " + std::to_string(bestModel.size()));
 }
 
 bool CBLIN::localsearch(vec<lbool> & sol) {
