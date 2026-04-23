@@ -568,6 +568,8 @@ MaxSATFormula* MaxSAT::standardized_formula() {
   }
   assert(weights.size() == maxsat_formula->nSoft());
 
+  std::set<int> appears_in_a_non_unit_soft_clause;
+
   vec<Lit> clause; 
   std::map<int, uint64_t> existing_units;
   for (int i = 0; i < maxsat_formula->nSoft(); i++) {
@@ -575,6 +577,9 @@ MaxSATFormula* MaxSAT::standardized_formula() {
     clause.clear();
     maxsat_formula->getSoftClause(i).clause.copyTo(clause);
     if (clause.size() != 1){
+      for (int j = 0; j < clause-size(); j++) {
+        appears_in_a_non_unit_soft_clause.insert(lit2Int(clause[j]))
+      }
       Lit l = copymx->newLiteral();
       clause.push(l);
       copymx->addHardClause(clause);
@@ -584,7 +589,7 @@ MaxSATFormula* MaxSAT::standardized_formula() {
     }  
     else {
       Lit l = clause[0];
-      //value is force to true by the hard clauses
+      //value is forcd to true by the hard clauses
       if (hard_units.find(lit2Int(l)) != hard_units.end()) {
         continue;
       }
@@ -599,7 +604,22 @@ MaxSATFormula* MaxSAT::standardized_formula() {
     }
   }
 
+  
   std::set<int> to_be_removed;
+  // first we need to identify literals appearing in non-unit soft-clauses 
+  for (auto iter = existing_units.begin(); iter != existing_units.end(); iter++ ) {
+    int lit = iter->first;
+    int negation = lit * (-1);
+    if appears_in_a_non_unit_soft_clause.find(lit) != appears_in_a_non_unit_soft_clause.end()) {
+      to_be_removed.insert(lit);
+    }
+    if appears_in_a_non_unit_soft_clause.find(negation) != appears_in_a_non_unit_soft_clause.end()) {
+      to_be_removed.insert(lit);
+    }
+  }
+
+
+  // Then removes contradicting literals among the rest
   for (auto iter = existing_units.begin(); iter != existing_units.end(); iter++ ) {
     int lit = iter->first;
     int negation = lit * (-1);
