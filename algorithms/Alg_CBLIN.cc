@@ -1740,7 +1740,7 @@ void CBLIN::extendBestModel() {
         s << " " << i;
       }
       else {
-        s << " " << "(-1) * i";
+        s << " " << (-1) * i;
       }
     }
     s << std::endl;
