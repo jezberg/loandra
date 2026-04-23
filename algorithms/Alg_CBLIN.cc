@@ -1754,7 +1754,7 @@ void CBLIN::extendBestModel() {
         modelAssumps.push(l);
       }     
       else {
-        logPrint("Pushing: " + std::to_string((-1) * i)
+        logPrint("Pushing: " + std::to_string((-1) * i);
         modelAssumps.push(~l);
       }
       //if (isSoft[i]) continue;
