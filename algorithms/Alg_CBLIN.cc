@@ -1750,7 +1750,7 @@ void CBLIN::extendBestModel() {
       if (!isSoft[i]) continue;
       Lit l = mkLit(i, true); 
       if (literalTrueInModel(l, bestModel)) {
-        logPrint("Pushing: " + std::to_string(i))
+        logPrint("Pushing: " + std::to_string(i));
         modelAssumps.push(l);
       }     
       else {
