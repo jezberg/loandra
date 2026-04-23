@@ -1732,13 +1732,29 @@ void CBLIN::extendBestModel() {
 
     vec<Lit> modelAssumps;
 
+    std::stringstream s;
+    s << "best_model before ";
+    for (int i = 0; i < bestModel.size(); i++) {
+      Lit l = mkLit(i, true); 
+      if (literalTrueInModel(l, bestModel)) {
+        s << " " << i;
+      }
+      else {
+        s << " " << "(-1) * i"
+      }
+    }
+    s << std::endl;
+    logPrint(s.str());
+
     for (int i = 0; i < isSoft.size(); i++ ) {
       if (!isSoft[i]) continue;
       Lit l = mkLit(i, true); 
       if (literalTrueInModel(l, bestModel)) {
+        logPrint("Pushing: " + std::to_string(i))
         modelAssumps.push(l);
       }     
       else {
+        logPrint("Pushing: " + std::to_string((-1) * i)
         modelAssumps.push(~l);
       }
       //if (isSoft[i]) continue;
