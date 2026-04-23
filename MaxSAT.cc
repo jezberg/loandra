@@ -578,7 +578,7 @@ MaxSATFormula* MaxSAT::standardized_formula() {
     maxsat_formula->getSoftClause(i).clause.copyTo(clause);
     if (clause.size() != 1){
       for (int j = 0; j < clause-size(); j++) {
-        appears_in_a_non_unit_soft_clause.insert(lit2Int(clause[j]))
+        appears_in_a_non_unit_soft_clause.insert(lit2Int(clause[j]));
       }
       Lit l = copymx->newLiteral();
       clause.push(l);
