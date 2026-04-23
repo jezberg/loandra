@@ -611,7 +611,7 @@ MaxSATFormula* MaxSAT::standardized_formula() {
     int lit = iter->first;
     int negation = lit * (-1);
     bool should_be_extended = (appears_in_a_non_unit_soft_clause.find(lit) != appears_in_a_non_unit_soft_clause.end()) || (appears_in_a_non_unit_soft_clause.find(negation) != appears_in_a_non_unit_soft_clause.end());
-    if should_be_extended) {
+    if (should_be_extended) {
       to_be_removed.insert(lit);
       uint64_t weight = iter->second;
       vec<Lit> clause;
