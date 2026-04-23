@@ -1737,10 +1737,10 @@ void CBLIN::extendBestModel() {
     for (int i = 0; i < bestModel.size(); i++) {
       Lit l = mkLit(i, true); 
       if (literalTrueInModel(l, bestModel)) {
-        s << " " << i;
+        s << " " << lit2Int(l);
       }
       else {
-        s << " " << (-1) * i;
+        s << " " << lit2Int(~l);
       }
     }
     s << std::endl;
@@ -1750,11 +1750,11 @@ void CBLIN::extendBestModel() {
       if (!isSoft[i]) continue;
       Lit l = mkLit(i, true); 
       if (literalTrueInModel(l, bestModel)) {
-        logPrint("Pushing: " + std::to_string(i));
+        logPrint("Pushing: " + std::to_string(lit2Int(l)));
         modelAssumps.push(l);
       }     
       else {
-        logPrint("Pushing: " + std::to_string((-1) * i));
+        logPrint("Pushing: " + std::to_string(lit2Int(~l)));
         modelAssumps.push(~l);
       }
       //if (isSoft[i]) continue;
