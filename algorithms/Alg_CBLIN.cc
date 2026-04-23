@@ -2177,7 +2177,7 @@ bool CBLIN::shouldUpdate() {
     if (has_flipped) {
       return false;
     }
-    return false;
+   // return false;
     uint64_t flips = 0;
     uint64_t failed_flips = 0;
     for (int i = 0; i < original_labels->nSoft(); i++) {
@@ -2198,7 +2198,7 @@ bool CBLIN::shouldUpdate() {
 
 //TODO parametrize on the model... 
 bool CBLIN::checkModel(bool from_local_search, bool improve_better) {
-  //flipLiterals();
+  flipLiterals();
   auto lambda = [this](Lit l){ return literal_sat_in_cadical(l) ;};
 
   uint64_t modelCost = computeCostOfModel(&lambda);
