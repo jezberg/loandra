@@ -2198,7 +2198,7 @@ bool CBLIN::shouldUpdate() {
 
 //TODO parametrize on the model... 
 bool CBLIN::checkModel(bool from_local_search, bool improve_better) {
-  flipLiterals();
+  //flipLiterals();
   auto lambda = [this](Lit l){ return literal_sat_in_cadical(l) ;};
 
   uint64_t modelCost = computeCostOfModel(&lambda);
