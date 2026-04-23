@@ -1732,20 +1732,6 @@ void CBLIN::extendBestModel() {
 
     vec<Lit> modelAssumps;
 
-    std::stringstream s;
-    s << "best_model before ";
-    for (int i = 0; i < bestModel.size(); i++) {
-      Lit l = mkLit(i, true); 
-      if (literalTrueInModel(l, bestModel)) {
-        s << " " << lit2Int(l);
-      }
-      else {
-        s << " " << lit2Int(~l);
-      }
-    }
-    s << std::endl;
-    logPrint(s.str());
-
     for (int i = 0; i < isSoft.size(); i++ ) {
       if (!isSoft[i]) continue;
       Lit l = mkLit(i, true); 
